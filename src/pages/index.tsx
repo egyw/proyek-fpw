@@ -4,11 +4,13 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold">Next.js + tRPC + TypeScript</h1>
-      <Button aria-label="Submit">Click Me</Button>
-      <Link href="/auth/register">Register</Link>
-      <Link href="/auth/login">Login</Link>
-      <p className="mt-4">Ready to build!</p>
+      <h1 className="text-3xl font-bold mb-4">Next.js + tRPC + TypeScript</h1>
+      <Button>
+        <Link href="/auth/register">Register</Link>
+      </Button>
+      <Button className="ml-4">
+        <Link href="/auth/login">Login</Link>
+      </Button>
     </div>
   );
 }
