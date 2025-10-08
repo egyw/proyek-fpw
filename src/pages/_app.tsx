@@ -3,7 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { trpc } from '../utils/trpc';
 import { useState } from 'react';
+import { Inter } from 'next/font/google';
 import '../styles/globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   const [queryClient] = useState(() => new QueryClient());
@@ -16,7 +19,9 @@ const MyApp: AppType = ({ Component, pageProps }) => {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <Component {...pageProps} />
+        <div className={inter.className}>
+          <Component {...pageProps} />
+        </div>
       </QueryClientProvider>
     </trpc.Provider>
   );
