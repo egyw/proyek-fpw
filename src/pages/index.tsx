@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import MainLayout from "@/components/layouts/MainLayout";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -52,35 +53,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Image 
-                src="/images/logo_4x1.png" 
-                alt="Logo" 
-                width={150}
-                height={38}
-                className="h-8 w-auto"
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <Link href="/products" className="text-gray-700 hover:text-primary">
-                Produk
-              </Link>
-              <Link href="/auth/login">
-                <Button variant="outline">Masuk</Button>
-              </Link>
-              <Link href="/auth/register">
-                <Button>Daftar</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <MainLayout>
       {/* Hero Section */}
       <section className="relative text-white">
         {/* Background Image */}
@@ -159,7 +132,7 @@ export default function Home() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">⚡ Promo Hari Ini</h2>
+            <h2 className="text-3xl font-bold text-gray-900">Promo Hari Ini</h2>
             <Link href="/products?filter=promo" className="text-primary hover:underline">
               Lihat Semua →
             </Link>
@@ -204,7 +177,7 @@ export default function Home() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            📦 Kategori Populer
+            Kategori Populer
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
             {categories.map((category) => (
@@ -229,7 +202,7 @@ export default function Home() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">🔥 Produk Terlaris</h2>
+            <h2 className="text-3xl font-bold text-gray-900">Produk Terlaris</h2>
             <Link href="/products?filter=bestseller" className="text-primary hover:underline">
               Lihat Semua →
             </Link>
@@ -264,11 +237,139 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Partners Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 text-center mb-12">
+            Partner Terpercaya
+          </h2>
+          
+          {/* Partner Logos */}
+          <div className="relative overflow-hidden">
+            <div className="flex items-center justify-center gap-6 md:gap-15 flex-wrap">
+              {/* Dulux */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/dulux_logo.png"
+                  alt="Dulux"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Nippon Paint */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/nippon_logo.png"
+                  alt="Nippon Paint"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Toto */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/toto_logo.png"
+                  alt="Toto"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Platinum */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/platinum_logo.png"
+                  alt="Platinum"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Roman */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/roman_logo.png"
+                  alt="Roman"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Semen Gresik */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/semen_gresik_logo.png"
+                  alt="Semen Gresik"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Semen Merdeka */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/semen_merdeka_logo.png"
+                  alt="Semen Merdeka"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* American Standard */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/american_standard_logo.png"
+                  alt="American Standard"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Perwira Steel */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/perwira_steel_logo.jpg"
+                  alt="Perwira Steel"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+
+              {/* Juma */}
+              <div className="transition-all duration-300 hover:scale-110">
+                <Image
+                  src="/images/partners/juma_logo.png"
+                  alt="Juma"
+                  width={80}
+                  height={50}
+                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-center text-sm text-gray-500 mt-8">
+            Dan 670+ brand lainnya...
+          </p>
+        </div>
+      </section>
+
       {/* Benefits Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">
-            ✅ Kenapa Belanja di Sini?
+            Kenapa Belanja di Sini?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
@@ -303,56 +404,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <Image 
-                src="/images/logo_4x1.png" 
-                alt="Logo" 
-                width={150}
-                height={38}
-                className="h-8 w-auto brightness-0 invert mb-4"
-              />
-              <p className="text-gray-400 text-sm">
-                Solusi lengkap material bangunan berkualitas untuk kebutuhan konstruksi Anda.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Produk</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/products?category=semen" className="hover:text-white">Semen</Link></li>
-                <li><Link href="/products?category=besi" className="hover:text-white">Besi</Link></li>
-                <li><Link href="/products?category=cat" className="hover:text-white">Cat</Link></li>
-                <li><Link href="/products?category=keramik" className="hover:text-white">Keramik</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Perusahaan</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/about" className="hover:text-white">Tentang Kami</Link></li>
-                <li><Link href="/contact" className="hover:text-white">Kontak</Link></li>
-                <li><Link href="/terms" className="hover:text-white">Syarat & Ketentuan</Link></li>
-                <li><Link href="/privacy" className="hover:text-white">Kebijakan Privasi</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Bantuan</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/faq" className="hover:text-white">FAQ</Link></li>
-                <li><Link href="/shipping" className="hover:text-white">Pengiriman</Link></li>
-                <li><Link href="/returns" className="hover:text-white">Pengembalian</Link></li>
-                <li><Link href="/payment" className="hover:text-white">Pembayaran</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2025 Toko Bangunan. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </MainLayout>
   );
 }

@@ -28,9 +28,16 @@ export const appRouter = router({
 ### UI Components (shadcn/ui)
 - Install via: `npx shadcn@latest add <component>` (use `cmd /c` on Windows if PowerShell blocks)
 - Location: `src/components/ui/`
-- Installed: button, input, label, card, badge, separator, form
+- Installed: button, input, label, card, badge, separator, form, carousel
 - **Always prefer shadcn components** over custom HTML/divs for consistency
 - **Form validation**: Use shadcn Form + react-hook-form + Zod (see auth pages)
+
+### Layout Components
+- **MainLayout**: Wrapper with Navbar + children + Footer (for public pages)
+- **Navbar**: Sticky navigation bar (`src/components/layouts/Navbar.tsx`)
+- **Footer**: Footer with links and branding (`src/components/layouts/Footer.tsx`)
+- **Usage**: Wrap page content with `<MainLayout>{content}</MainLayout>`
+- **Auth pages**: Login/Register pages do NOT use MainLayout (standalone design)
 
 ### Styling Conventions
 - **Tailwind v4** with `@import "tailwindcss"` syntax (NOT CDN)
@@ -59,8 +66,10 @@ npm run lint         # Run ESLint
 4. **Types**: tRPC auto-generates types; export `AppRouter` type from `_app.ts`
 
 ### Static Assets
-- Images: `public/images/` (e.g., logo at `public/images/logo_4x1.jpg`)
-- Use Next.js `<Image>` component with relative paths: `src="/images/logo_4x1.jpg"`
+- Images: `public/images/` (e.g., logo at `public/images/logo_4x1.png`)
+- Hero image: `public/images/hero_image.png`
+- Dummy/placeholder: `public/images/dummy_image.jpg`
+- Use Next.js `<Image>` component with relative paths: `src="/images/logo_4x1.png"`
 
 ## Project-Specific Patterns
 
