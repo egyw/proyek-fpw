@@ -252,11 +252,45 @@ export default function AdminPage() {
 10. **Windows environment** - Use `cmd /c` for npx commands if PowerShell execution policy blocks
 11. **Avoid `cn` utility** - Use template literals `${...}` for conditional classNames instead of `cn()` function
 
+## UI/UX Patterns
+
+### Product Catalog Layout
+**Structure** (`src/pages/products/index.tsx`):
+- **Sidebar Filters** (left): Categories, price range, stock status, discount - follows page scroll naturally
+- **Products Area** (right): Scrollable container with `maxHeight: calc(100vh - 16rem)` - independent scroll
+- **View Modes**: Grid (3 columns) and List layouts with toggle
+- **Search & Sort**: Input with Lucide Search icon, Select for sorting
+
+**Key Implementation**:
+```tsx
+<div className="flex flex-col lg:flex-row gap-8 lg:items-start">
+  {/* Sidebar - follows page scroll */}
+  <aside className="lg:w-64 flex-shrink-0">
+    <div className="space-y-6">{/* Filters */}</div>
+  </aside>
+  
+  {/* Products with independent scroll */}
+  <main className="flex-1">
+    <div style={{ maxHeight: 'calc(100vh - 16rem)' }} className="overflow-y-auto [&::-webkit-scrollbar]:...">
+      {/* Product cards */}
+    </div>
+  </main>
+</div>
+```
+
+### Icon Usage Guidelines
+- **Prefer Lucide React icons** over emoji for professional appearance
+- **Installed**: lucide-react package
+- **Common icons**: Search, Grid3x3, List, ShoppingCart, Eye, Star, ChevronLeft/Right, RotateCcw
+- **Import pattern**: `import { IconName } from "lucide-react"`
+- **Size convention**: `className="h-4 w-4"` for buttons, `h-5 w-5` for larger elements
+- **Avoid emoji icons** (🔍👁️🛒) - they look unprofessional and inconsistent across platforms
+
 ## External Dependencies
 - **React Query**: Data fetching (via tRPC integration)
 - **Zod**: Schema validation for tRPC inputs
 - **Radix UI**: Accessible primitives for shadcn components
-- **Lucide Icons**: Icon library (use lucide-react when needed)
+- **Lucide React**: Professional SVG icon library (1000+ icons)
 
 ## Testing & Debugging
 - No test framework configured yet
