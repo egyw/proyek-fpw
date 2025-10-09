@@ -28,16 +28,28 @@ export const appRouter = router({
 ### UI Components (shadcn/ui)
 - Install via: `npx shadcn@latest add <component>` (use `cmd /c` on Windows if PowerShell blocks)
 - Location: `src/components/ui/`
-- Installed: button, input, label, card, badge, separator, form, carousel
-- **Always prefer shadcn components** over custom HTML/divs for consistency
+- **Installed components**: button, input, label, card, badge, separator, form, carousel, table, dropdown-menu, avatar, select, dialog, sheet
+- **Always prefer shadcn components first** - Install missing shadcn components before creating custom ones
+- **DO NOT use HTML elements** when shadcn equivalent exists:
+  - ❌ `<table>` → ✅ Use shadcn `<Table>` component
+  - ❌ `<select>` → ✅ Use shadcn `<Select>` component
+  - ❌ Custom dropdown → ✅ Use shadcn `<DropdownMenu>` component
+  - ❌ `<div>` for avatar → ✅ Use shadcn `<Avatar>` component
 - **Form validation**: Use shadcn Form + react-hook-form + Zod (see auth pages)
+- **Avoid `cn` utility**: Use template literals for conditional classNames instead of `cn()` function
 
 ### Layout Components
-- **MainLayout**: Wrapper with Navbar + children + Footer (for public pages)
-- **Navbar**: Sticky navigation bar (`src/components/layouts/Navbar.tsx`)
+- **MainLayout**: Wrapper with Navbar + children + Footer (for public pages like homepage, products)
+  - Usage: `<MainLayout>{content}</MainLayout>`
+  - Located: `src/components/layouts/MainLayout.tsx`
+- **AdminLayout**: Admin dashboard wrapper with sidebar navigation + header (for admin pages)
+  - Features: Collapsible sidebar, user dropdown menu, notifications, breadcrumbs
+  - Navigation: Dashboard, Produk, Pesanan, Pelanggan, Kategori, Laporan, Pengaturan
+  - Usage: `<AdminLayout>{content}</AdminLayout>`
+  - Located: `src/components/layouts/AdminLayout.tsx`
+- **Navbar**: Sticky navigation bar for public pages (`src/components/layouts/Navbar.tsx`)
 - **Footer**: Footer with links and branding (`src/components/layouts/Footer.tsx`)
-- **Usage**: Wrap page content with `<MainLayout>{content}</MainLayout>`
-- **Auth pages**: Login/Register pages do NOT use MainLayout (standalone design)
+- **Auth pages**: Login/Register pages do NOT use any layout (standalone design)
 
 ### Styling Conventions
 - **Tailwind v4** with `@import "tailwindcss"` syntax (NOT CDN)
@@ -162,17 +174,83 @@ export default function Page() {
 }
 ```
 
+### Admin Dashboard Pattern
+**AdminLayout Structure** (`src/components/layouts/AdminLayout.tsx`):
+- Collapsible sidebar (toggle width between `w-64` and `w-20`)
+- Navigation items with active state highlighting (bg-primary for active)
+- Header with page title, notification bell, and user dropdown menu
+- User menu uses shadcn DropdownMenu with Avatar component
+- Mobile responsive (sidebar can be hidden on small screens)
+
+**Admin Pages Structure**:
+- All admin pages located in `src/pages/admin/`
+- Always wrap content with `<AdminLayout>`
+- Use shadcn Table for data display (NOT HTML `<table>`)
+- Use shadcn Select for filters (NOT HTML `<select>`)
+- Stats cards using shadcn Card component
+- Badge component for status indicators
+
+**Example Admin Page**:
+```typescript
+import AdminLayout from "@/components/layouts/AdminLayout";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+export default function AdminPage() {
+  return (
+    <AdminLayout>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <Card className="p-6">
+          <p className="text-sm text-gray-600">Total Items</p>
+          <h3 className="text-2xl font-bold">1,234</h3>
+        </Card>
+      </div>
+      
+      {/* Filters with shadcn Select */}
+      <Select>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Filter" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Semua</SelectItem>
+        </SelectContent>
+      </Select>
+      
+      {/* Data Table with shadcn Table */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Column</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>Data</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Card>
+    </AdminLayout>
+  );
+}
+```
+
 ## Critical Rules
 
 1. **Never create App Router files** - This is Pages Router only (no `app/` directory)
-2. **Use shadcn components** - Install missing ones rather than creating custom components
-3. **Form validation required** - Always use react-hook-form + Zod for forms (NOT plain HTML forms)
-4. **Keep tRPC routers in single file** - `_app.ts` contains all procedures (not split into multiple files)
-5. **Match brand colors** - Use #1a5fa4 primary color (navy blue) for building materials branding
-6. **Consistent backgrounds** - Use animated gradient pattern for auth pages (see login/register)
-7. **Clean UI preference** - User prefers minimal, clean designs without excessive decorations
-8. **Indonesian language** - UI text and placeholders in Bahasa Indonesia
-9. **Windows environment** - Use `cmd /c` for npx commands if PowerShell execution policy blocks
+2. **Use shadcn components first** - Install missing ones rather than creating custom components
+3. **NO HTML primitives when shadcn exists** - Use Table, Select, Avatar, DropdownMenu from shadcn
+4. **Form validation required** - Always use react-hook-form + Zod for forms (NOT plain HTML forms)
+5. **Keep tRPC routers in single file** - `_app.ts` contains all procedures (not split into multiple files)
+6. **Match brand colors** - Use #1a5fa4 primary color (navy blue) for building materials branding
+7. **Consistent backgrounds** - Use animated gradient pattern for auth pages (see login/register)
+8. **Clean UI preference** - User prefers minimal, clean designs without excessive decorations
+9. **Indonesian language** - UI text and placeholders in Bahasa Indonesia
+10. **Windows environment** - Use `cmd /c` for npx commands if PowerShell execution policy blocks
+11. **Avoid `cn` utility** - Use template literals `${...}` for conditional classNames instead of `cn()` function
 
 ## External Dependencies
 - **React Query**: Data fetching (via tRPC integration)
