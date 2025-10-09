@@ -203,10 +203,10 @@ export default function ProductsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
           {/* Sidebar Filters */}
           <aside className="lg:w-64 flex-shrink-0">
-            <div className="sticky top-24 space-y-6 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-primary">
+            <div className="space-y-6" id="sidebar-filters">
               {/* Categories */}
               <Card className="p-4">
                 <h3 className="font-semibold text-gray-900 mb-4">Kategori</h3>
@@ -319,7 +319,7 @@ export default function ProductsPage() {
           </aside>
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -395,14 +395,16 @@ export default function ProductsPage() {
               </Button>
             </div>
 
-            {/* Products Grid */}
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "space-y-4"
-              }
-            >
+            {/* Products Container with Scroll - Match Sidebar Height */}
+            <div className="flex-1 overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-primary" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
+              {/* Products Grid */}
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                    : "space-y-4"
+                }
+              >
               {products.map((product) =>
                 viewMode === "grid" ? (
                   // Grid View
@@ -539,10 +541,13 @@ export default function ProductsPage() {
                   </Card>
                 )
               )}
+              </div>
+              {/* End Products Grid */}
             </div>
+            {/* End Products Container */}
 
             {/* Pagination */}
-            <div className="mt-8 flex items-center justify-center gap-2">
+            <div className="mt-6 flex items-center justify-center gap-2">
               <Button variant="outline" size="sm" disabled>
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Sebelumnya
