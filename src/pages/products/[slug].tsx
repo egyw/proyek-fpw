@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 // import { useRouter } from "next/router";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Star,
   ShoppingCart,
@@ -363,7 +364,13 @@ export default function ProductDetailPage() {
             onAddToCart={(quantity, unit, totalPrice) => {
               // TODO: Implement cart functionality
               console.log(`Adding to cart: ${quantity} ${unit} = Rp ${totalPrice}`);
-              alert(`Berhasil menambahkan ${quantity} ${unit} ke keranjang (Total: Rp ${totalPrice.toLocaleString("id-ID")})`);
+              toast.success("Berhasil ditambahkan ke keranjang!", {
+                description: `${quantity} ${unit} - Total: Rp ${totalPrice.toLocaleString("id-ID")}`,
+                action: {
+                  label: "Lihat Keranjang",
+                  onClick: () => window.location.href = "/cart",
+                },
+              });
             }}
           />
         </div>

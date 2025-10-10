@@ -412,10 +412,81 @@ export default function AdminPage() {
 ### Icon Usage Guidelines
 - **Prefer Lucide React icons** over emoji for professional appearance
 - **Installed**: lucide-react package
-- **Common icons**: Search, Grid3x3, List, ShoppingCart, Eye, Star, ChevronLeft/Right, RotateCcw
+- **Common icons**: Search, Grid3x3, List, ShoppingCart, Eye, Star, ChevronLeft/Right, RotateCcw, Calculator, Info
 - **Import pattern**: `import { IconName } from "lucide-react"`
 - **Size convention**: `className="h-4 w-4"` for buttons, `h-5 w-5` for larger elements
 - **Avoid emoji icons** (🔍👁️🛒) - they look unprofessional and inconsistent across platforms
+
+### Unit Converter Component
+**Purpose**: Allow customers to purchase building materials in their preferred unit (e.g., buy cement in KG when product is sold per SAK)
+
+**Location**: `src/components/UnitConverter.tsx`
+
+**Features**:
+- Real-time unit conversion calculator
+- Price calculation in custom unit
+- Stock availability check in selected unit
+- Add to cart with custom unit selection
+- Supports 7 product categories: Semen, Keramik, Cat, Besi, Pipa, Kayu, Atap
+
+**Usage Pattern**:
+```tsx
+<UnitConverter 
+  category={product.category}        // Product category (e.g., "Semen")
+  productUnit={product.unit}         // Default unit (e.g., "SAK")
+  productPrice={product.price}       // Price per unit
+  productStock={product.stock}       // Available stock
+  onAddToCart={(qty, unit, total) => {
+    // Handle add to cart with custom unit
+  }}
+/>
+```
+
+**Base Unit System**:
+- Each category has a base unit (e.g., Semen → kg, Keramik → pcs)
+- Conversions defined as multiplier to base unit
+- Example: 1 SAK = 50kg, 1 Zak = 40kg, 1 Ton = 1000kg
+
+**Props Interface**:
+```typescript
+interface UnitConverterProps {
+  category: string;              // Product category
+  productUnit: string;           // Product's default unit
+  productPrice: number;          // Price per productUnit
+  productStock: number;          // Stock in productUnit
+  onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
+}
+```
+
+**DO NOT use Form component** - UnitConverter uses simple `useState` for real-time calculation, NOT react-hook-form
+
+### Form Validation Guidelines
+**MUST use Form (react-hook-form + Zod + shadcn Form) for**:
+- ✅ Login/Register pages - Email, password validation
+- ✅ Checkout forms - Address, phone number validation
+- ✅ Admin CRUD - Create/Edit product with multiple fields
+- ✅ Contact forms - Email, message validation
+- ✅ Profile settings - User information update
+
+**DO NOT use Form for**:
+- ❌ Real-time calculators (like UnitConverter) - Use `useState` instead
+- ❌ Search inputs - Simple controlled input with `onChange`
+- ❌ Quantity selectors - Just state with +/- buttons
+- ❌ Filter dropdowns - Direct state management
+
+**Pattern for Simple Inputs**:
+```typescript
+// ✅ Correct: Simple state for calculator/search
+const [value, setValue] = useState("");
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (/^\d*\.?\d*$/.test(e.target.value)) { // Inline validation
+    setValue(e.target.value);
+  }
+};
+
+// ❌ Wrong: Using Form for simple calculator
+const form = useForm({ ... }); // Overkill for real-time input
+```
 
 ## External Dependencies
 - **React Query**: Data fetching (via tRPC integration)

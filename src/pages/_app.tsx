@@ -4,6 +4,7 @@ import { httpBatchLink } from '@trpc/client';
 import { trpc } from '../utils/trpc';
 import { useState } from 'react';
 import { Inter } from 'next/font/google';
+import { Toaster } from '@/components/ui/sonner';
 import '../styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -21,6 +22,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
       <QueryClientProvider client={queryClient}>
         <div className={inter.className}>
           <Component {...pageProps} />
+          <Toaster />
         </div>
       </QueryClientProvider>
     </trpc.Provider>
