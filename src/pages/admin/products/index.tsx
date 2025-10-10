@@ -21,57 +21,129 @@ import {
 import Image from "next/image";
 
 export default function AdminProducts() {
-  // Dummy data - nanti akan diganti dengan tRPC
+  // TODO: Replace with tRPC query
+  // Expected API: trpc.products.getAll.useQuery()
+  // Output: Product[]
   const products = [
     {
-      id: 1,
+      id: "68b8340ed2788dc4d9e608b1",
       name: "Semen Gresik 50kg",
+      slug: "semen-gresik-50kg",
       category: "Semen",
+      brand: "Gresik",
+      unit: "SAK",
       price: 65000,
+      originalPrice: 81250,
+      discount: { percentage: 20, validUntil: "2025-12-31T23:59:59Z" },
       stock: 150,
+      minStock: 20,
+      images: ["/images/dummy_image.jpg"],
+      description: "Semen Portland berkualitas tinggi untuk konstruksi bangunan.",
+      rating: { average: 4.8, count: 234 },
       sold: 234,
+      views: 1250,
+      attributes: { type: "Portland Type I", weight: "50kg", origin: "Indonesia" },
+      isActive: true,
+      isFeatured: false,
       status: "active",
-      image: "/images/dummy_image.jpg",
+      createdAt: "2025-01-15T00:00:00Z",
+      updatedAt: "2025-04-01T00:00:00Z",
     },
     {
-      id: 2,
+      id: "68b8340ed2788dc4d9e608b2",
       name: "Cat Tembok Avian 5kg",
+      slug: "cat-tembok-avian-5kg-putih",
       category: "Cat",
+      brand: "Avian",
+      unit: "KALENG",
       price: 180000,
+      originalPrice: 211765,
+      discount: { percentage: 15, validUntil: "2025-11-30T23:59:59Z" },
       stock: 45,
+      minStock: 10,
+      images: ["/images/dummy_image.jpg"],
+      description: "Cat tembok interior premium dengan daya tutup maksimal.",
+      rating: { average: 4.7, count: 189 },
       sold: 189,
+      views: 890,
+      attributes: { color: "Putih", weight: "5kg", coverage: "8-10 m2/kg", finish: "Matte" },
+      isActive: true,
+      isFeatured: true,
       status: "active",
-      image: "/images/dummy_image.jpg",
+      createdAt: "2025-02-10T00:00:00Z",
+      updatedAt: "2025-04-05T00:00:00Z",
     },
     {
-      id: 3,
+      id: "68b8340ed2788dc4d9e608b3",
       name: "Besi Beton 10mm",
+      slug: "besi-beton-10mm-panjang-12m",
       category: "Besi",
+      brand: "Krakatau Steel",
+      unit: "BATANG",
       price: 85000,
+      originalPrice: 121429,
+      discount: { percentage: 30, validUntil: "2025-10-31T23:59:59Z" },
       stock: 8,
+      minStock: 15,
+      images: ["/images/dummy_image.jpg"],
+      description: "Besi beton SNI untuk struktur bangunan yang kuat dan tahan lama.",
+      rating: { average: 4.9, count: 156 },
       sold: 156,
+      views: 678,
+      attributes: { diameter: "10mm", length: "12m", standard: "SNI", grade: "BjTS 420" },
+      isActive: true,
+      isFeatured: false,
       status: "low_stock",
-      image: "/images/dummy_image.jpg",
+      createdAt: "2025-01-20T00:00:00Z",
+      updatedAt: "2025-04-02T00:00:00Z",
     },
     {
-      id: 4,
+      id: "68b8340ed2788dc4d9e608b4",
       name: "Keramik 40x40 Platinum",
+      slug: "keramik-platinum-40x40-glossy",
       category: "Keramik",
+      brand: "Platinum",
+      unit: "DUS",
       price: 42000,
+      originalPrice: 56000,
+      discount: { percentage: 25, validUntil: "2025-12-15T23:59:59Z" },
       stock: 0,
+      minStock: 30,
+      images: ["/images/dummy_image.jpg"],
+      description: "Keramik lantai glossy dengan permukaan mengkilap dan tahan lama.",
+      rating: { average: 4.6, count: 423 },
       sold: 423,
+      views: 2100,
+      attributes: { size: "40x40 cm", finish: "Glossy", pcs_per_box: "4", coverage: "0.64 m2/dus" },
+      isActive: false,
+      isFeatured: true,
       status: "out_of_stock",
-      image: "/images/dummy_image.jpg",
+      createdAt: "2025-01-05T00:00:00Z",
+      updatedAt: "2025-04-08T00:00:00Z",
     },
     {
-      id: 5,
+      id: "68b8340ed2788dc4d9e608b5",
       name: "Pipa PVC 3 inch",
+      slug: "pipa-pvc-rucika-3-inch",
       category: "Pipa",
+      brand: "Rucika",
+      unit: "BATANG",
       price: 45000,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 87,
+      minStock: 20,
+      images: ["/images/dummy_image.jpg"],
+      description: "Pipa PVC berkualitas untuk instalasi air bersih dan limbah.",
+      rating: { average: 4.8, count: 298 },
       sold: 298,
+      views: 1450,
+      attributes: { diameter: "3 inch", length: "4m", type: "AW/D", standard: "SNI" },
+      isActive: true,
+      isFeatured: false,
       status: "active",
-      image: "/images/dummy_image.jpg",
+      createdAt: "2025-02-20T00:00:00Z",
+      updatedAt: "2025-04-01T00:00:00Z",
     },
   ];
 
@@ -185,7 +257,7 @@ export default function AdminProducts() {
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
                         <Image
-                          src={product.image}
+                          src={product.images[0]}
                           alt={product.name}
                           fill
                           className="object-cover"
@@ -193,7 +265,7 @@ export default function AdminProducts() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-xs text-gray-500">ID: {product.id}</p>
+                        <p className="text-xs text-gray-500">ID: {product.id.slice(0, 8)}...</p>
                       </div>
                     </div>
                   </TableCell>

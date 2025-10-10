@@ -32,11 +32,12 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     console.log(data);
+    window.location.href = '/';
     // TODO: Implement login logic with tRPC
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
+    <div className="h-screen relative flex items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
       {/* Animated Background Patterns */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Geometric shapes */}
@@ -63,22 +64,22 @@ export default function LoginPage() {
         
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden backdrop-blur-sm">
           {/* Card Header with Logo */}
-          <div className="bg-gradient-to-br from-primary to-primary/90 px-8 py-10 text-center relative overflow-hidden">
+          <div className="bg-gradient-to-br from-primary to-primary/90 px-6 py-6 text-center relative overflow-hidden">
             {/* Header decoration */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]"></div>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.1),transparent_50%)]"></div>
             
             <div className="relative z-10">
-              <div className="flex justify-center mb-8">
+              <div className="flex justify-center mb-4">
                 <Image 
                   src="/images/logo_4x1.png" 
                   alt="Logo" 
-                  width={200}
-                  height={50}
+                  width={180}
+                  height={45}
                   className="brightness-0 invert"
                 />
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-2xl font-bold text-white mb-1">
                 Selamat Datang
               </h1>
               <p className="text-white/80 text-sm">
@@ -88,9 +89,9 @@ export default function LoginPage() {
           </div>
 
           {/* Card Body with Form */}
-          <div className="px-8 py-10">
+          <div className="px-6 py-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Email */}
                 <FormField
                   control={form.control}
@@ -102,7 +103,7 @@ export default function LoginPage() {
                         <Input
                           type="email"
                           placeholder="nama@email.com"
-                          className="h-12 border-2 focus:border-primary"
+                          className="h-11 border-2 focus:border-primary"
                           {...field}
                         />
                       </FormControl>
@@ -130,7 +131,7 @@ export default function LoginPage() {
                         <Input
                           type="password"
                           placeholder="Masukkan password"
-                          className="h-12 border-2 focus:border-primary"
+                          className="h-11 border-2 focus:border-primary"
                           {...field}
                         />
                       </FormControl>
@@ -141,7 +142,7 @@ export default function LoginPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-base font-semibold mt-6 shadow-lg hover:shadow-xl transition-all"
+                  className="w-full h-11 text-base font-semibold mt-5 shadow-lg hover:shadow-xl transition-all"
                 >
                   Masuk
                 </Button>
@@ -149,7 +150,7 @@ export default function LoginPage() {
             </Form>
 
             {/* Divider */}
-            <div className="relative my-8">
+            <div className="relative my-5">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
               </div>
@@ -162,7 +163,7 @@ export default function LoginPage() {
             <Button 
               type="button" 
               variant="outline" 
-              className="w-full h-11 border-2 hover:bg-gray-50"
+              className="w-full h-10 border-2 hover:bg-gray-50"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -174,7 +175,7 @@ export default function LoginPage() {
             </Button>
 
             {/* Register Link */}
-            <p className="text-center text-sm text-gray-600 mt-8">
+            <p className="text-center text-sm text-gray-600 mt-5">
               Belum punya akun?{' '}
               <Link 
                 href="/auth/register" 
@@ -187,7 +188,7 @@ export default function LoginPage() {
         </div>
 
         {/* Bottom decorative text */}
-        <p className="text-center text-white/60 text-xs mt-6">
+        <p className="text-center text-white/60 text-xs mt-4">
           Dengan masuk, Anda menyetujui{' '}
           <Link href="/terms" className="underline hover:text-white">
             Syarat & Ketentuan

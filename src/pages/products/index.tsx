@@ -40,150 +40,286 @@ export default function ProductsPage() {
     { name: "Atap", count: 145, slug: "atap" },
   ];
 
+  // TODO: Replace with tRPC query
+  // Expected API: trpc.products.getAll.useQuery()
+  // Input: { categoryId?: string, search?: string, sortBy?: string, minPrice?: number, maxPrice?: number }
+  // Output: Product[]
   const products = [
     {
-      id: 1,
+      id: "68b8340ed2788dc4d9e608b1",
       name: "Semen Gresik 50kg",
+      slug: "semen-gresik-50kg",
       category: "Semen",
+      brand: "Gresik",
+      unit: "SAK",
       price: 65000,
       originalPrice: 81250,
-      discount: 20,
+      discount: { percentage: 20, validUntil: "2025-12-31T23:59:59Z" },
       stock: 150,
+      minStock: 20,
+      images: ["/images/dummy_image.jpg"],
+      description: "Semen Portland berkualitas tinggi untuk konstruksi bangunan.",
+      rating: { average: 4.8, count: 234 },
       sold: 234,
-      rating: 4.8,
-      image: "/images/dummy_image.jpg",
+      views: 1250,
+      attributes: { type: "Portland Type I", weight: "50kg", origin: "Indonesia" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-01-15T00:00:00Z",
+      updatedAt: "2025-04-01T00:00:00Z",
     },
     {
-      id: 2,
+      id: "68b8340ed2788dc4d9e608b2",
       name: "Cat Tembok Avian 5kg Putih",
+      slug: "cat-tembok-avian-5kg-putih",
       category: "Cat",
+      brand: "Avian",
+      unit: "KALENG",
       price: 180000,
       originalPrice: 211765,
-      discount: 15,
+      discount: { percentage: 15, validUntil: "2025-11-30T23:59:59Z" },
       stock: 45,
+      minStock: 10,
+      images: ["/images/dummy_image.jpg"],
+      description: "Cat tembok interior premium dengan daya tutup maksimal.",
+      rating: { average: 4.7, count: 189 },
       sold: 189,
-      rating: 4.7,
-      image: "/images/dummy_image.jpg",
+      views: 890,
+      attributes: { color: "Putih", weight: "5kg", coverage: "8-10 m2/kg", finish: "Matte" },
+      isActive: true,
+      isFeatured: true,
+      createdAt: "2025-02-10T00:00:00Z",
+      updatedAt: "2025-04-05T00:00:00Z",
     },
     {
-      id: 3,
+      id: "68b8340ed2788dc4d9e608b3",
       name: "Besi Beton 10mm Panjang 12m",
+      slug: "besi-beton-10mm-panjang-12m",
       category: "Besi",
+      brand: "Krakatau Steel",
+      unit: "BATANG",
       price: 85000,
       originalPrice: 121429,
-      discount: 30,
+      discount: { percentage: 30, validUntil: "2025-10-31T23:59:59Z" },
       stock: 8,
+      minStock: 15,
+      images: ["/images/dummy_image.jpg"],
+      description: "Besi beton SNI untuk struktur bangunan yang kuat dan tahan lama.",
+      rating: { average: 4.9, count: 156 },
       sold: 156,
-      rating: 4.9,
-      image: "/images/dummy_image.jpg",
+      views: 678,
+      attributes: { diameter: "10mm", length: "12m", standard: "SNI", grade: "BjTS 420" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-01-20T00:00:00Z",
+      updatedAt: "2025-04-02T00:00:00Z",
     },
     {
-      id: 4,
+      id: "68b8340ed2788dc4d9e608b4",
       name: "Keramik Platinum 40x40 Glossy",
+      slug: "keramik-platinum-40x40-glossy",
       category: "Keramik",
+      brand: "Platinum",
+      unit: "DUS",
       price: 42000,
       originalPrice: 56000,
-      discount: 25,
+      discount: { percentage: 25, validUntil: "2025-12-15T23:59:59Z" },
       stock: 200,
+      minStock: 30,
+      images: ["/images/dummy_image.jpg"],
+      description: "Keramik lantai glossy dengan permukaan mengkilap dan tahan lama.",
+      rating: { average: 4.6, count: 423 },
       sold: 423,
-      rating: 4.6,
-      image: "/images/dummy_image.jpg",
+      views: 2100,
+      attributes: { size: "40x40 cm", finish: "Glossy", pcs_per_box: "4", coverage: "0.64 m2/dus" },
+      isActive: true,
+      isFeatured: true,
+      createdAt: "2025-01-05T00:00:00Z",
+      updatedAt: "2025-04-08T00:00:00Z",
     },
     {
-      id: 5,
+      id: "68b8340ed2788dc4d9e608b5",
       name: "Pipa PVC Rucika 3 inch",
+      slug: "pipa-pvc-rucika-3-inch",
       category: "Pipa",
+      brand: "Rucika",
+      unit: "BATANG",
       price: 45000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 87,
+      minStock: 20,
+      images: ["/images/dummy_image.jpg"],
+      description: "Pipa PVC berkualitas untuk instalasi air bersih dan limbah.",
+      rating: { average: 4.8, count: 298 },
       sold: 298,
-      rating: 4.8,
-      image: "/images/dummy_image.jpg",
+      views: 1450,
+      attributes: { diameter: "3 inch", length: "4m", type: "AW/D", standard: "SNI" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-02-20T00:00:00Z",
+      updatedAt: "2025-04-01T00:00:00Z",
     },
     {
-      id: 6,
+      id: "68b8340ed2788dc4d9e608b6",
       name: "Semen Tiga Roda 50kg",
+      slug: "semen-tiga-roda-50kg",
       category: "Semen",
+      brand: "Tiga Roda",
+      unit: "SAK",
       price: 62000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 180,
+      minStock: 25,
+      images: ["/images/dummy_image.jpg"],
+      description: "Semen berkualitas untuk berbagai jenis konstruksi.",
+      rating: { average: 4.7, count: 334 },
       sold: 334,
-      rating: 4.7,
-      image: "/images/dummy_image.jpg",
+      views: 1680,
+      attributes: { type: "Portland Type I", weight: "50kg", origin: "Indonesia" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-01-18T00:00:00Z",
+      updatedAt: "2025-03-28T00:00:00Z",
     },
     {
-      id: 7,
+      id: "68b8340ed2788dc4d9e608b7",
       name: "Genteng Metal Pasir Merah",
+      slug: "genteng-metal-pasir-merah",
       category: "Atap",
+      brand: "Surya Roof",
+      unit: "LEMBAR",
       price: 35000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 456,
+      minStock: 50,
+      images: ["/images/dummy_image.jpg"],
+      description: "Genteng metal anti karat dengan coating pasir berkualitas.",
+      rating: { average: 4.5, count: 567 },
       sold: 567,
-      rating: 4.5,
-      image: "/images/dummy_image.jpg",
+      views: 2850,
+      attributes: { color: "Merah", material: "Metal + Coating Pasir", length: "240cm", thickness: "0.3mm" },
+      isActive: true,
+      isFeatured: true,
+      createdAt: "2025-01-10T00:00:00Z",
+      updatedAt: "2025-04-06T00:00:00Z",
     },
     {
-      id: 8,
+      id: "68b8340ed2788dc4d9e608b8",
       name: "Triplek 9mm 122x244cm",
+      slug: "triplek-9mm-122x244cm",
       category: "Kayu",
+      brand: "Surabaya Plywood",
+      unit: "LEMBAR",
       price: 95000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 76,
+      minStock: 15,
+      images: ["/images/dummy_image.jpg"],
+      description: "Triplek berkualitas untuk furniture dan konstruksi interior.",
+      rating: { average: 4.6, count: 234 },
       sold: 234,
-      rating: 4.6,
-      image: "/images/dummy_image.jpg",
+      views: 980,
+      attributes: { thickness: "9mm", size: "122x244 cm", grade: "Grade A", plies: "7 ply" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-02-05T00:00:00Z",
+      updatedAt: "2025-04-03T00:00:00Z",
     },
     {
-      id: 9,
+      id: "68b8340ed2788dc4d9e608b9",
       name: "Cat Dulux 5kg Warna Custom",
+      slug: "cat-dulux-5kg-warna-custom",
       category: "Cat",
+      brand: "Dulux",
+      unit: "KALENG",
       price: 195000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 34,
+      minStock: 10,
+      images: ["/images/dummy_image.jpg"],
+      description: "Cat premium dengan ribuan pilihan warna custom sesuai keinginan.",
+      rating: { average: 4.9, count: 145 },
       sold: 145,
-      rating: 4.9,
-      image: "/images/dummy_image.jpg",
+      views: 720,
+      attributes: { color: "Custom", weight: "5kg", coverage: "10-12 m2/kg", finish: "Satin" },
+      isActive: true,
+      isFeatured: true,
+      createdAt: "2025-02-15T00:00:00Z",
+      updatedAt: "2025-04-07T00:00:00Z",
     },
     {
-      id: 10,
+      id: "68b8340ed2788dc4d9e608ba",
       name: "Besi Hollow 4x4cm Tebal 1.2mm",
+      slug: "besi-hollow-4x4cm-tebal-1-2mm",
       category: "Besi",
+      brand: "Gunung Garuda",
+      unit: "BATANG",
       price: 78000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 123,
+      minStock: 20,
+      images: ["/images/dummy_image.jpg"],
+      description: "Besi hollow untuk rangka pintu, jendela, dan konstruksi ringan.",
+      rating: { average: 4.7, count: 189 },
       sold: 189,
-      rating: 4.7,
-      image: "/images/dummy_image.jpg",
+      views: 890,
+      attributes: { size: "4x4 cm", thickness: "1.2mm", length: "6m", standard: "SNI" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-01-25T00:00:00Z",
+      updatedAt: "2025-04-04T00:00:00Z",
     },
     {
-      id: 11,
+      id: "68b8340ed2788dc4d9e608bb",
       name: "Keramik Roman 30x30 Motif",
+      slug: "keramik-roman-30x30-motif",
       category: "Keramik",
+      brand: "Roman",
+      unit: "DUS",
       price: 38000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 234,
+      minStock: 30,
+      images: ["/images/dummy_image.jpg"],
+      description: "Keramik lantai dengan motif modern untuk ruangan elegan.",
+      rating: { average: 4.6, count: 345 },
       sold: 345,
-      rating: 4.6,
-      image: "/images/dummy_image.jpg",
+      views: 1450,
+      attributes: { size: "30x30 cm", finish: "Matt", pcs_per_box: "11", coverage: "0.99 m2/dus" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-01-08T00:00:00Z",
+      updatedAt: "2025-04-02T00:00:00Z",
     },
     {
-      id: 12,
+      id: "68b8340ed2788dc4d9e608bc",
       name: "Pipa Wavin 2 inch AW/D",
+      slug: "pipa-wavin-2-inch-aw-d",
       category: "Pipa",
+      brand: "Wavin",
+      unit: "BATANG",
       price: 32000,
-      originalPrice: null,
-      discount: 0,
+      originalPrice: undefined,
+      discount: undefined,
       stock: 156,
+      minStock: 25,
+      images: ["/images/dummy_image.jpg"],
+      description: "Pipa PVC Wavin standar SNI untuk air bersih dan limbah.",
+      rating: { average: 4.8, count: 267 },
       sold: 267,
-      rating: 4.8,
-      image: "/images/dummy_image.jpg",
+      views: 1120,
+      attributes: { diameter: "2 inch", length: "4m", type: "AW/D", standard: "SNI" },
+      isActive: true,
+      isFeatured: false,
+      createdAt: "2025-02-18T00:00:00Z",
+      updatedAt: "2025-03-30T00:00:00Z",
     },
   ];
 
@@ -395,16 +531,14 @@ export default function ProductsPage() {
               </Button>
             </div>
 
-            {/* Products Container with Scroll - Match Sidebar Height */}
-            <div className="flex-1 overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-primary" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
-              {/* Products Grid */}
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                    : "space-y-4"
-                }
-              >
+            {/* Products Grid */}
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "space-y-4"
+              }
+            >
               {products.map((product) =>
                 viewMode === "grid" ? (
                   // Grid View
@@ -414,14 +548,14 @@ export default function ProductsPage() {
                   >
                     <div className="relative h-48">
                       <Image
-                        src={product.image}
+                        src={product.images[0]}
                         alt={product.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      {product.discount > 0 && (
+                      {product.discount && product.discount.percentage > 0 && (
                         <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-                          -{product.discount}%
+                          -{product.discount.percentage}%
                         </Badge>
                       )}
                       {product.stock < 50 && product.stock > 0 && (
@@ -440,7 +574,7 @@ export default function ProductsPage() {
                       <div className="flex items-center gap-1 mb-3">
                         <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                         <span className="text-sm font-medium text-gray-900">
-                          {product.rating}
+                          {product.rating.average}
                         </span>
                         <span className="text-xs text-gray-500">
                           ({product.sold} terjual)
@@ -463,9 +597,11 @@ export default function ProductsPage() {
                           <ShoppingCart className="h-4 w-4 mr-1" />
                           Keranjang
                         </Button>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/products/${product.slug}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </Card>
@@ -478,14 +614,14 @@ export default function ProductsPage() {
                     <div className="flex gap-4 p-4">
                       <div className="relative w-32 h-32 flex-shrink-0">
                         <Image
-                          src={product.image}
+                          src={product.images[0]}
                           alt={product.name}
                           fill
                           className="object-cover rounded-lg"
                         />
-                        {product.discount > 0 && (
+                        {product.discount && product.discount.percentage > 0 && (
                           <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-                            -{product.discount}%
+                            -{product.discount.percentage}%
                           </Badge>
                         )}
                       </div>
@@ -501,7 +637,7 @@ export default function ProductsPage() {
                             <div className="flex items-center gap-1 mb-2">
                               <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                               <span className="text-sm font-medium text-gray-900">
-                                {product.rating}
+                                {product.rating.average}
                               </span>
                               <span className="text-xs text-gray-500">
                                 ({product.sold} terjual)
@@ -523,7 +659,7 @@ export default function ProductsPage() {
                               )}
                             </div>
                             <p className="text-xs text-gray-500">
-                              Stok: {product.stock} pcs
+                              Stok: {product.stock} {product.unit.toLowerCase()}
                             </p>
                           </div>
                         </div>
@@ -532,19 +668,19 @@ export default function ProductsPage() {
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Tambah ke Keranjang
                           </Button>
-                          <Button variant="outline" size="sm">
-                            Lihat Detail
-                          </Button>
+                          <Link href={`/products/${product.slug}`}>
+                            <Button variant="outline" size="sm">
+                              Lihat Detail
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </div>
                   </Card>
                 )
               )}
-              </div>
-              {/* End Products Grid */}
             </div>
-            {/* End Products Container */}
+            {/* End Products Grid */}
 
             {/* Pagination */}
             <div className="mt-6 flex items-center justify-center gap-2">

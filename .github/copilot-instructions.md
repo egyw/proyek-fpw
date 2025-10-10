@@ -71,6 +71,137 @@ npm run build        # Production build
 npm run lint         # Run ESLint
 ```
 
+### Frontend Development with Dummy Data (Current Phase)
+**Project is currently using dummy/mock data** - Database not yet integrated.
+
+**When creating frontend pages/components:**
+1. **Use dummy data arrays** - Create mock data inline or in separate constants
+2. **Add clear TODO comments** - Mark where backend integration is needed
+3. **Structure for easy backend swap** - Design components to easily replace dummy data with tRPC hooks
+4. **Comment pattern for AI assistance**:
+   ```typescript
+   // TODO: Replace with tRPC query
+   // Expected API: trpc.products.getAll.useQuery()
+   // Input: { categoryId?: number, search?: string }
+   // Output: Product[]
+   const dummyProducts: Product[] = [
+     { 
+       id: 1, 
+       name: "Product 1", 
+       price: 100000, 
+       originalPrice: 120000,
+       discount: { percentage: 15, validUntil: "2025-12-31" },
+       stock: 50, 
+       images: ["/images/dummy_image.jpg"],
+       rating: { average: 4.5, count: 128 },
+       sold: 245,
+       category: "Category Name",
+       // ... other fields
+     },
+   ];
+   ```
+
+**Backend Integration Pattern** (for future AI agents):
+```typescript
+// BEFORE (dummy data):
+const products = dummyProducts;
+
+// AFTER (with backend):
+const { data: products, isLoading } = trpc.products.getAll.useQuery({ categoryId: 1 });
+if (isLoading) return <Spinner />;
+```
+
+**Key principles:**
+- Keep data structure consistent (same fields/types for dummy and real data)
+- Use TypeScript interfaces for data shapes (even for dummy data)
+- Comment expected tRPC procedure names and input/output schemas
+- Design UI to handle loading states (even if not used with dummy data)
+
+### Product Data Structure
+**Complete product schema** for consistent dummy data across the project:
+
+```typescript
+interface Product {
+  id: string;                    // MongoDB ObjectId or unique identifier
+  name: string;                  // Product name
+  slug: string;                  // URL-friendly name (e.g., "buana-tangki-air-650")
+  category: string;              // Category name
+  brand: string;                 // Brand name
+  unit: string;                  // Unit (e.g., "SET", "PCS", "M2")
+  
+  // Pricing
+  price: number;                 // Current selling price (after discount)
+  originalPrice?: number;        // Original price (before discount)
+  discount?: {
+    percentage: number;          // Discount percentage (0-100)
+    validUntil: string;          // ISO date string
+  };
+  
+  // Stock
+  stock: number;                 // Available stock quantity
+  minStock?: number;             // Minimum stock for restock alert
+  
+  // Media
+  images: string[];              // Array of image URLs/paths
+  
+  // Description
+  description: string;           // Product description
+  
+  // Rating & Social Proof
+  rating: {
+    average: number;             // Average rating (0-5)
+    count: number;               // Number of reviews
+  };
+  sold: number;                  // Total units sold
+  views?: number;                // Product page views
+  
+  // Attributes (product specifications)
+  attributes?: Record<string, string>; // e.g., { material: "Plastik HDPE", capacity: "650L" }
+  
+  // Status
+  isActive: boolean;             // Product visibility
+  isFeatured?: boolean;          // Featured product flag
+  
+  // Timestamps
+  createdAt: string;             // ISO date string
+  updatedAt: string;             // ISO date string
+}
+```
+
+**Example dummy product:**
+```typescript
+{
+  id: "68b8340ed2788dc4d9e608b5",
+  name: "Buana Tangki Air Plastik 650 LTR",
+  slug: "buana-tangki-air-plastik-650-ltr",
+  category: "Tangki Air",
+  brand: "Buana",
+  unit: "SET",
+  price: 552500,
+  originalPrice: 650000,
+  discount: { percentage: 15, validUntil: "2025-12-31T23:59:59Z" },
+  stock: 150,
+  minStock: 10,
+  images: ["/images/products/tangki-air-1.jpg", "/images/products/tangki-air-2.jpg"],
+  description: "Tangki air plastik merek Buana kapasitas 650 liter.",
+  rating: { average: 4.5, count: 128 },
+  sold: 245,
+  views: 1250,
+  attributes: { material: "Plastik HDPE", capacity: "650 Liter", color: "Biru" },
+  isActive: true,
+  isFeatured: false,
+  createdAt: "2025-04-01T00:00:00Z",
+  updatedAt: "2025-04-01T00:00:00Z"
+}
+```
+
+**Important notes:**
+- Always use this complete structure for product dummy data
+- UI can display subset of fields (don't clutter interface)
+- Price = final price after discount (originalPrice optional for comparison)
+- Images should be array even if single image
+- Rating & sold are key for social proof
+
 ### Adding New Features
 1. **API**: Add procedure to `src/server/routers/_app.ts` with Zod input validation
 2. **Page**: Create file in `src/pages/` (no registration needed)
