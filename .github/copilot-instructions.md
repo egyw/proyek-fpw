@@ -518,6 +518,576 @@ export default function SalesReportPage() {
 - ✅ Individual route access with breadcrumb navigation
 - ✅ Easy to add new reports (create component, import in both places)
 
+### Admin Orders Management
+**Location**: `src/pages/admin/orders/index.tsx`
+
+**Purpose**: Complete order management system for admin to process, ship, and track customer orders.
+
+**Key Features**:
+- **4 Stats Cards** with Lucide icons:
+  - Perlu Diproses (Paid - blue, ShoppingCart icon) - Orders that need to be processed
+  - Sedang Diproses (Processing - yellow, Package icon) - Orders being prepared
+  - Dalam Pengiriman (Shipped - purple, Truck icon) - Orders in delivery
+  - Selesai (Completed - green, CheckCircle icon) - Completed orders
+- **Filters**: Search input (order number/customer/phone) + Status Select dropdown
+- **Orders Table**: 7 columns (No Order, Customer, Tanggal, Items, Total, Status badge, Actions)
+- **Dynamic Action Buttons** based on order status:
+  - Paid → "Proses" button (Eye icon for View + Ban for Cancel)
+  - Processing → "Kirim" button (Eye + Ban)
+  - Shipped/Delivered/Completed/Cancelled → View only
+- **5 Dialog Types**:
+
+**1. View Detail Dialog** (Read-only, max-w-3xl):
+```tsx
+// Full order information display
+- Customer: name, phone, email
+- Shipping Address: full address with city, province, postal
+- Order Items: table with qty × price = subtotal
+- Totals: subtotal + shipping = total
+- Payment Method info
+- Shipping Info (if shipped): courier, tracking number, date
+- Cancel Reason (if cancelled)
+```
+
+**2. Process Order Dialog** (Confirmation):
+```tsx
+// Simple confirmation to change paid → processing
+<DialogContent className="max-w-md">
+  <p>Apakah Anda yakin ingin memproses pesanan ini?</p>
+  <Button onClick={handleProcess}>Ya, Proses</Button>
+</DialogContent>
+```
+
+**3. Ship Order Dialog** (Form with validation):
+```tsx
+// IMPORTANT: Form fields have space-y-2 for proper label-input spacing
+<div className="space-y-4">
+  <div className="space-y-2"> {/* Label-input gap */}
+    <Label>Ekspedisi</Label>
+    <Select> {/* JNE, J&T, SiCepat, Anteraja, IDExpress, Ninja */}
+      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="jne">JNE</SelectItem>
+        ...
+      </SelectContent>
+    </Select>
+  </div>
+  <div className="space-y-2">
+    <Label>Nomor Resi</Label>
+    <Input placeholder="Contoh: JNE1234567890" />
+  </div>
+  <div className="space-y-2">
+    <Label>Tanggal Kirim</Label>
+    <Input type="date" />
+  </div>
+</div>
+// Button disabled until all fields filled
+<Button disabled={!courier || !trackingNumber || !shippingDate}>
+  <Send className="mr-2 h-4 w-4" />
+  Kirim Pesanan
+</Button>
+```
+
+**4. Cancel Order Dialog** (Textarea validation):
+```tsx
+// Textarea for cancel reason with validation
+<div className="space-y-2"> {/* Label-textarea gap */}
+  <Label>Alasan Pembatalan</Label>
+  <Textarea 
+    rows={4}
+    value={cancelReason}
+    onChange={(e) => setCancelReason(e.target.value)}
+    placeholder="Masukkan alasan pembatalan pesanan..."
+  />
+</div>
+// Button disabled if reason empty
+<Button disabled={!cancelReason.trim()}>
+  <Ban className="mr-2 h-4 w-4" />
+  Batalkan Pesanan
+</Button>
+```
+
+**Order Interface** (18 fields):
+```typescript
+interface Order {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  orderDate: string; // ISO date string
+  status: "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  shippingAddress: {
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+  };
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  paymentMethod: string;
+  discount?: { amount: number; code: string };
+  shippingInfo?: {
+    courier: string;
+    trackingNumber: string;
+    shippedDate: string;
+  };
+  cancelReason?: string;
+  notes?: string;
+}
+```
+
+**Status Configuration**:
+```typescript
+const statusConfig = {
+  paid: { label: "Perlu Diproses", color: "bg-blue-500", icon: ShoppingCart },
+  processing: { label: "Sedang Diproses", color: "bg-yellow-500", icon: Package },
+  shipped: { label: "Dalam Pengiriman", color: "bg-purple-500", icon: Truck },
+  delivered: { label: "Terkirim", color: "bg-indigo-500", icon: CheckCircle },
+  completed: { label: "Selesai", color: "bg-green-500", icon: CheckCircle },
+  cancelled: { label: "Dibatalkan", color: "bg-red-500", icon: XCircle },
+};
+```
+
+**Important Patterns**:
+- **Form Spacing**: ALWAYS use `space-y-2` in form field containers for 8px gap between label and input/select/textarea
+- **Shadcn Components**: Dialog, Select, Input, Textarea, Badge, Table, Button (NO HTML primitives)
+- **Button States**: Disable buttons until validation passes (courier + trackingNumber + date OR cancelReason)
+- **Status-Based UI**: Show/hide action buttons based on order status
+- **TODO Comments**: Ready for tRPC mutations (`updateOrderStatus`, `shipOrder`, `cancelOrder`)
+
+### Admin Inventory Stock Movements
+**Location**: `src/pages/admin/inventory/index.tsx`
+
+**Purpose**: Track automatic stock movements (IN/OUT) from transactions without manual stock entry.
+
+**Key Features**:
+- **3 Stats Cards** with Lucide icons:
+  - Total Masuk (green, ArrowUpCircle) - Sum of all stock IN movements
+  - Total Keluar (red, ArrowDownCircle) - Sum of all stock OUT movements
+  - Saldo Stok (blue, Package) - Net stock (IN - OUT)
+- **Info Alert** at top:
+  ```tsx
+  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+    <p className="text-sm text-blue-800">
+      <strong>ℹ️ Info:</strong> Pergerakan stok dicatat otomatis dari transaksi...
+    </p>
+  </div>
+  ```
+- **Filters**: 
+  - Search input (product name/code)
+  - Type Select (Semua, Masuk, Keluar)
+  - Date Input (type="date")
+- **Movements Table**: 9 columns
+  - Tanggal (formatted date)
+  - Kode Produk
+  - Nama Produk
+  - Tipe (Badge: Masuk=green, Keluar=red)
+  - Jumlah (number)
+  - Satuan (unit)
+  - Ref (transaction reference)
+  - Keterangan (description)
+  - Saldo (current balance after movement)
+
+**Movement Interface**:
+```typescript
+interface StockMovement {
+  id: string;
+  date: string; // ISO date
+  productCode: string;
+  productName: string;
+  type: "in" | "out";
+  quantity: number;
+  unit: string;
+  reference: string; // e.g., "PO-2025-001", "INV-2025-123"
+  description: string;
+  balance: number; // Stock balance after this movement
+}
+```
+
+**Important Notes**:
+- **Automatic Recording**: Stock movements are NOT manually entered, they are generated from:
+  - Stock IN → Purchase orders, returns from customers
+  - Stock OUT → Sales orders, damaged/lost items
+- **Read-Only Table**: No add/edit/delete actions (movements auto-created)
+- **Route**: `/admin/inventory` (using index.tsx, NOT stock-movements.tsx)
+- **AdminLayout Menu**: Icon 📋 between Pesanan and Pelanggan
+
+### Admin Product Add Form
+**Location**: `src/pages/admin/products/index.tsx`
+
+**Purpose**: Comprehensive form to add new products with complete validation using react-hook-form + Zod.
+
+**Dialog Configuration**:
+- Size: `max-w-5xl` (1024px wide) + `max-h-95vh` (95% viewport height)
+- Title: `text-2xl` for prominence
+- Form: `space-y-8` for generous section separation
+
+**Form Structure** (4 Sections with Visual Hierarchy):
+
+**Section 1: Informasi Produk** (`space-y-5`, header with `border-b pb-2`):
+```tsx
+<div className="space-y-5">
+  <h3 className="text-lg font-semibold border-b pb-2">Informasi Produk</h3>
+  
+  {/* Nama Produk */}
+  <FormField name="name" render={...}>
+    <Input placeholder="Contoh: Semen Gresik 50kg" />
+  </FormField>
+  
+  {/* Kategori + Brand (Grid 2 columns) */}
+  <div className="grid grid-cols-2 gap-4">
+    <FormField name="category" render={...}>
+      <Select> {/* 8 options: Semen, Besi, Cat, Pipa, Keramik, Kayu, Atap, Lainnya */}
+    </FormField>
+    <FormField name="brand" render={...}>
+      <Input placeholder="Contoh: Gresik" />
+    </FormField>
+  </div>
+  
+  {/* Deskripsi */}
+  <FormField name="description" render={...}>
+    <Textarea rows={4} placeholder="Deskripsi produk..." />
+  </FormField>
+</div>
+```
+
+**Section 2: Harga & Stok** (`space-y-5`, `pt-6 border-t`, header with `border-b pb-2`):
+```tsx
+<div className="space-y-5 pt-6 border-t">
+  <h3 className="text-lg font-semibold border-b pb-2">Harga & Stok</h3>
+  
+  {/* Harga Jual + Harga Asli (Grid 2) */}
+  <div className="grid grid-cols-2 gap-4">
+    <FormField name="price" render={...}>
+      <Input type="number" placeholder="100000" />
+      <FormDescription>Harga jual saat ini</FormDescription>
+    </FormField>
+    <FormField name="originalPrice" render={...}>
+      <Input type="number" placeholder="120000" />
+      <FormDescription>Harga sebelum diskon (opsional)</FormDescription>
+    </FormField>
+  </div>
+  
+  {/* Satuan + Stok + Stok Min (Grid 3) */}
+  <div className="grid grid-cols-3 gap-4">
+    <FormField name="unit" render={...}>
+      <Select> {/* 10 options: PCS, SET, SAK, ZAK, TON, KG, LITER, M2, M3, BOX */}
+    </FormField>
+    <FormField name="stock" render={...}>
+      <Input type="number" placeholder="0" />
+    </FormField>
+    <FormField name="minStock" render={...}>
+      <Input type="number" placeholder="10" />
+      <FormDescription>Untuk alert stok rendah</FormDescription>
+    </FormField>
+  </div>
+  
+  {/* Diskon */}
+  <FormField name="discount" render={...}>
+    <Input type="number" placeholder="15" />
+    <FormDescription>Persentase diskon (0-100)</FormDescription>
+  </FormField>
+</div>
+```
+
+**Section 3: Gambar Produk** (`space-y-5`, `pt-6 border-t`, header with `border-b pb-2`):
+```tsx
+<div className="space-y-5 pt-6 border-t">
+  <h3 className="text-lg font-semibold border-b pb-2">Gambar Produk</h3>
+  
+  <div className="border-2 border-dashed rounded-lg p-6">
+    {imagePreview ? (
+      <div className="space-y-4">
+        <Image src={imagePreview} alt="Preview" width={200} height={200} />
+        <Button type="button" variant="outline" onClick={removeImage}>
+          Hapus Gambar
+        </Button>
+      </div>
+    ) : (
+      <label className="flex flex-col items-center cursor-pointer">
+        <Upload className="h-12 w-12 text-gray-400 mb-2" />
+        <p className="text-sm text-gray-600">Klik untuk upload gambar</p>
+        <Input 
+          type="file" 
+          accept="image/*" 
+          className="hidden" 
+          onChange={handleImageChange} 
+        />
+      </label>
+    )}
+  </div>
+</div>
+```
+
+**Section 4: Status Produk** (`space-y-5`, `pt-6 border-t`, header with `border-b pb-2`):
+```tsx
+<div className="space-y-5 pt-6 border-t">
+  <h3 className="text-lg font-semibold border-b pb-2">Status Produk</h3>
+  
+  {/* isActive Checkbox */}
+  <FormField name="isActive" render={({ field }) => (
+    <FormItem className="flex items-start space-x-3">
+      <FormControl>
+        <Checkbox 
+          checked={field.value} 
+          onCheckedChange={field.onChange} 
+        />
+      </FormControl>
+      <div className="space-y-1">
+        <FormLabel>Produk Aktif</FormLabel>
+        <FormDescription>Produk akan ditampilkan di katalog</FormDescription>
+      </div>
+    </FormItem>
+  )} />
+  
+  {/* isFeatured Checkbox */}
+  <FormField name="isFeatured" render={({ field }) => (
+    <FormItem className="flex items-start space-x-3">
+      <FormControl>
+        <Checkbox 
+          checked={field.value} 
+          onCheckedChange={field.onChange} 
+        />
+      </FormControl>
+      <div className="space-y-1">
+        <FormLabel>Produk Unggulan</FormLabel>
+        <FormDescription>Tampilkan di section featured products</FormDescription>
+      </div>
+    </FormItem>
+  )} />
+</div>
+```
+
+**Zod Validation Schema**:
+```typescript
+const productSchema = z.object({
+  name: z.string().min(3, "Nama produk minimal 3 karakter"),
+  category: z.string().min(1, "Kategori harus dipilih"),
+  brand: z.string().min(1, "Brand harus diisi"),
+  unit: z.string().min(1, "Satuan harus dipilih"),
+  price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    message: "Harga harus lebih dari 0",
+  }),
+  originalPrice: z.string().optional(),
+  stock: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+    message: "Stok tidak boleh negatif",
+  }),
+  minStock: z.string().optional(),
+  description: z.string().min(10, "Deskripsi minimal 10 karakter"),
+  discount: z.string().optional(),
+  isActive: z.boolean(),
+  isFeatured: z.boolean(),
+});
+```
+
+**Image Upload Handler**:
+```typescript
+const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+};
+```
+
+**Critical Patterns**:
+- **MUST use react-hook-form + Zod** for complex forms (12+ fields)
+- **Shadcn Checkbox**: Use `<Checkbox checked={value} onCheckedChange={onChange} />` (NOT HTML `<input type="checkbox">`)
+- **Checkbox Layout**: `flex items-start space-x-3` with label and description in separate div
+- **Section Spacing**: `space-y-8` for form, `space-y-5` for sections, `pt-6 border-t` for visual separation
+- **Section Headers**: `text-lg font-semibold border-b pb-2` for clear hierarchy
+- **Grid Layouts**: `grid-cols-2` for related pairs, `grid-cols-3` for stock fields
+- **FormDescription**: Use for hints and optional field notes
+- **Dialog Size**: Use `max-w-5xl` for forms with 12+ fields (NOT max-w-3xl)
+- **Image Preview**: FileReader + base64 for client-side preview before upload
+- **TODO Comment**: Ready for tRPC mutation to create product
+
+**Important for AI Agents**:
+- When creating complex CRUD forms, ALWAYS follow this pattern (sections, spacing, validation)
+- Check shadcn component availability BEFORE using HTML primitives (input, select, checkbox)
+- For forms with 12+ fields, dialog MUST be max-w-5xl or larger
+- Section headers with border-b improve visual hierarchy significantly
+
+### Admin Customers Management
+**Location**: `src/pages/admin/customers/index.tsx`
+
+**Purpose**: Manage customer data, view customer information, and track customer activity.
+
+**Key Features**:
+- **4 Stats Cards** with Lucide icons:
+  - Total Pelanggan (blue, UserCheck) - Total number of customers
+  - Pelanggan Aktif (green, UserCheck) - Active customers who made recent orders
+  - Pelanggan Tidak Aktif (gray, UserX) - Inactive customers
+  - Total Revenue (orange, ShoppingBag) - Total revenue from all customers
+- **Filters**:
+  - Search Input (Search icon) - Search by name, email, or phone number
+  - Status Select - Filter: Semua Status / Aktif / Tidak Aktif
+- **Customers Table**: 7 columns
+  - Nama (name + city)
+  - Kontak (email + phone)
+  - Tgl Registrasi (registration date)
+  - Total Pesanan (total orders with ShoppingBag icon)
+  - Total Belanja (total spent in currency format)
+  - Status (Badge: Aktif=green, Tidak Aktif=gray)
+  - Aksi (View Detail button with Eye icon)
+
+**View Detail Dialog** (max-w-2xl):
+Three sections with full customer information:
+
+**1. Informasi Pelanggan** (Grid 2 columns):
+```tsx
+<div className="grid grid-cols-2 gap-4">
+  <div>
+    <p className="text-sm text-gray-600 mb-1">Nama Lengkap</p>
+    <p className="font-medium text-gray-900">{customer.name}</p>
+  </div>
+  <div>
+    <p className="text-sm text-gray-600 mb-1">Status</p>
+    <Badge className="bg-green-100 text-green-800">Aktif</Badge>
+  </div>
+  <div>
+    <p className="text-sm text-gray-600 mb-1">Email</p>
+    <p className="text-gray-900">{customer.email}</p>
+  </div>
+  <div>
+    <p className="text-sm text-gray-600 mb-1">Nomor Telepon</p>
+    <p className="text-gray-900">{customer.phone}</p>
+  </div>
+</div>
+```
+
+**2. Alamat Pengiriman**:
+```tsx
+<div>
+  <p className="text-gray-900">{customer.address.street}</p>
+  <p className="text-gray-900">{customer.address.city}, {customer.address.province}</p>
+  <p className="text-gray-900">{customer.address.postalCode}</p>
+</div>
+```
+
+**3. Statistik Pesanan** (Grid 2×2, colored cards):
+```tsx
+<div className="grid grid-cols-2 gap-4">
+  {/* Total Pesanan - Blue */}
+  <div className="bg-blue-50 p-4 rounded-lg">
+    <div className="flex items-center gap-2 mb-2">
+      <ShoppingBag className="h-5 w-5 text-blue-600" />
+      <p className="text-sm text-blue-600 font-medium">Total Pesanan</p>
+    </div>
+    <p className="text-2xl font-bold text-blue-900">{customer.totalOrders}</p>
+  </div>
+  
+  {/* Total Belanja - Green */}
+  <div className="bg-green-50 p-4 rounded-lg">
+    <div className="flex items-center gap-2 mb-2">
+      <ShoppingBag className="h-5 w-5 text-green-600" />
+      <p className="text-sm text-green-600 font-medium">Total Belanja</p>
+    </div>
+    <p className="text-2xl font-bold text-green-900">{formatCurrency(totalSpent)}</p>
+  </div>
+  
+  {/* Tgl Registrasi - Purple */}
+  <div className="bg-purple-50 p-4 rounded-lg">
+    <div className="flex items-center gap-2 mb-2">
+      <Calendar className="h-5 w-5 text-purple-600" />
+      <p className="text-sm text-purple-600 font-medium">Tgl Registrasi</p>
+    </div>
+    <p className="text-sm font-medium text-purple-900">{formatDate(registeredDate)}</p>
+  </div>
+  
+  {/* Pesanan Terakhir - Orange */}
+  <div className="bg-orange-50 p-4 rounded-lg">
+    <div className="flex items-center gap-2 mb-2">
+      <Calendar className="h-5 w-5 text-orange-600" />
+      <p className="text-sm text-orange-600 font-medium">Pesanan Terakhir</p>
+    </div>
+    <p className="text-sm font-medium text-orange-900">
+      {lastOrderDate ? formatDate(lastOrderDate) : "Belum ada pesanan"}
+    </p>
+  </div>
+</div>
+```
+
+**Customer Interface** (9 fields):
+```typescript
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  registeredDate: string; // ISO date
+  totalOrders: number;
+  totalSpent: number;
+  status: "active" | "inactive";
+  address: {
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+  };
+  lastOrderDate?: string; // ISO date, optional
+}
+```
+
+**Helper Functions**:
+```typescript
+// Format date to Indonesian locale
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+// Format currency to IDR
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount);
+};
+```
+
+**Important Patterns**:
+- **Lucide Icons Only**: UserCheck, UserX, ShoppingBag, Calendar, Search, Eye (NO emoji)
+- **Shadcn Components**: Table, Dialog, Badge, Card, Button, Input, Select (NO HTML primitives)
+- **Status Logic**: Active = has recent orders, Inactive = no orders or old orders
+- **Search Filtering**: Case-insensitive search across name, email, and phone
+- **Status Filtering**: Filter by all/active/inactive status
+- **Empty State**: Show message when no customers found after filtering
+- **Color Coding**: Blue (total), Green (active), Gray (inactive), Orange (revenue)
+- **Stats Calculation**: Calculate totals dynamically from customer data
+- **TODO Comment**: Ready for tRPC query (`trpc.customers.getAll.useQuery()`)
+
+**Dialog Pattern**:
+- Size: `max-w-2xl` for customer detail view (not too wide)
+- Three distinct sections with headers (`border-b pb-2`)
+- Grid layouts for organized information display
+- Colored stat cards for visual appeal
+- Single action button: "Tutup" (Close)
+
+**Important for AI Agents**:
+- When showing customer statistics, always use colored cards with icons
+- Format currency with IDR locale (Intl.NumberFormat)
+- Format dates with Indonesian locale (id-ID)
+- Handle optional fields (lastOrderDate) with fallback text
+- Use Lucide icons consistently (NO emoji icons in admin pages)
+
 ## Critical Rules
 
 1. **Never create App Router files** - This is Pages Router only (no `app/` directory)

@@ -52,12 +52,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       active: router.pathname.startsWith("/admin/customers"),
     },
     {
-      title: "Kategori",
-      icon: "🏷️",
-      href: "/admin/categories",
-      active: router.pathname.startsWith("/admin/categories"),
-    },
-    {
       title: "Laporan",
       icon: "📈",
       href: "/admin/reports",
