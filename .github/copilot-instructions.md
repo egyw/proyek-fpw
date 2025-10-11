@@ -28,7 +28,7 @@ export const appRouter = router({
 ### UI Components (shadcn/ui)
 - Install via: `npx shadcn@latest add <component>` (use `cmd /c` on Windows if PowerShell blocks)
 - Location: `src/components/ui/`
-- **Installed components**: button, input, label, card, badge, separator, form, carousel, table, dropdown-menu, avatar, select, dialog, sheet
+- **Installed components**: button, input, label, card, badge, separator, form, carousel, table, dropdown-menu, avatar, select, dialog, sheet, tabs, textarea
 - **Always prefer shadcn components first** - Install missing shadcn components before creating custom ones
 - **DO NOT use HTML elements** when shadcn equivalent exists:
   - ❌ `<table>` → ✅ Use shadcn `<Table>` component
@@ -369,6 +369,155 @@ export default function AdminPage() {
 }
 ```
 
+### Orders Page Pattern
+**Location**: `src/pages/orders/index.tsx`
+
+**Features Implemented**:
+- Filter by status (Select dropdown): all, processing, shipping, delivered, completed
+- Order cards with expand/collapse (show 1 item by default, Button to show more)
+- Return request Dialog with Textarea for reason input, validation (disabled if empty)
+- Rating Dialog with 5 Star buttons (Button variant ghost), shows existing rating
+- All shadcn components (verified no HTML primitives)
+
+**Key Implementation**:
+```tsx
+// Expand/Collapse Orders
+const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+const toggleExpand = (orderId: string) => {
+  const newExpanded = new Set(expandedOrders);
+  if (newExpanded.has(orderId)) {
+    newExpanded.delete(orderId);
+  } else {
+    newExpanded.add(orderId);
+  }
+  setExpandedOrders(newExpanded);
+};
+
+// Show only 1 item by default
+{expandedOrders.has(order.id) ? order.items : order.items.slice(0, 1)}
+```
+
+**Return Request Dialog**:
+```tsx
+const [returnReason, setReturnReason] = useState("");
+<Dialog>
+  <DialogContent>
+    <Textarea 
+      value={returnReason}
+      onChange={(e) => setReturnReason(e.target.value)}
+    />
+    <Button disabled={!returnReason.trim()}>Ajukan Pengembalian</Button>
+  </DialogContent>
+</Dialog>
+```
+
+**Rating System**:
+```tsx
+// 5 star buttons with active state
+{[1, 2, 3, 4, 5].map((star) => (
+  <Button
+    key={star}
+    variant="ghost"
+    size="sm"
+    onClick={() => handleRate(star)}
+  >
+    <Star className={`h-5 w-5 ${star <= selectedRating ? 'fill-yellow-400' : ''}`} />
+  </Button>
+))}
+```
+
+### Admin Reports System
+**Location**: `src/pages/admin/reports/`
+
+**Architecture** - Hybrid Tabs + Components:
+- **Main Hub** (`index.tsx`): Tabs navigation with 10 report tabs
+- **Reusable Components** (`src/components/reports/`):
+  - `SalesReportContent.tsx` - Full sales report with Recharts
+  - `PlaceholderReport.tsx` - Coming Soon component for未实现 reports
+- **Individual Routes**: Each report accessible via standalone route + breadcrumb
+
+**File Structure**:
+```
+src/
+├── components/
+│   └── reports/
+│       ├── SalesReportContent.tsx    (full sales report)
+│       └── PlaceholderReport.tsx     (reusable placeholder)
+└── pages/
+    └── admin/
+        └── reports/
+            ├── index.tsx             (tabs navigation hub)
+            ├── sales.tsx             (Laporan Penjualan - completed)
+            ├── report2.tsx           (Laporan 2 - placeholder)
+            ├── report3.tsx           (Laporan 3 - placeholder)
+            ... (report4 - report10)
+```
+
+**Tabs Navigation** (`index.tsx`):
+```tsx
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SalesReportContent from "@/components/reports/SalesReportContent";
+import PlaceholderReport from "@/components/reports/PlaceholderReport";
+
+<Tabs defaultValue="sales">
+  <TabsList>
+    <TabsTrigger value="sales">Laporan Penjualan</TabsTrigger>
+    <TabsTrigger value="report2">Laporan 2</TabsTrigger>
+    ...
+  </TabsList>
+  <TabsContent value="sales">
+    <SalesReportContent />
+  </TabsContent>
+  <TabsContent value="report2">
+    <PlaceholderReport title="Laporan 2" description="..." />
+  </TabsContent>
+</Tabs>
+```
+
+**Sales Report Features** (`SalesReportContent.tsx`):
+- 3 Stats cards with icons: Total Revenue (TrendingUp/Down), Total Orders, Products Sold
+- Interactive Recharts: LineChart/BarChart toggle via Select
+- Year filter (2025, 2024, 2023) with Select
+- CustomTooltip component for chart hover details
+- Export buttons (PDF, Excel - ready for backend)
+- All using shadcn components (Card, Button, Select) + Recharts + Lucide icons
+
+**Placeholder Component** (`PlaceholderReport.tsx`):
+```tsx
+interface PlaceholderReportProps {
+  title: string;        // e.g., "Laporan 2"
+  description: string;  // e.g., "Konten laporan 2 sedang dalam pengembangan"
+}
+// Shows: Package icon, "Coming Soon" heading, description, info box, disabled button
+```
+
+**Individual Routes Pattern**:
+```tsx
+// src/pages/admin/reports/sales.tsx
+export default function SalesReportPage() {
+  return (
+    <AdminLayout>
+      {/* Breadcrumb with ChevronLeft */}
+      <Link href="/admin/reports">← Kembali ke Laporan</Link>
+      {/* Import same component used in tabs */}
+      <SalesReportContent />
+    </AdminLayout>
+  );
+}
+```
+
+**Report Naming Convention**:
+- **Laporan Penjualan** (sales.tsx) - Specific, completed report
+- **Laporan 2-10** (report2.tsx - report10.tsx) - Generic placeholders
+- Use generic names for未确定 reports for flexibility
+
+**Benefits of Hybrid Approach**:
+- ✅ Tabs UI for best UX (quick navigation between reports)
+- ✅ Component reusability (1 component for tabs + standalone route)
+- ✅ No code duplication (DRY principle)
+- ✅ Individual route access with breadcrumb navigation
+- ✅ Easy to add new reports (create component, import in both places)
+
 ## Critical Rules
 
 1. **Never create App Router files** - This is Pages Router only (no `app/` directory)
@@ -493,6 +642,7 @@ const form = useForm({ ... }); // Overkill for real-time input
 - **Zod**: Schema validation for tRPC inputs
 - **Radix UI**: Accessible primitives for shadcn components
 - **Lucide React**: Professional SVG icon library (1000+ icons)
+- **Recharts**: React charting library for data visualization (LineChart, BarChart, etc.)
 
 ## Testing & Debugging
 - No test framework configured yet
