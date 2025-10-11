@@ -40,6 +40,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       active: router.pathname.startsWith("/admin/orders"),
     },
     {
+      title: "Inventory",
+      icon: "📋",
+      href: "/admin/inventory",
+      active: router.pathname.startsWith("/admin/inventory"),
+    },
+    {
       title: "Pelanggan",
       icon: "👥",
       href: "/admin/customers",

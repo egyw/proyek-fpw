@@ -1,3 +1,4 @@
+import { useState } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,94 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import Image from "next/image";
+import { Plus, Upload } from "lucide-react";
+
+// Form validation schema
+const productSchema = z.object({
+  name: z.string().min(3, "Nama produk minimal 3 karakter"),
+  category: z.string().min(1, "Kategori harus dipilih"),
+  brand: z.string().min(1, "Brand harus diisi"),
+  unit: z.string().min(1, "Unit harus dipilih"),
+  price: z.string().min(1, "Harga harus diisi").refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    message: "Harga harus berupa angka positif",
+  }),
+  originalPrice: z.string().optional(),
+  stock: z.string().min(1, "Stok harus diisi").refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+    message: "Stok harus berupa angka positif atau 0",
+  }),
+  minStock: z.string().optional(),
+  description: z.string().min(10, "Deskripsi minimal 10 karakter"),
+  discount: z.string().optional(),
+  isActive: z.boolean(),
+  isFeatured: z.boolean(),
+});
+
+type ProductFormValues = z.infer<typeof productSchema>;
 
 export default function AdminProducts() {
+  const [addDialog, setAddDialog] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
+
+  // Form setup
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: "",
+      category: "",
+      brand: "",
+      unit: "",
+      price: "",
+      originalPrice: "",
+      stock: "",
+      minStock: "",
+      description: "",
+      discount: "",
+      isActive: true,
+      isFeatured: false,
+    },
+  });
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = (data: ProductFormValues) => {
+    // TODO: Call tRPC mutation to create product
+    console.log("Create product:", data);
+    setAddDialog(false);
+    form.reset();
+    setImagePreview("");
+  };
   // TODO: Replace with tRPC query
   // Expected API: trpc.products.getAll.useQuery()
   // Output: Product[]
@@ -171,8 +257,8 @@ export default function AdminProducts() {
             Manage dan update katalog produk Anda
           </p>
         </div>
-        <Button className="gap-2">
-          <span>➕</span>
+        <Button className="gap-2" onClick={() => setAddDialog(true)}>
+          <Plus className="h-4 w-4" />
           Tambah Produk Baru
         </Button>
       </div>
@@ -327,6 +413,348 @@ export default function AdminProducts() {
           </div>
         </div>
       </Card>
+
+      {/* Add Product Dialog */}
+      <Dialog open={addDialog} onOpenChange={setAddDialog}>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Tambah Produk Baru</DialogTitle>
+            <DialogDescription>
+              Lengkapi informasi produk yang akan ditambahkan ke katalog
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Product Info Section */}
+              <div className="space-y-5">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informasi Produk</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Produk *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Contoh: Semen Gresik 50kg" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Kategori *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih kategori" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Semen">Semen</SelectItem>
+                            <SelectItem value="Cat">Cat</SelectItem>
+                            <SelectItem value="Besi">Besi</SelectItem>
+                            <SelectItem value="Pipa">Pipa</SelectItem>
+                            <SelectItem value="Keramik">Keramik</SelectItem>
+                            <SelectItem value="Genteng">Genteng</SelectItem>
+                            <SelectItem value="Pasir">Pasir</SelectItem>
+                            <SelectItem value="Kayu">Kayu</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="brand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Brand *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contoh: Gresik" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deskripsi *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Deskripsi produk..." 
+                          rows={4}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Pricing Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Harga & Stok</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Harga Jual *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="65000" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>Harga dalam Rupiah</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="originalPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Harga Asli (Opsional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="80000" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>Untuk menampilkan diskon</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Satuan *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Satuan" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="PCS">PCS</SelectItem>
+                            <SelectItem value="SET">SET</SelectItem>
+                            <SelectItem value="SAK">SAK</SelectItem>
+                            <SelectItem value="BATANG">BATANG</SelectItem>
+                            <SelectItem value="LEMBAR">LEMBAR</SelectItem>
+                            <SelectItem value="M2">M2</SelectItem>
+                            <SelectItem value="M3">M3</SelectItem>
+                            <SelectItem value="KALENG">KALENG</SelectItem>
+                            <SelectItem value="GALON">GALON</SelectItem>
+                            <SelectItem value="KG">KG</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stok *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="100" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="minStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stok Min (Opsional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="10" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="discount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Diskon (Opsional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="20" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>Persentase diskon (0-100)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Image Upload Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Gambar Produk</h3>
+                
+                <div className="space-y-2">
+                  <FormLabel>Upload Gambar</FormLabel>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    {imagePreview ? (
+                      <div className="space-y-3">
+                        <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+                          <Image
+                            src={imagePreview}
+                            alt="Preview"
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setImagePreview("")}
+                        >
+                          Hapus Gambar
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="mt-2">
+                          <label htmlFor="image-upload" className="cursor-pointer">
+                            <span className="text-primary hover:underline">Upload file</span>
+                            <Input
+                              id="image-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleImageChange}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Status Produk</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Produk Aktif</FormLabel>
+                        <FormDescription>
+                          Produk akan ditampilkan di katalog
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isFeatured"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Produk Unggulan</FormLabel>
+                        <FormDescription>
+                          Tampilkan di section featured products
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setAddDialog(false);
+                    form.reset();
+                    setImagePreview("");
+                  }}
+                >
+                  Batal
+                </Button>
+                <Button type="submit">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Produk
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
