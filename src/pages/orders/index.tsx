@@ -115,7 +115,7 @@ const dummyOrders: Order[] = [
     id: "4",
     orderNumber: "ORD-2025-004",
     date: "2025-10-09",
-    status: "delivered",
+    status: "completed",
     total: 3200000,
     items: [
       {
