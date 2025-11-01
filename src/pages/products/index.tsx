@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Grid3x3,
@@ -24,303 +24,71 @@ import {
   ChevronLeft,
   RotateCcw,
 } from "lucide-react";
+import { trpc } from "@/utils/trpc";
 
 export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
+  const [hasDiscount, setHasDiscount] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Dummy data - nanti akan diganti dengan tRPC
+  const ITEMS_PER_PAGE = 20;
+
+  // Fetch products from backend using tRPC
+  const { data: productsData, isLoading } = trpc.products.getAll.useQuery({
+    category: selectedCategory || undefined,
+    search: searchQuery || undefined,
+    sortBy: sortBy || undefined,
+    minPrice: minPrice ? Number(minPrice) : undefined,
+    maxPrice: maxPrice ? Number(maxPrice) : undefined,
+    hasDiscount: hasDiscount || undefined,
+    limit: ITEMS_PER_PAGE,
+    skip: (currentPage - 1) * ITEMS_PER_PAGE,
+  });
+
+  // Extract products and total from response
+  const products = productsData?.products || [];
+  const totalProducts = productsData?.total || 0;
+  const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE);
+
+  // Reset all filters function
+  const resetAllFilters = () => {
+    setSelectedCategory("");
+    setSearchQuery("");
+    setSortBy("newest");
+    setMinPrice("");
+    setMaxPrice("");
+    setHasDiscount(false);
+    setCurrentPage(1); // Reset to page 1
+  };
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, sortBy, minPrice, maxPrice, hasDiscount]);
+
+  // Static categories from database schema
   const categories = [
-    { name: "Semua Produk", count: 1234, slug: "all" },
-    { name: "Semen", count: 156, slug: "semen" },
-    { name: "Besi", count: 234, slug: "besi" },
-    { name: "Cat", count: 189, slug: "cat" },
-    { name: "Pipa", count: 145, slug: "pipa" },
-    { name: "Keramik", count: 267, slug: "keramik" },
-    { name: "Kayu", count: 98, slug: "kayu" },
-    { name: "Atap", count: 145, slug: "atap" },
-  ];
-
-  // TODO: Replace with tRPC query
-  // Expected API: trpc.products.getAll.useQuery()
-  // Input: { categoryId?: string, search?: string, sortBy?: string, minPrice?: number, maxPrice?: number }
-  // Output: Product[]
-  const products = [
-    {
-      id: "68b8340ed2788dc4d9e608b1",
-      name: "Semen Gresik 50kg",
-      slug: "semen-gresik-50kg",
-      category: "Semen",
-      brand: "Gresik",
-      unit: "SAK",
-      price: 65000,
-      originalPrice: 81250,
-      discount: { percentage: 20, validUntil: "2025-12-31T23:59:59Z" },
-      stock: 150,
-      minStock: 20,
-      images: ["/images/dummy_image.jpg"],
-      description: "Semen Portland berkualitas tinggi untuk konstruksi bangunan.",
-      rating: { average: 4.8, count: 234 },
-      sold: 234,
-      views: 1250,
-      attributes: { type: "Portland Type I", weight: "50kg", origin: "Indonesia" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-01-15T00:00:00Z",
-      updatedAt: "2025-04-01T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b2",
-      name: "Cat Tembok Avian 5kg Putih",
-      slug: "cat-tembok-avian-5kg-putih",
-      category: "Cat",
-      brand: "Avian",
-      unit: "KALENG",
-      price: 180000,
-      originalPrice: 211765,
-      discount: { percentage: 15, validUntil: "2025-11-30T23:59:59Z" },
-      stock: 45,
-      minStock: 10,
-      images: ["/images/dummy_image.jpg"],
-      description: "Cat tembok interior premium dengan daya tutup maksimal.",
-      rating: { average: 4.7, count: 189 },
-      sold: 189,
-      views: 890,
-      attributes: { color: "Putih", weight: "5kg", coverage: "8-10 m2/kg", finish: "Matte" },
-      isActive: true,
-      isFeatured: true,
-      createdAt: "2025-02-10T00:00:00Z",
-      updatedAt: "2025-04-05T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b3",
-      name: "Besi Beton 10mm Panjang 12m",
-      slug: "besi-beton-10mm-panjang-12m",
-      category: "Besi",
-      brand: "Krakatau Steel",
-      unit: "BATANG",
-      price: 85000,
-      originalPrice: 121429,
-      discount: { percentage: 30, validUntil: "2025-10-31T23:59:59Z" },
-      stock: 8,
-      minStock: 15,
-      images: ["/images/dummy_image.jpg"],
-      description: "Besi beton SNI untuk struktur bangunan yang kuat dan tahan lama.",
-      rating: { average: 4.9, count: 156 },
-      sold: 156,
-      views: 678,
-      attributes: { diameter: "10mm", length: "12m", standard: "SNI", grade: "BjTS 420" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-01-20T00:00:00Z",
-      updatedAt: "2025-04-02T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b4",
-      name: "Keramik Platinum 40x40 Glossy",
-      slug: "keramik-platinum-40x40-glossy",
-      category: "Keramik",
-      brand: "Platinum",
-      unit: "DUS",
-      price: 42000,
-      originalPrice: 56000,
-      discount: { percentage: 25, validUntil: "2025-12-15T23:59:59Z" },
-      stock: 200,
-      minStock: 30,
-      images: ["/images/dummy_image.jpg"],
-      description: "Keramik lantai glossy dengan permukaan mengkilap dan tahan lama.",
-      rating: { average: 4.6, count: 423 },
-      sold: 423,
-      views: 2100,
-      attributes: { size: "40x40 cm", finish: "Glossy", pcs_per_box: "4", coverage: "0.64 m2/dus" },
-      isActive: true,
-      isFeatured: true,
-      createdAt: "2025-01-05T00:00:00Z",
-      updatedAt: "2025-04-08T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b5",
-      name: "Pipa PVC Rucika 3 inch",
-      slug: "pipa-pvc-rucika-3-inch",
-      category: "Pipa",
-      brand: "Rucika",
-      unit: "BATANG",
-      price: 45000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 87,
-      minStock: 20,
-      images: ["/images/dummy_image.jpg"],
-      description: "Pipa PVC berkualitas untuk instalasi air bersih dan limbah.",
-      rating: { average: 4.8, count: 298 },
-      sold: 298,
-      views: 1450,
-      attributes: { diameter: "3 inch", length: "4m", type: "AW/D", standard: "SNI" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-02-20T00:00:00Z",
-      updatedAt: "2025-04-01T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b6",
-      name: "Semen Tiga Roda 50kg",
-      slug: "semen-tiga-roda-50kg",
-      category: "Semen",
-      brand: "Tiga Roda",
-      unit: "SAK",
-      price: 62000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 180,
-      minStock: 25,
-      images: ["/images/dummy_image.jpg"],
-      description: "Semen berkualitas untuk berbagai jenis konstruksi.",
-      rating: { average: 4.7, count: 334 },
-      sold: 334,
-      views: 1680,
-      attributes: { type: "Portland Type I", weight: "50kg", origin: "Indonesia" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-01-18T00:00:00Z",
-      updatedAt: "2025-03-28T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b7",
-      name: "Genteng Metal Pasir Merah",
-      slug: "genteng-metal-pasir-merah",
-      category: "Atap",
-      brand: "Surya Roof",
-      unit: "LEMBAR",
-      price: 35000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 456,
-      minStock: 50,
-      images: ["/images/dummy_image.jpg"],
-      description: "Genteng metal anti karat dengan coating pasir berkualitas.",
-      rating: { average: 4.5, count: 567 },
-      sold: 567,
-      views: 2850,
-      attributes: { color: "Merah", material: "Metal + Coating Pasir", length: "240cm", thickness: "0.3mm" },
-      isActive: true,
-      isFeatured: true,
-      createdAt: "2025-01-10T00:00:00Z",
-      updatedAt: "2025-04-06T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b8",
-      name: "Triplek 9mm 122x244cm",
-      slug: "triplek-9mm-122x244cm",
-      category: "Kayu",
-      brand: "Surabaya Plywood",
-      unit: "LEMBAR",
-      price: 95000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 76,
-      minStock: 15,
-      images: ["/images/dummy_image.jpg"],
-      description: "Triplek berkualitas untuk furniture dan konstruksi interior.",
-      rating: { average: 4.6, count: 234 },
-      sold: 234,
-      views: 980,
-      attributes: { thickness: "9mm", size: "122x244 cm", grade: "Grade A", plies: "7 ply" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-02-05T00:00:00Z",
-      updatedAt: "2025-04-03T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b9",
-      name: "Cat Dulux 5kg Warna Custom",
-      slug: "cat-dulux-5kg-warna-custom",
-      category: "Cat",
-      brand: "Dulux",
-      unit: "KALENG",
-      price: 195000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 34,
-      minStock: 10,
-      images: ["/images/dummy_image.jpg"],
-      description: "Cat premium dengan ribuan pilihan warna custom sesuai keinginan.",
-      rating: { average: 4.9, count: 145 },
-      sold: 145,
-      views: 720,
-      attributes: { color: "Custom", weight: "5kg", coverage: "10-12 m2/kg", finish: "Satin" },
-      isActive: true,
-      isFeatured: true,
-      createdAt: "2025-02-15T00:00:00Z",
-      updatedAt: "2025-04-07T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608ba",
-      name: "Besi Hollow 4x4cm Tebal 1.2mm",
-      slug: "besi-hollow-4x4cm-tebal-1-2mm",
-      category: "Besi",
-      brand: "Gunung Garuda",
-      unit: "BATANG",
-      price: 78000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 123,
-      minStock: 20,
-      images: ["/images/dummy_image.jpg"],
-      description: "Besi hollow untuk rangka pintu, jendela, dan konstruksi ringan.",
-      rating: { average: 4.7, count: 189 },
-      sold: 189,
-      views: 890,
-      attributes: { size: "4x4 cm", thickness: "1.2mm", length: "6m", standard: "SNI" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-01-25T00:00:00Z",
-      updatedAt: "2025-04-04T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608bb",
-      name: "Keramik Roman 30x30 Motif",
-      slug: "keramik-roman-30x30-motif",
-      category: "Keramik",
-      brand: "Roman",
-      unit: "DUS",
-      price: 38000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 234,
-      minStock: 30,
-      images: ["/images/dummy_image.jpg"],
-      description: "Keramik lantai dengan motif modern untuk ruangan elegan.",
-      rating: { average: 4.6, count: 345 },
-      sold: 345,
-      views: 1450,
-      attributes: { size: "30x30 cm", finish: "Matt", pcs_per_box: "11", coverage: "0.99 m2/dus" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-01-08T00:00:00Z",
-      updatedAt: "2025-04-02T00:00:00Z",
-    },
-    {
-      id: "68b8340ed2788dc4d9e608bc",
-      name: "Pipa Wavin 2 inch AW/D",
-      slug: "pipa-wavin-2-inch-aw-d",
-      category: "Pipa",
-      brand: "Wavin",
-      unit: "BATANG",
-      price: 32000,
-      originalPrice: undefined,
-      discount: undefined,
-      stock: 156,
-      minStock: 25,
-      images: ["/images/dummy_image.jpg"],
-      description: "Pipa PVC Wavin standar SNI untuk air bersih dan limbah.",
-      rating: { average: 4.8, count: 267 },
-      sold: 267,
-      views: 1120,
-      attributes: { diameter: "2 inch", length: "4m", type: "AW/D", standard: "SNI" },
-      isActive: true,
-      isFeatured: false,
-      createdAt: "2025-02-18T00:00:00Z",
-      updatedAt: "2025-03-30T00:00:00Z",
-    },
+    { name: "Semua Produk", slug: "" },
+    { name: "Pipa", slug: "Pipa" },
+    { name: "Besi", slug: "Besi" },
+    { name: "Semen", slug: "Semen" },
+    { name: "Triplek", slug: "Triplek" },
+    { name: "Tangki Air", slug: "Tangki Air" },
+    { name: "Kawat", slug: "Kawat" },
+    { name: "Paku", slug: "Paku" },
+    { name: "Baut", slug: "Baut" },
+    { name: "Aspal", slug: "Aspal" },
   ];
 
   return (
@@ -350,8 +118,12 @@ export default function ProductsPage() {
                   {categories.map((category) => (
                     <li key={category.slug}>
                       <button
+                        onClick={() => {
+                          setSelectedCategory(category.slug);
+                          setCurrentPage(1); // Reset to page 1
+                        }}
                         className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                          category.slug === "all"
+                          selectedCategory === category.slug
                             ? "bg-primary text-white"
                             : "hover:bg-gray-100 text-gray-700"
                         }`}
@@ -359,15 +131,6 @@ export default function ProductsPage() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
                             {category.name}
-                          </span>
-                          <span
-                            className={`text-xs ${
-                              category.slug === "all"
-                                ? "text-white/80"
-                                : "text-gray-500"
-                            }`}
-                          >
-                            {category.count}
                           </span>
                         </div>
                       </button>
@@ -390,6 +153,8 @@ export default function ProductsPage() {
                       type="number"
                       placeholder="0"
                       className="w-full"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
                     />
                   </div>
                   <div>
@@ -400,39 +165,10 @@ export default function ProductsPage() {
                       type="number"
                       placeholder="1000000"
                       className="w-full"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
                     />
                   </div>
-                  <Button className="w-full" size="sm">
-                    Terapkan Filter
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Stock Status */}
-              <Card className="p-4">
-                <h3 className="font-semibold text-gray-900 mb-4">
-                  Status Stok
-                </h3>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-primary rounded"
-                      defaultChecked
-                    />
-                    <span className="text-sm text-gray-700">
-                      Tersedia (1,189)
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-primary rounded"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Pre-Order (45)
-                    </span>
-                  </label>
                 </div>
               </Card>
 
@@ -443,7 +179,9 @@ export default function ProductsPage() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      className="w-4 h-4 text-primary rounded"
+                      className="w-4 h-4 text-primary rounded cursor-pointer"
+                      checked={hasDiscount}
+                      onChange={(e) => setHasDiscount(e.target.checked)}
                     />
                     <span className="text-sm text-gray-700">
                       Produk Diskon
@@ -451,6 +189,16 @@ export default function ProductsPage() {
                   </label>
                 </div>
               </Card>
+
+              {/* Reset All Filters Button - Bottom */}
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={resetAllFilters}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset Semua Filter
+              </Button>
             </div>
           </aside>
 
@@ -474,10 +222,12 @@ export default function ProductsPage() {
                   <Input
                     placeholder="Cari produk berdasarkan nama..."
                     className="w-full pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Select defaultValue="popular">
+                  <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Urutkan" />
                     </SelectTrigger>
@@ -487,6 +237,7 @@ export default function ProductsPage() {
                       <SelectItem value="price-low">Harga Terendah</SelectItem>
                       <SelectItem value="price-high">Harga Tertinggi</SelectItem>
                       <SelectItem value="name">Nama A-Z</SelectItem>
+                      <SelectItem value="name-desc">Nama Z-A</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -520,30 +271,60 @@ export default function ProductsPage() {
             </Card>
 
             {/* Results Info */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-gray-600">
-                Menampilkan <span className="font-semibold">1-12</span> dari{" "}
-                <span className="font-semibold">1,234</span> produk
-              </p>
-              <Button variant="outline" size="sm">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset Filter
-              </Button>
-            </div>
+            {!isLoading && products && products.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  Menampilkan{" "}
+                  <span className="font-semibold">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                    {Math.min(currentPage * ITEMS_PER_PAGE, totalProducts)}
+                  </span>{" "}
+                  dari <span className="font-semibold">{totalProducts}</span> produk
+                </p>
+              </div>
+            )}
 
             {/* Products Grid */}
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "space-y-4"
-              }
-            >
-              {products.map((product) =>
-                viewMode === "grid" ? (
+            {isLoading ? (
+              // Loading skeleton
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Card key={index} className="overflow-hidden animate-pulse">
+                    <div className="h-48 bg-gray-200"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-9 bg-gray-200 rounded"></div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : !products || products.length === 0 ? (
+              // Empty state
+              <div className="text-center py-16">
+                <div className="text-gray-400 mb-4">
+                  <Search className="h-16 w-16 mx-auto" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Produk tidak ditemukan
+                </h3>
+                <p className="text-gray-600">
+                  Coba ubah filter atau kata kunci pencarian Anda
+                </p>
+              </div>
+            ) : (
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                    : "space-y-4"
+                }
+              >
+                {products.map((product) =>
+                  viewMode === "grid" ? (
                   // Grid View
                   <Card
-                    key={product.id}
+                    key={product._id.toString()}
                     className="overflow-hidden hover:shadow-lg transition-shadow group"
                   >
                     <div className="relative h-48">
@@ -558,7 +339,7 @@ export default function ProductsPage() {
                           -{product.discount.percentage}%
                         </Badge>
                       )}
-                      {product.stock < 50 && product.stock > 0 && (
+                      {product.stock < 10 && product.stock > 0 && (
                         <Badge className="absolute top-2 left-2 bg-orange-500 hover:bg-orange-600">
                           Stok Terbatas
                         </Badge>
@@ -581,16 +362,26 @@ export default function ProductsPage() {
                         </span>
                       </div>
                       <div className="mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-primary">
-                            Rp {product.price.toLocaleString("id-ID")}
-                          </span>
-                          {product.originalPrice && (
-                            <span className="text-sm text-gray-400 line-through">
-                              Rp {product.originalPrice.toLocaleString("id-ID")}
+                        {product.discount && product.discount.percentage > 0 ? (
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-500 line-through">
+                                Rp {product.price.toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-primary">
+                                Rp {(product.price * (1 - product.discount.percentage / 100)).toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold text-primary">
+                              Rp {product.price.toLocaleString("id-ID")}
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button className="flex-1" size="sm">
@@ -608,7 +399,7 @@ export default function ProductsPage() {
                 ) : (
                   // List View
                   <Card
-                    key={product.id}
+                    key={product._id.toString()}
                     className="overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     <div className="flex gap-4 p-4">
@@ -645,19 +436,26 @@ export default function ProductsPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xl font-bold text-primary">
-                                Rp {product.price.toLocaleString("id-ID")}
-                              </span>
-                              {product.originalPrice && (
-                                <span className="text-sm text-gray-400 line-through">
-                                  Rp{" "}
-                                  {product.originalPrice.toLocaleString(
-                                    "id-ID"
-                                  )}
+                            {product.discount && product.discount.percentage > 0 ? (
+                              <div>
+                                <div className="flex items-center justify-end gap-2 mb-1">
+                                  <span className="text-sm text-gray-500 line-through">
+                                    Rp {product.price.toLocaleString("id-ID")}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-end gap-2 mb-1">
+                                  <span className="text-xl font-bold text-primary">
+                                    Rp {(product.price * (1 - product.discount.percentage / 100)).toLocaleString("id-ID")}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xl font-bold text-primary">
+                                  Rp {product.price.toLocaleString("id-ID")}
                                 </span>
-                              )}
-                            </div>
+                              </div>
+                            )}
                             <p className="text-xs text-gray-500">
                               Stok: {product.stock} {product.unit.toLowerCase()}
                             </p>
@@ -678,36 +476,70 @@ export default function ProductsPage() {
                     </div>
                   </Card>
                 )
-              )}
-            </div>
+                )}
+              </div>
+            )}
             {/* End Products Grid */}
 
             {/* Pagination */}
-            <div className="mt-6 flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" disabled>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Sebelumnya
-              </Button>
-              <Button variant="outline" size="sm" className="bg-primary text-white">
-                1
-              </Button>
-              <Button variant="outline" size="sm">
-                2
-              </Button>
-              <Button variant="outline" size="sm">
-                3
-              </Button>
-              <Button variant="outline" size="sm">
-                4
-              </Button>
-              <Button variant="outline" size="sm">
-                5
-              </Button>
-              <Button variant="outline" size="sm">
-                Selanjutnya
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+            {!isLoading && totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Sebelumnya
+                </Button>
+
+                {/* Page Numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage =
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1);
+
+                  if (!showPage) {
+                    // Show ellipsis
+                    if (page === currentPage - 2 || page === currentPage + 2) {
+                      return (
+                        <span key={page} className="px-2 text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  return (
+                    <Button
+                      key={page}
+                      variant="outline"
+                      size="sm"
+                      className={
+                        currentPage === page ? "bg-primary text-white" : ""
+                      }
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                >
+                  Selanjutnya
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

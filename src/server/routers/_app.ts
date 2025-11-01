@@ -1,9 +1,8 @@
 import { router } from '../trpc';
+import { productsRouter } from './products';
 
 export const appRouter = router({
-  // Daftarkan routers disini
-  // user: userRouter,
-  // post: postRouter,
+  products: productsRouter,
 });
 
 export type AppRouter = typeof appRouter;

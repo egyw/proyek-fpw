@@ -20,7 +20,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/pipa-pvc-1.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719958/Fumato_Pipa_PVC_AW_1_inc_zqocec.png"
   ],
   "description": "Pipa PVC merek Fumato tipe AW ukuran 1 inch.",
   "rating": {
@@ -64,7 +64,7 @@
     "lonjor"
   ],
   "images": [
-    "/images/products/besi-10-full-sni.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719834/Besi_10_full_SNI_f2zfpo.png"
   ],
   "rating": {
     "average": 4.6,
@@ -106,7 +106,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/semen-merdeka-50-kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720033/Semen_Merdeka_ifxboq.png"
   ],
   "rating": {
     "average": 4.5,
@@ -147,7 +147,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/semen-conch-50-kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720031/Semen_Conch_sek2o0.png"
   ],
   "rating": {
     "average": 4.6,
@@ -187,7 +187,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-3mm.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720078/Triplek_3mm_Segon_lfq8aj.png"
   ],
   "description": "Triplek merk Segon tebal 3 mm.",
   "rating": {
@@ -227,7 +227,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-4mm-segon.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720080/Triplek_4mm_Segon_xjjeov.png"
   ],
   "rating": {
     "average": 4.4,
@@ -272,7 +272,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-9mm-segon.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720083/Triplek_9mm_Segon_v6djhj.png"
   ],
   "rating": {
     "average": 4.2,
@@ -312,7 +312,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-9mm-semi-miranti.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720085/Triplek_9mm_Semi_Miranti_tygmld.png"
   ],
   "rating": {
     "average": 4.6,
@@ -348,7 +348,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-16-50kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719866/Kawat_Licin_16_50_KG_ay8dqa.png"
   ],
   "rating": {
     "average": 4.4,
@@ -388,7 +388,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-20-25kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719868/Kawat_Licin_20_25_KG_z2jh5j.png"
   ],
   "rating": {
     "average": 4.3,
@@ -428,7 +428,7 @@
     "box"
   ],
   "images": [
-    "/images/products/paku-beton-putih-vpr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719941/Paku_Beton_Putih_VPR_lkt4uz.png"
   ],
   "rating": {
     "average": 4.5,
@@ -468,7 +468,7 @@
     "box"
   ],
   "images": [
-    "/images/products/truss-screw-10x16-lion.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719819/Truss_Screw_10_x_16_LION_l8adea.png"
   ],
   "rating": {
     "average": 4.7,
@@ -505,7 +505,7 @@
     "set"
   ],
   "images": [
-    "/images/products/tangki-buana-350.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720057/tangki-air-buana-350_nioppg.png"
   ],
   "description": "Tangki air plastik merek Buana kapasitas 350 liter.",
   "rating": {
@@ -545,7 +545,7 @@
     "set"
   ],
   "images": [
-    "/images/products/buana-tangki-air-plastik-2200-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720068/tangki-air-buana-2200_dmtmbn.png"
   ],
   "rating": {
     "average": 4.7,
@@ -584,7 +584,7 @@
     "set"
   ],
   "images": [
-    "/images/products/buana-tangki-air-plastik-5000-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720071/tangki-air-buana-5000_njo05w.png"
   ],
   "rating": {
     "average": 4.9,
@@ -625,7 +625,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-aw-1-2-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719958/Fumato_Pipa_PVC_AW_1-2_inc_gmfbyq.png"
   ],
   "rating": {
     "average": 4.4,
@@ -668,7 +668,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-aw-11-4-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719963/Fumato_Pipa_PVC_AW_11-4_inc_howdth.png"
   ],
   "rating": {
     "average": 4.5,
@@ -711,7 +711,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-d-11-4-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719965/Fumato_Pipa_PVC_D_11-4_inc_h4q2la.png"
   ],
   "rating": {
     "average": 4.3,
@@ -754,7 +754,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-tanpa-mof-5-8-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719970/Fumato_Pipa_PVC_Tanpa_MOF_5-8_inc_rf5h4a.png"
   ],
   "rating": {
     "average": 4.2,
@@ -798,7 +798,7 @@
     "lonjor"
   ],
   "images": [
-    "/images/products/besi-10-ulir.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719835/Besi_10_Ulir_hywxbp.png"
   ],
   "rating": {
     "average": 4.1,
@@ -840,7 +840,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/semen-bosowa.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720029/Semen_Bosowa_wnqd4b.png"
   ],
   "rating": {
     "average": 4.6,
@@ -880,7 +880,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-12mm-semiranti.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720090/Triplek_12mm_Semiranti_ywy6tn.png"
   ],
   "rating": {
     "average": 4.6,
@@ -920,7 +920,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-6-50kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719861/Kawat_Licin_6_50_KG_gwwgtu.png"
   ],
   "rating": {
     "average": 4.5,
@@ -960,7 +960,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-10-50kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719862/Kawat_Licin_10_50_KG_hlshza.png"
   ],
   "rating": {
     "average": 4.4,
@@ -1000,7 +1000,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-12-50kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719864/Kawat_Licin_12_50_KG_okduuy.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1040,7 +1040,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-14-50kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719865/Kawat_Licin_14_50_KG_t4vrih.png"
   ],
   "rating": {
     "average": 4.6,
@@ -1080,7 +1080,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-22-25kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719870/Kawat_Licin_22_25_KG_d9kozm.png"
   ],
   "rating": {
     "average": 4.4,
@@ -1120,7 +1120,7 @@
     "galon"
   ],
   "images": [
-    "/images/products/aspal-cair-5-liter.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719801/Aspal_Cair_5_liter_wooiux.png"
   ],
   "rating": {
     "average": 4.2,
@@ -1157,7 +1157,7 @@
     "set"
   ],
   "images": [
-    "/images/products/buana-tangki-air-plastik-1450-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720064/tangki-air-buana-1450_pnpwuq.png"
   ],
   "rating": {
     "average": 4.7,
@@ -1196,7 +1196,7 @@
     "set"
   ],
   "images": [
-    "/images/products/buana-tangki-air-plastik-650-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720062/tangki-air-buana-650_lgdtcz.png"
   ],
   "rating": {
     "average": 4.6,
@@ -1235,7 +1235,7 @@
     "set"
   ],
   "images": [
-    "/images/products/badak-tangki-air-plastik-1100-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720055/tangki-air-badak-1100_i61qds.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1276,7 +1276,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-aw-3-4-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719959/Fumato_Pipa_PVC_AW_3-4_inc_x1j0hi.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1319,7 +1319,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-aw-11-2-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719962/Fumato_Pipa_PVC_AW_11-2_inc_f4ekxn.png"
   ],
   "rating": {
     "average": 4.6,
@@ -1362,7 +1362,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-conduit-5-8-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719957/Fumato_Conduit_5-8_inc_o2asbv.png"
   ],
   "rating": {
     "average": 4.3,
@@ -1406,7 +1406,7 @@
     "lonjor"
   ],
   "images": [
-    "/images/products/besi-8-sni.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719832/Besi_8_SNI_r0yyyy.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1447,7 +1447,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-18mm-semi-miranti.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720092/Triplek_18mm_Semi_Miranti_nztwgb.png"
   ],
   "rating": {
     "average": 4.8,
@@ -1487,7 +1487,7 @@
     "box"
   ],
   "images": [
-    "/images/products/sds-roofing-50mm-lion-kng.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719818/SDS_Roofing_50_mm_LION_KNG_c5cz5m.png"
   ],
   "rating": {
     "average": 4.6,
@@ -1525,7 +1525,7 @@
     "set"
   ],
   "images": [
-    "/images/products/buana-tangki-air-plastik-1200-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720067/tangki-air-buana-1200_he0yr6.png"
   ],
   "rating": {
     "average": 4.6,
@@ -1564,7 +1564,7 @@
     "set"
   ],
   "images": [
-    "/images/products/badak-tangki-air-plastik-600-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720053/tangki-air-badak-600_b4rynh.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1603,7 +1603,7 @@
     "set"
   ],
   "images": [
-    "/images/products/buana-tangki-air-plastik-1000-ltr.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720060/tangki-air-buana-1000_qhronw.png"
   ],
   "rating": {
     "average": 4.7,
@@ -1644,7 +1644,7 @@
     "pcs"
   ],
   "images": [
-    "/images/products/fumato-pipa-pvc-mof-5-8-inc.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719968/Fumato_Pipa_PVC_MOF_5-8_inc_bf1dz7.png"
   ],
   "rating": {
     "average": 4.4,
@@ -1688,7 +1688,7 @@
     "lonjor"
   ],
   "images": [
-    "/images/products/besi-6-sni.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719831/Besi_6_SNI_k3mw2y.png"
   ],
   "rating": {
     "average": 4.4,
@@ -1730,7 +1730,7 @@
     "lonjor"
   ],
   "images": [
-    "/images/products/besi-12-full-sni.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719836/Besi_12_full_SNI_usvqgo.png"
   ],
   "rating": {
     "average": 4.7,
@@ -1772,7 +1772,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/semen-tonasa.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720035/Semen_Tonasa_ydrckv.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1800,8 +1800,8 @@
   "price": 140000,
   "brand": "Segon",
   "discount": {
-    "percentage": 0,
-    "validUntil": ""
+    "percentage": 20,
+    "validUntil": "2026-11-01T08:00:00.000Z"
   },
   "description": "Triplek merk Segon tebal 12 mm.",
   "stock": 72,
@@ -1812,7 +1812,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-12mm-segon.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720087/Triplek_12mm_Segon_b212ri.png"
   ],
   "rating": {
     "average": 4.4,
@@ -1852,7 +1852,7 @@
     "m3"
   ],
   "images": [
-    "/images/products/triplek-20mm-semi-miranti.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720095/Triplek_20mm_Semi_Miranti_flxw1c.png"
   ],
   "rating": {
     "average": 4.8,
@@ -1892,7 +1892,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-8-50kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719858/Kawat_Licin_8_50_KG_ww1z1k.png"
   ],
   "rating": {
     "average": 4.5,
@@ -1932,7 +1932,7 @@
     "ton"
   ],
   "images": [
-    "/images/products/kawat-licin-18-25kg.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719859/Kawat_Licin_18_25_KG_dtnrlf.png"
   ],
   "rating": {
     "average": 4.4,
@@ -1972,7 +1972,7 @@
     "galon"
   ],
   "images": [
-    "/images/products/aspal-cair-1-liter.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719801/Aspal_Cair_1_liter_kulngk.png"
   ],
   "rating": {
     "average": 4.3,
@@ -1999,8 +1999,8 @@
   "price": 1659,
   "brand": "WOWO",
   "discount": {
-    "percentage": 0,
-    "validUntil": ""
+    "percentage": 10,
+    "validUntil": "2026-11-01T08:00:00.000Z"
   },
   "description": "Baut dinamik merek WOWO ukuran M12 x 60 mm.",
   "stock": 800,
@@ -2011,7 +2011,7 @@
     "box"
   ],
   "images": [
-    "/images/products/dynabolt-m12x60-wowo.jpg"
+    "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719817/Dynabolt_M12_x_60_WOWO_vrqkju.png"
   ],
   "rating": {
     "average": 4.7,

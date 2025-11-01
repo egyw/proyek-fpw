@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import MainLayout from "@/components/layouts/MainLayout";
 import Link from "next/link";
 import Image from "next/image";
+import { trpc } from "@/utils/trpc";
 import {
   Carousel,
   CarouselContent,
@@ -19,12 +20,16 @@ export default function Home() {
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  // Dummy data
+  // Fetch featured products from backend using tRPC
+  const { data: featuredProducts, isLoading } = trpc.products.getFeatured.useQuery();
+
+  // Static data (will remain static)
   const carouselItems = [
-    { id: 1, title: "Promo Semen 20%", subtitle: "Hemat hingga Rp 50.000" },
-    { id: 2, title: "Diskon Cat 30%", subtitle: "Untuk pembelian 5 galon" },
-    { id: 3, title: "Gratis Ongkir", subtitle: "Minimum pembelian Rp 5 juta" },
-    { id: 4, title: "Keramik Murah", subtitle: "Mulai dari Rp 35.000/box" },
+    { id: 1, image: "/assets/carousels/carousel1.png" },
+    { id: 2, image: "/assets/carousels/carousel2.png" },
+    { id: 3, image: "/assets/carousels/carousel3.png" },
+    { id: 4, image: "/assets/carousels/carousel4.png" },
+    { id: 5, image: "/assets/carousels/carousel5.png" },
   ];
 
   const categories = [
@@ -36,20 +41,6 @@ export default function Home() {
     { name: "Kayu", icon: "🪵" },
     { name: "Atap", icon: "🏠" },
     { name: "Lainnya", icon: "📦" },
-  ];
-
-  const promoProducts = [
-    { id: 1, name: "Semen Gresik 50kg", price: 65000, discount: 20, originalPrice: 81250 },
-    { id: 2, name: "Cat Tembok Avian 5kg", price: 180000, discount: 15, originalPrice: 211765 },
-    { id: 3, name: "Besi Beton 10mm", price: 85000, discount: 30, originalPrice: 121429 },
-    { id: 4, name: "Keramik 40x40 Platinum", price: 42000, discount: 25, originalPrice: 56000 },
-  ];
-
-  const bestSellers = [
-    { id: 5, name: "Pipa PVC 3 inch", price: 45000 },
-    { id: 6, name: "Semen Tiga Roda 50kg", price: 62000 },
-    { id: 7, name: "Genteng Metal Pasir", price: 35000 },
-    { id: 8, name: "Triplek 9mm", price: 95000 },
   ];
 
   return (
@@ -109,15 +100,11 @@ export default function Home() {
                 <CarouselItem key={item.id}>
                   <div className="relative h-64 md:h-80 rounded-xl overflow-hidden">
                     <Image
-                      src="/images/dummy_image.jpg"
-                      alt={item.title}
+                      src={item.image}
+                      alt={`Carousel ${item.id}`}
                       fill
-                      className="object-cover brightness-75"
+                      className="object-cover"
                     />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
-                      <h3 className="text-3xl md:text-4xl font-bold mb-2">{item.title}</h3>
-                      <p className="text-lg md:text-xl text-white/90">{item.subtitle}</p>
-                    </div>
                   </div>
                 </CarouselItem>
               ))}
@@ -128,50 +115,70 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Promo Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Promo Hari Ini</h2>
-            <Link href="/products?filter=promo" className="text-primary hover:underline">
-              Lihat Semua →
-            </Link>
+      {/* Promo Section - Only show if there are products with discount */}
+      {(isLoading || (featuredProducts && featuredProducts.some((p) => p.discount && p.discount.percentage > 0))) && (
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold text-gray-900">Promo Hari Ini</h2>
+              <Link href="/products?filter=promo" className="text-primary hover:underline">
+                Lihat Semua →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {isLoading ? (
+                // Loading skeleton
+                Array.from({ length: 4 }).map((_, index) => (
+                  <Card key={index} className="overflow-hidden animate-pulse">
+                    <div className="h-48 bg-gray-200"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-9 bg-gray-200 rounded"></div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                featuredProducts
+                  ?.filter((p) => p.discount && p.discount.percentage > 0) // Only products with discount
+                  .slice(0, 4) // Show first 4 products with discount
+                  .map((product) => (
+                    <Link key={product._id} href={`/products/${product.slug}`}>
+                      <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+                        <div className="relative h-48">
+                          <Image
+                            src={product.images[0] || "/images/dummy_image.jpg"}
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                          />
+                          {product.discount && product.discount.percentage > 0 && (
+                            <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
+                              -{product.discount.percentage}%
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="p-4 flex flex-col flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 h-12">
+                            {product.name}
+                          </h3>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-lg font-bold text-primary">
+                              Rp {product.price.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <Button className="w-full mt-auto" size="sm">
+                            Lihat Detail
+                          </Button>
+                        </div>
+                      </Card>
+                    </Link>
+                  ))
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {promoProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative h-48">
-                  <Image
-                    src="/images/dummy_image.jpg"
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
-                  <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-                    -{product.discount}%
-                  </Badge>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-lg font-bold text-primary">
-                      Rp {product.price.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-sm text-gray-400 line-through">
-                      Rp {product.originalPrice.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <Button className="w-full" size="sm">
-                    Tambah ke Keranjang
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Categories Section */}
       <section className="py-16 bg-white">
@@ -208,31 +215,54 @@ export default function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {bestSellers.map((product) => (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative h-48">
-                  <Image
-                    src="/images/dummy_image.jpg"
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {product.name}
-                  </h3>
-                  <div className="mb-3">
-                    <span className="text-lg font-bold text-primary">
-                      Rp {product.price.toLocaleString('id-ID')}
-                    </span>
+            {isLoading ? (
+              // Loading skeleton
+              Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="overflow-hidden animate-pulse">
+                  <div className="h-48 bg-gray-200"></div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-9 bg-gray-200 rounded"></div>
                   </div>
-                  <Button className="w-full" size="sm" variant="outline">
-                    Lihat Detail
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            ) : (
+              featuredProducts
+                ?.slice(0, 4) // Show first 4 featured products
+                .map((product) => (
+                  <Link key={product._id} href={`/products/${product.slug}`}>
+                    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+                      <div className="relative h-48">
+                        <Image
+                          src={product.images[0] || "/images/dummy_image.jpg"}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                        />
+                        {product.discount && product.discount.percentage > 0 && (
+                          <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
+                            -{product.discount.percentage}%
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="p-4 flex flex-col flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 h-12">
+                          {product.name}
+                        </h3>
+                        <div className="mb-3">
+                          <span className="text-lg font-bold text-primary">
+                            Rp {product.price.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <Button className="w-full mt-auto" size="sm" variant="outline">
+                          Lihat Detail
+                        </Button>
+                      </div>
+                    </Card>
+                  </Link>
+                ))
+            )}
           </div>
         </div>
       </section>
