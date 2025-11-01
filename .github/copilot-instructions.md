@@ -1392,3 +1392,263 @@ const form = useForm({ ... }); // Overkill for real-time input
 - Component config: `components.json` (shadcn settings)
 - Router setup: `src/server/routers/_app.ts` (API definitions)
 - Entry point: `src/pages/_app.tsx` (tRPC + React Query providers)
+- Environment variables: `.env.example` (template for configuration)
+
+## Environment Setup
+
+### Environment Variables
+**File**: `.env.local` (create from `.env.example`)
+
+**Required Variables**:
+```bash
+# MongoDB Connection (choose one)
+# Option 1: Local MongoDB
+MONGODB_URI=mongodb://localhost:27017/proyekFPW
+
+# Option 2: MongoDB Atlas (production)
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/proyekFPW?retryWrites=true&w=majority
+
+# JWT Secret for Authentication
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+```
+
+**Setup Steps**:
+1. Copy `.env.example` to `.env.local`
+2. Update `MONGODB_URI` with your MongoDB connection string
+3. Generate secure JWT_SECRET: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
+4. **Never commit** `.env.local` (already in `.gitignore`)
+
+## Recent Features & Patterns (November 2025)
+
+### 1. Dynamic Unit Converter with Product Attributes
+**Location**: `src/components/UnitConverter.tsx`
+
+**Key Pattern**: Dynamic label generation based on product attributes
+```tsx
+// Props include productAttributes for weight-based labels
+interface UnitConverterProps {
+  category: string;
+  productUnit: string;
+  productPrice: number;
+  productStock: number;
+  availableUnits?: string[];
+  productAttributes?: Record<string, string | number>; // NEW: For dynamic labels
+  onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
+}
+
+// Generate dynamic conversions for Besi category
+if (category === "Besi" && productAttributes?.weight_kg) {
+  const weightKg = Number(productAttributes.weight_kg);
+  dynamicConversions = [
+    { unit: "batang", toBase: weightKg, label: `Batang (${weightKg}kg)` }, // Dynamic!
+    { unit: "kg", toBase: 1, label: "Kilogram (kg)" },
+    { unit: "ton", toBase: 1000, label: "Ton (1000kg)" },
+  ];
+}
+```
+
+**Why This Matters**:
+- ❌ Before: All Besi products showed "Batang (7.4kg)" (hardcoded)
+- ✅ After: Besi 6mm shows "Batang (2.66kg)", Besi 10mm shows "Batang (7.4kg)" (dynamic)
+- Reads `weight_kg` from `product.attributes` in database
+- Same pattern for Kawat category with `gulung` weight
+
+**Usage in Product Detail**:
+```tsx
+<UnitConverter 
+  category={product.category}
+  productUnit={product.unit}
+  productPrice={discountPrice}
+  productStock={product.stock}
+  availableUnits={product.availableUnits}
+  productAttributes={product.attributes as Record<string, string | number>} // Pass attributes
+  onAddToCart={handleAddToCart}
+/>
+```
+
+### 2. Clickable Product Cards (No Eye Button)
+**Location**: `src/pages/products/index.tsx`
+
+**Pattern**: Wrap entire card with Link, prevent default on action buttons
+```tsx
+// Grid View
+<Link href={`/products/${product.slug}`} key={product._id.toString()}>
+  <Card className="cursor-pointer hover:shadow-lg">
+    {/* Card content */}
+    <Button 
+      className="w-full"
+      onClick={(e) => {
+        e.preventDefault(); // Prevent navigation
+        // Add to cart logic
+      }}
+    >
+      <ShoppingCart className="h-4 w-4 mr-2" />
+      Tambah ke Keranjang
+    </Button>
+  </Card>
+</Link>
+```
+
+**Key Points**:
+- ✅ Entire card is clickable → Navigate to product detail
+- ✅ "Tambah ke Keranjang" button still works (with `e.preventDefault()`)
+- ✅ Better UX: 1 click to view details, not 2 (card + eye button)
+- ❌ Removed: Eye icon button (no longer needed)
+
+**Icons**:
+- Removed `Eye` from Lucide imports
+- Card has `cursor-pointer` class for visual feedback
+
+### 3. Share Button - Copy URL to Clipboard
+**Location**: `src/pages/products/[slug].tsx`
+
+**Pattern**: Async clipboard API with toast notifications
+```tsx
+const handleShare = async () => {
+  try {
+    const currentUrl = window.location.href;
+    await navigator.clipboard.writeText(currentUrl);
+    toast.success("Link berhasil disalin!", {
+      description: "Link produk telah disalin ke clipboard",
+    });
+  } catch {
+    toast.error("Gagal menyalin link", {
+      description: "Terjadi kesalahan saat menyalin link",
+    });
+  }
+};
+
+// Button usage
+<Button size="lg" variant="outline" onClick={handleShare}>
+  <Share2 className="h-5 w-5" />
+</Button>
+```
+
+**Browser Requirements**:
+- ✅ Modern browsers (Chrome, Firefox, Edge, Safari)
+- ✅ Requires **HTTPS** or localhost (secure context)
+- ⚠️ Production must use HTTPS for clipboard API
+
+### 4. URL Query Parameters for Deep Linking
+**Location**: `src/pages/products/index.tsx`
+
+**Pattern**: Read URL params on mount, set filter state
+```tsx
+import { useRouter } from "next/router";
+
+const router = useRouter();
+
+// Read query parameters on mount
+useEffect(() => {
+  if (router.isReady) {
+    // Category filter
+    if (router.query.category && typeof router.query.category === "string") {
+      setSelectedCategory(router.query.category);
+    }
+    
+    // Discount filter
+    if (router.query.discount === "true") {
+      setHasDiscount(true);
+    }
+    
+    // Search query
+    if (router.query.search && typeof router.query.search === "string") {
+      setSearchQuery(router.query.search);
+    }
+    
+    // Sort option
+    if (router.query.sortBy && typeof router.query.sortBy === "string") {
+      setSortBy(router.query.sortBy);
+    }
+  }
+}, [router.isReady, router.query]);
+```
+
+**Supported URL Patterns**:
+```bash
+# Single filter
+/products?category=Pipa
+/products?discount=true
+/products?search=semen
+/products?sortBy=price-low
+
+# Multiple filters (kombinasi)
+/products?category=Besi&discount=true
+/products?category=Pipa&sortBy=price-low&discount=true
+```
+
+**Important**: Category names use **Title Case** (e.g., "Pipa", NOT "pipa")
+```tsx
+// Homepage category links - NO .toLowerCase()
+<Link href={`/products?category=${category.name}`}>
+  {/* category.name = "Pipa" (matches database exactly) */}
+</Link>
+```
+
+**Benefits**:
+- 🔗 Shareable URLs with pre-applied filters
+- 🔖 Bookmarkable filtered product pages
+- 🎯 Marketing campaign links (e.g., `/products?discount=true` from email)
+- ↩️ Browser back/forward maintains filter state
+
+**Hero Section Integration**:
+```tsx
+// Homepage - "Lihat Promo" button
+<Link href="/products?discount=true">
+  <Button>Lihat Promo</Button>
+</Link>
+// → Auto-checks "Produk Diskon" filter on products page
+```
+
+### 5. Product Data Consistency - Unit Field
+**Database**: `database/proyekFPW.products.json`
+
+**Critical Rule**: `unit` field MUST match supplier's actual selling unit
+
+**Examples**:
+- ✅ Kawat: `unit: "gulung"` (supplier sells per gulung, not per kg)
+- ✅ Besi: `unit: "batang"` (supplier sells per batang, not per kg)
+- ✅ Semen: `unit: "sak"` (supplier sells per sak)
+- ✅ Pipa: `unit: "batang"` (supplier sells per batang)
+
+**Attributes for Weight/Dimensions**:
+```json
+{
+  "name": "Besi 10 full SNI",
+  "unit": "batang",
+  "price": 67000,
+  "attributes": {
+    "diameter_mm": 10,
+    "type": "Ulir",
+    "standard": "SNI",
+    "weight_kg": 7.4,      // ← Used for dynamic unit labels
+    "length_meter": 12
+  }
+}
+```
+
+**Why This Matters**:
+- UnitConverter calculations depend on correct `unit` + `price` relationship
+- `price` is per `unit` (e.g., Rp 67,000 per batang, NOT per kg)
+- `stock` is quantity in `unit` (e.g., 150 batang, NOT kg)
+- Attributes provide metadata for conversions
+
+## Critical Updates & Best Practices
+
+### DO's ✅
+1. **Always pass `productAttributes`** to UnitConverter for dynamic labels
+2. **Use Title Case** for category names in URLs ("Pipa", not "pipa")
+3. **Wrap cards with Link** for clickable navigation
+4. **Use `e.preventDefault()`** on buttons inside clickable cards
+5. **Read query params** with type checking (`typeof router.query.x === "string"`)
+6. **Use `router.isReady`** before reading query params
+7. **Copy `.env.example` to `.env.local`** for local development
+8. **Generate secure JWT_SECRET** with crypto.randomBytes()
+
+### DON'Ts ❌
+1. **Never hardcode unit weights** in UnitConverter (use `productAttributes`)
+2. **Never use `.toLowerCase()`** on category names for URLs
+3. **Never commit `.env.local`** (contains secrets)
+4. **Never use Eye icon button** on product cards (cards are clickable)
+5. **Never assume query params exist** (always check `router.isReady`)
+6. **Never mix unit types** in database (unit field must match selling unit)
