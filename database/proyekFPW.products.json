@@ -48,7 +48,7 @@
   "name": "Besi 10 full SNI",
   "slug": "besi-10-full-sni",
   "category": "Besi",
-  "unit": "kg",
+  "unit": "batang",
   "price": 67000,
   "brand": "Sigma Besi",
   "discount": {
@@ -58,8 +58,8 @@
   "stock": 150,
   "minStock": 15,
   "availableUnits": [
-    "kg",
     "batang",
+    "kg",
     "ton",
     "lonjor"
   ],
@@ -76,7 +76,9 @@
   "attributes": {
     "diameter_mm": 10,
     "type": "Ulir",
-    "standard": "SNI"
+    "standard": "SNI",
+    "weight_kg": 7.4,
+    "length_meter": 12
   },
   "isActive": true,
   "isFeatured": false,
@@ -332,19 +334,19 @@
   "name": "Kawat Licin 16 (50 KG)",
   "slug": "kawat-licin-16-50kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 741750,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 16 mm, bobot 50 kg.",
+  "description": "Kawat licin ukuran 16 mm, bobot 50 kg per gulung.",
   "stock": 60,
   "minStock": 8,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -372,19 +374,19 @@
   "name": "Kawat Licin 20 (25 KG)",
   "slug": "kawat-licin-20-25kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 406500,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 20 mm, bobot 25 kg.",
+  "description": "Kawat licin ukuran 20 mm, bobot 25 kg per gulung.",
   "stock": 75,
   "minStock": 10,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -781,7 +783,7 @@
   "name": "Besi 10 Ulir",
   "slug": "besi-10-ulir",
   "category": "Besi",
-  "unit": "kg",
+  "unit": "batang",
   "price": 68000,
   "brand": "Sigma Besi",
   "discount": {
@@ -792,8 +794,8 @@
   "stock": 140,
   "minStock": 15,
   "availableUnits": [
-    "kg",
     "batang",
+    "kg",
     "ton",
     "lonjor"
   ],
@@ -809,7 +811,9 @@
   "attributes": {
     "diameter_mm": 10,
     "type": "Ulir",
-    "standard": "Non-SNI"
+    "standard": "Non-SNI",
+    "weight_kg": 7.4,
+    "length_meter": 12
   },
   "isActive": true,
   "isFeatured": false,
@@ -904,19 +908,19 @@
   "name": "Kawat Licin 6 (50 KG)",
   "slug": "kawat-licin-6-50kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 695000,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 6 mm, bobot 50 kg.",
+  "description": "Kawat licin ukuran 6 mm, bobot 50 kg per gulung.",
   "stock": 50,
   "minStock": 6,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -944,19 +948,19 @@
   "name": "Kawat Licin 10 (50 KG)",
   "slug": "kawat-licin-10-50kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 695000,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 10 mm, bobot 50 kg.",
+  "description": "Kawat licin ukuran 10 mm, bobot 50 kg per gulung.",
   "stock": 55,
   "minStock": 6,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -984,19 +988,19 @@
   "name": "Kawat Licin 12 (50 KG)",
   "slug": "kawat-licin-12-50kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 700000,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 12 mm, bobot 50 kg.",
+  "description": "Kawat licin ukuran 12 mm, bobot 50 kg per gulung.",
   "stock": 58,
   "minStock": 6,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -1024,19 +1028,19 @@
   "name": "Kawat Licin 14 (50 KG)",
   "slug": "kawat-licin-14-50kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 712500,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 14 mm, bobot 50 kg.",
+  "description": "Kawat licin ukuran 14 mm, bobot 50 kg per gulung.",
   "stock": 52,
   "minStock": 6,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -1064,19 +1068,19 @@
   "name": "Kawat Licin 22 (25 KG)",
   "slug": "kawat-licin-22-25kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 427500,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 22 mm, bobot 25 kg.",
+  "description": "Kawat licin ukuran 22 mm, bobot 25 kg per gulung.",
   "stock": 68,
   "minStock": 8,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -1389,7 +1393,7 @@
   "name": "Besi 8 SNI",
   "slug": "besi-8-sni",
   "category": "Besi",
-  "unit": "kg",
+  "unit": "batang",
   "price": 42500,
   "brand": "Sigma Besi",
   "discount": {
@@ -1400,8 +1404,8 @@
   "stock": 170,
   "minStock": 20,
   "availableUnits": [
-    "kg",
     "batang",
+    "kg",
     "ton",
     "lonjor"
   ],
@@ -1417,7 +1421,9 @@
   "attributes": {
     "diameter_mm": 8,
     "type": "Ulir",
-    "standard": "SNI"
+    "standard": "SNI",
+    "weight_kg": 4.74,
+    "length_meter": 12
   },
   "isActive": true,
   "isFeatured": false,
@@ -1671,7 +1677,7 @@
   "name": "Besi 6 SNI",
   "slug": "besi-6-sni",
   "category": "Besi",
-  "unit": "kg",
+  "unit": "batang",
   "price": 25500,
   "brand": "Sigma Besi",
   "discount": {
@@ -1682,8 +1688,8 @@
   "stock": 200,
   "minStock": 25,
   "availableUnits": [
-    "kg",
     "batang",
+    "kg",
     "ton",
     "lonjor"
   ],
@@ -1699,7 +1705,9 @@
   "attributes": {
     "diameter_mm": 6,
     "type": "Ulir",
-    "standard": "SNI"
+    "standard": "SNI",
+    "weight_kg": 2.66,
+    "length_meter": 12
   },
   "isActive": true,
   "isFeatured": false,
@@ -1713,7 +1721,7 @@
   "name": "Besi 12 full SNI",
   "slug": "besi-12-full-sni",
   "category": "Besi",
-  "unit": "kg",
+  "unit": "batang",
   "price": 98000,
   "brand": "Sigma Besi",
   "discount": {
@@ -1724,8 +1732,8 @@
   "stock": 130,
   "minStock": 15,
   "availableUnits": [
-    "kg",
     "batang",
+    "kg",
     "ton",
     "lonjor"
   ],
@@ -1741,7 +1749,9 @@
   "attributes": {
     "diameter_mm": 12,
     "type": "Ulir",
-    "standard": "SNI"
+    "standard": "SNI",
+    "weight_kg": 10.66,
+    "length_meter": 12
   },
   "isActive": true,
   "isFeatured": false,
@@ -1876,19 +1886,19 @@
   "name": "Kawat Licin 8 (50 KG)",
   "slug": "kawat-licin-8-50kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 695000,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 8 mm, bobot 50 kg.",
+  "description": "Kawat licin ukuran 8 mm, bobot 50 kg per gulung.",
   "stock": 53,
   "minStock": 6,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [
@@ -1916,19 +1926,19 @@
   "name": "Kawat Licin 18 (25 KG)",
   "slug": "kawat-licin-18-25kg",
   "category": "Kawat",
-  "unit": "kg",
+  "unit": "gulung",
   "price": 386000,
   "brand": "N/A",
   "discount": {
     "percentage": 0,
     "validUntil": ""
   },
-  "description": "Kawat licin ukuran 18 mm, bobot 25 kg.",
+  "description": "Kawat licin ukuran 18 mm, bobot 25 kg per gulung.",
   "stock": 70,
   "minStock": 8,
   "availableUnits": [
+    "gulung",
     "kg",
-    "batang",
     "ton"
   ],
   "images": [

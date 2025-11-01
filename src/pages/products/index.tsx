@@ -18,15 +18,16 @@ import {
   Grid3x3,
   List,
   ShoppingCart,
-  Eye,
   Star,
   ChevronRight,
   ChevronLeft,
   RotateCcw,
 } from "lucide-react";
 import { trpc } from "@/utils/trpc";
+import { useRouter } from "next/router";
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -35,6 +36,31 @@ export default function ProductsPage() {
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [hasDiscount, setHasDiscount] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Read query parameters on mount (for deep linking with filters)
+  useEffect(() => {
+    if (router.isReady) {
+      // Set category from URL query parameter
+      if (router.query.category && typeof router.query.category === "string") {
+        setSelectedCategory(router.query.category);
+      }
+      
+      // Set discount filter from URL query parameter
+      if (router.query.discount === "true") {
+        setHasDiscount(true);
+      }
+      
+      // Set search query from URL
+      if (router.query.search && typeof router.query.search === "string") {
+        setSearchQuery(router.query.search);
+      }
+      
+      // Set sort option from URL
+      if (router.query.sortBy && typeof router.query.sortBy === "string") {
+        setSortBy(router.query.sortBy);
+      }
+    }
+  }, [router.isReady, router.query]);
 
   const ITEMS_PER_PAGE = 20;
 
@@ -323,158 +349,157 @@ export default function ProductsPage() {
                 {products.map((product) =>
                   viewMode === "grid" ? (
                   // Grid View
-                  <Card
-                    key={product._id.toString()}
-                    className="overflow-hidden hover:shadow-lg transition-shadow group"
-                  >
-                    <div className="relative h-48">
-                      <Image
-                        src={product.images[0]}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {product.discount && product.discount.percentage > 0 && (
-                        <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-                          -{product.discount.percentage}%
-                        </Badge>
-                      )}
-                      {product.stock < 10 && product.stock > 0 && (
-                        <Badge className="absolute top-2 left-2 bg-orange-500 hover:bg-orange-600">
-                          Stok Terbatas
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <Badge variant="outline" className="mb-2 text-xs">
-                        {product.category}
-                      </Badge>
-                      <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 h-12">
-                        {product.name}
-                      </h3>
-                      <div className="flex items-center gap-1 mb-3">
-                        <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {product.rating.average}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ({product.sold} terjual)
-                        </span>
-                      </div>
-                      <div className="mb-3">
-                        {product.discount && product.discount.percentage > 0 ? (
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-500 line-through">
-                                Rp {product.price.toLocaleString("id-ID")}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-primary">
-                                Rp {(product.price * (1 - product.discount.percentage / 100)).toLocaleString("id-ID")}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-primary">
-                              Rp {product.price.toLocaleString("id-ID")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button className="flex-1" size="sm">
-                          <ShoppingCart className="h-4 w-4 mr-1" />
-                          Keranjang
-                        </Button>
-                        <Link href={`/products/${product.slug}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </Card>
-                ) : (
-                  // List View
-                  <Card
-                    key={product._id.toString()}
-                    className="overflow-hidden hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex gap-4 p-4">
-                      <div className="relative w-32 h-32 flex-shrink-0">
+                  <Link href={`/products/${product.slug}`} key={product._id.toString()}>
+                    <Card className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
+                      <div className="relative h-48">
                         <Image
                           src={product.images[0]}
                           alt={product.name}
                           fill
-                          className="object-cover rounded-lg"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         {product.discount && product.discount.percentage > 0 && (
                           <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
                             -{product.discount.percentage}%
                           </Badge>
                         )}
+                        {product.stock < 10 && product.stock > 0 && (
+                          <Badge className="absolute top-2 left-2 bg-orange-500 hover:bg-orange-600">
+                            Stok Terbatas
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <Badge variant="outline" className="mb-2 text-xs">
-                              {product.category}
-                            </Badge>
-                            <h3 className="font-semibold text-gray-900 mb-1">
-                              {product.name}
-                            </h3>
-                            <div className="flex items-center gap-1 mb-2">
-                              <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                              <span className="text-sm font-medium text-gray-900">
-                                {product.rating.average}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                ({product.sold} terjual)
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            {product.discount && product.discount.percentage > 0 ? (
-                              <div>
-                                <div className="flex items-center justify-end gap-2 mb-1">
-                                  <span className="text-sm text-gray-500 line-through">
-                                    Rp {product.price.toLocaleString("id-ID")}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-end gap-2 mb-1">
-                                  <span className="text-xl font-bold text-primary">
-                                    Rp {(product.price * (1 - product.discount.percentage / 100)).toLocaleString("id-ID")}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xl font-bold text-primary">
+                      <div className="p-4">
+                        <Badge variant="outline" className="mb-2 text-xs">
+                          {product.category}
+                        </Badge>
+                        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 h-12">
+                          {product.name}
+                        </h3>
+                        <div className="flex items-center gap-1 mb-3">
+                          <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {product.rating.average}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({product.sold} terjual)
+                          </span>
+                        </div>
+                        <div className="mb-3">
+                          {product.discount && product.discount.percentage > 0 ? (
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500 line-through">
                                   Rp {product.price.toLocaleString("id-ID")}
                                 </span>
                               </div>
-                            )}
-                            <p className="text-xs text-gray-500">
-                              Stok: {product.stock} {product.unit.toLowerCase()}
-                            </p>
-                          </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg font-bold text-primary">
+                                  Rp {(product.price * (1 - product.discount.percentage / 100)).toLocaleString("id-ID")}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-primary">
+                                Rp {product.price.toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex gap-2 mt-4">
-                          <Button size="sm">
+                        <Button 
+                          className="w-full" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            // TODO: Add to cart functionality
+                            console.log('Add to cart:', product.name);
+                          }}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Tambah ke Keranjang
+                        </Button>
+                      </div>
+                    </Card>
+                  </Link>
+                ) : (
+                  // List View
+                  <Link href={`/products/${product.slug}`} key={product._id.toString()}>
+                    <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="flex gap-4 p-4">
+                        <div className="relative w-32 h-32 flex-shrink-0">
+                          <Image
+                            src={product.images[0]}
+                            alt={product.name}
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                          {product.discount && product.discount.percentage > 0 && (
+                            <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
+                              -{product.discount.percentage}%
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <Badge variant="outline" className="mb-2 text-xs">
+                                {product.category}
+                              </Badge>
+                              <h3 className="font-semibold text-gray-900 mb-1">
+                                {product.name}
+                              </h3>
+                              <div className="flex items-center gap-1 mb-2">
+                                <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                                <span className="text-sm font-medium text-gray-900">
+                                  {product.rating.average}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  ({product.sold} terjual)
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              {product.discount && product.discount.percentage > 0 ? (
+                                <div>
+                                  <div className="flex items-center justify-end gap-2 mb-1">
+                                    <span className="text-sm text-gray-500 line-through">
+                                      Rp {product.price.toLocaleString("id-ID")}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-end gap-2 mb-1">
+                                    <span className="text-xl font-bold text-primary">
+                                      Rp {(product.price * (1 - product.discount.percentage / 100)).toLocaleString("id-ID")}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xl font-bold text-primary">
+                                    Rp {product.price.toLocaleString("id-ID")}
+                                  </span>
+                                </div>
+                              )}
+                              <p className="text-xs text-gray-500">
+                                Stok: {product.stock} {product.unit.toLowerCase()}
+                              </p>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              // TODO: Add to cart functionality
+                              console.log('Add to cart:', product.name);
+                            }}
+                          >
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Tambah ke Keranjang
                           </Button>
-                          <Link href={`/products/${product.slug}`}>
-                            <Button variant="outline" size="sm">
-                              Lihat Detail
-                            </Button>
-                          </Link>
                         </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  </Link>
                 )
                 )}
               </div>

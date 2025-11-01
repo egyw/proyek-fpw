@@ -76,7 +76,7 @@ export default function Home() {
                   Belanja Sekarang
                 </Button>
               </Link>
-              <Link href="/products?category=promo">
+              <Link href="/products?discount=true">
                 <Button size="lg" variant="outline" className="text-lg px-8 bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm">
                   Lihat Promo
                 </Button>
@@ -190,7 +190,7 @@ export default function Home() {
             {categories.map((category) => (
               <Link
                 key={category.name}
-                href={`/products?category=${category.name.toLowerCase()}`}
+                href={`/products?category=${category.name}`}
                 className="group"
               >
                 <Card className="p-6 text-center hover:shadow-lg transition-all hover:scale-105 cursor-pointer">

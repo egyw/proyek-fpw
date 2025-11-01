@@ -76,6 +76,55 @@ const unitConversions: Record<string, CategoryUnits> = {
       { unit: "m3", toBase: 0.029, label: "Meter Kubik (m³)" },
     ],
   },
+  Triplek: {
+    baseUnit: "lembar",
+    conversions: [
+      { unit: "lembar", toBase: 1, label: "Lembar" },
+      { unit: "pcs", toBase: 1, label: "Pieces (pcs)" },
+      { unit: "set", toBase: 10, label: "Set (10 lembar)" },
+    ],
+  },
+  "Tangki Air": {
+    baseUnit: "set",
+    conversions: [
+      { unit: "set", toBase: 1, label: "Set" },
+      { unit: "pcs", toBase: 1, label: "Pieces (pcs)" },
+    ],
+  },
+  Kawat: {
+    baseUnit: "kg",
+    conversions: [
+      { unit: "kg", toBase: 1, label: "Kilogram (kg)" },
+      { unit: "ton", toBase: 1000, label: "Ton (1000kg)" },
+      { unit: "gulung", toBase: 50, label: "Gulung (50kg)" },
+      { unit: "batang", toBase: 1, label: "Batang (per kg)" },
+    ],
+  },
+  Paku: {
+    baseUnit: "kg",
+    conversions: [
+      { unit: "kg", toBase: 1, label: "Kilogram (kg)" },
+      { unit: "pcs", toBase: 0.01, label: "Pieces (pcs)" },
+      { unit: "pak", toBase: 5, label: "Pak (5kg)" },
+    ],
+  },
+  Baut: {
+    baseUnit: "pcs",
+    conversions: [
+      { unit: "pcs", toBase: 1, label: "Pieces (pcs)" },
+      { unit: "set", toBase: 10, label: "Set (10 pcs)" },
+      { unit: "box", toBase: 100, label: "Box (100 pcs)" },
+      { unit: "kg", toBase: 200, label: "Kilogram (kg, ~200 pcs)" },
+    ],
+  },
+  Aspal: {
+    baseUnit: "liter",
+    conversions: [
+      { unit: "liter", toBase: 1, label: "Liter (L)" },
+      { unit: "kg", toBase: 1.1, label: "Kilogram (kg)" },
+      { unit: "drum", toBase: 200, label: "Drum (200L)" },
+    ],
+  },
   Atap: {
     baseUnit: "lembar",
     conversions: [
@@ -92,6 +141,7 @@ interface UnitConverterProps {
   productPrice: number;
   productStock: number;
   availableUnits?: string[]; // Units dari database yang dipilih admin
+  productAttributes?: Record<string, string | number>; // Attributes dari database (untuk ambil weight_kg)
   onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
 }
 
@@ -101,36 +151,69 @@ export default function UnitConverter({
   productPrice,
   productStock,
   availableUnits,
+  productAttributes,
   onAddToCart,
 }: UnitConverterProps) {
   const categoryUnits = unitConversions[category];
 
+  // Generate dynamic conversions untuk kategori Besi dan Kawat berdasarkan weight_kg
+  let dynamicConversions = categoryUnits?.conversions || [];
+  
+  if (category === "Besi" && productAttributes?.weight_kg) {
+    const weightKg = Number(productAttributes.weight_kg);
+    const lengthMeter = Number(productAttributes.length_meter) || 12;
+    
+    dynamicConversions = [
+      { unit: "batang", toBase: weightKg, label: `Batang (${weightKg}kg)` },
+      { unit: "kg", toBase: 1, label: "Kilogram (kg)" },
+      { unit: "ton", toBase: 1000, label: "Ton (1000kg)" },
+      { unit: "lonjor", toBase: weightKg * (lengthMeter / 12), label: `Lonjor (${lengthMeter}m)` },
+    ];
+  } else if (category === "Kawat" && productAttributes?.weight_kg) {
+    const weightKg = Number(productAttributes.weight_kg);
+    
+    dynamicConversions = [
+      { unit: "kg", toBase: 1, label: "Kilogram (kg)" },
+      { unit: "ton", toBase: 1000, label: "Ton (1000kg)" },
+      { unit: "gulung", toBase: weightKg, label: `Gulung (${weightKg}kg)` },
+      { unit: "batang", toBase: 1, label: "Batang (per kg)" },
+    ];
+  }
+
   // Filter conversions berdasarkan availableUnits dari database
-  const allowedConversions = categoryUnits?.conversions.filter(
-    (conv) => !availableUnits || availableUnits.includes(conv.unit)
+  const allowedConversions = dynamicConversions.filter(
+    (conv) => !availableUnits || availableUnits.length === 0 || availableUnits.includes(conv.unit)
   ) || [];
 
   // FROM unit LOCKED to supplier's unit (productUnit)
   const fromUnit = productUnit.toLowerCase();
 
   // TO unit can be changed by customer (default to first available unit that's different from supplier unit)
-  const [toUnit, setToUnit] = useState(
-    allowedConversions.find((c) => c.unit !== fromUnit)?.unit || 
-    allowedConversions[0]?.unit || 
-    ""
-  );
+  const [toUnit, setToUnit] = useState(() => {
+    if (!categoryUnits || allowedConversions.length === 0) return "";
+    return allowedConversions.find((c) => c.unit !== fromUnit)?.unit || 
+           allowedConversions[0]?.unit || 
+           "";
+  });
+  
   // User inputs the desired quantity in the TARGET unit ("Ke"). Keep as string for controlled input.
   const [toValue, setToValue] = useState<string>("1");
 
-  // Jika kategori tidak ada konversi atau tidak ada unit yang diizinkan, tidak tampilkan converter
-  if (!categoryUnits || allowedConversions.length === 0) {
+  // Jika kategori tidak ada konversi, tidak tampilkan converter
+  if (!categoryUnits) {
+    return null;
+  }
+
+  // Jika tidak ada unit yang diizinkan atau hanya ada 1 unit yang sama dengan supplier unit, tidak tampilkan converter
+  if (allowedConversions.length === 0 || 
+     (allowedConversions.length === 1 && allowedConversions[0].unit === fromUnit)) {
     return null;
   }
 
   // Fungsi konversi
   const convertUnits = (value: number, from: string, to: string): number => {
-    const fromConversion = categoryUnits.conversions.find((c) => c.unit === from);
-    const toConversion = categoryUnits.conversions.find((c) => c.unit === to);
+    const fromConversion = dynamicConversions.find((c) => c.unit === from);
+    const toConversion = dynamicConversions.find((c) => c.unit === to);
 
     if (!fromConversion || !toConversion) return 0;
 
@@ -164,13 +247,16 @@ export default function UnitConverter({
     }
   };
 
+  // Get the label for supplier's unit
+  const supplierUnitLabel = allowedConversions.find(c => c.unit === fromUnit)?.label || productUnit;
+
   return (
     <Card className="p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-gray-900">Beli Dalam Satuan Lain</h3>
         <span className="text-sm text-green-600">
-          Stok: {productStock} {allowedConversions.find(c => c.unit === fromUnit)?.label}
+          Stok: {productStock} {supplierUnitLabel}
         </span>
       </div>
 
@@ -207,7 +293,7 @@ export default function UnitConverter({
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Konversi:</span>
               <span className="font-medium">
-                {toValueNum} {allowedConversions.find(c => c.unit === toUnit)?.label} = {quantityInProductUnit.toFixed(2)} {allowedConversions.find(c => c.unit === fromUnit)?.label}
+                {toValueNum} {allowedConversions.find(c => c.unit === toUnit)?.label} = {quantityInProductUnit.toFixed(2)} {supplierUnitLabel}
               </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -240,7 +326,7 @@ export default function UnitConverter({
             ? "Stok Tidak Cukup" 
             : toValueNum <= 0 
             ? "Masukkan Jumlah" 
-            : `Beli ${toValueNum} ${allowedConversions.find(c => c.unit === toUnit)?.label}`
+            : `Beli ${quantityInProductUnit.toFixed(2)} ${supplierUnitLabel}`
           }
         </Button>
       </div>

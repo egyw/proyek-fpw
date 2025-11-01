@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import Link from "next/link";
-// import { useRouter } from "next/router";
+import { useRouter } from "next/router";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -20,99 +20,106 @@ import {
   RotateCcw,
 } from "lucide-react";
 import UnitConverter from "@/components/UnitConverter";
+import { trpc } from "@/utils/trpc";
 
 export default function ProductDetailPage() {
-  // const router = useRouter();
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // TODO: Get slug from URL for backend integration
-  // const slug = router.query.slug as string;
-  // const { data: product, isLoading } = trpc.products.getBySlug.useQuery({ slug });
+  // Get slug from URL
+  const slug = router.query.slug as string;
 
-  // TODO: Replace with tRPC query
-  // Expected API: trpc.products.getBySlug.useQuery({ slug })
-  // Output: Product
-  const product = {
-    id: "68b8340ed2788dc4d9e608b1",
-    name: "Semen Gresik 50kg",
-    slug: "semen-gresik-50kg",
-    category: "Semen",
-    brand: "Gresik",
-    unit: "SAK",
-    availableUnits: ["sak", "kg", "ton"], // Units yang dipilih admin saat create product
-    price: 65000,
-    originalPrice: 81250,
-    discount: { percentage: 20, validUntil: "2025-12-31T23:59:59Z" },
-    stock: 150,
-    minStock: 20,
-    images: [
-      "/images/dummy_image.jpg",
-      "/images/dummy_image.jpg",
-      "/images/dummy_image.jpg",
-    ],
-    description:
-      "Semen Portland Type I berkualitas tinggi dari PT Semen Gresik (Persero) Tbk. Cocok untuk berbagai jenis konstruksi bangunan seperti rumah tinggal, gedung bertingkat, jalan, jembatan, dan infrastruktur lainnya. Telah memenuhi standar SNI dan memiliki kekuatan tekan yang tinggi. Kemasan 50kg dalam karung yang kuat dan tahan air.",
-    rating: { average: 4.8, count: 234 },
-    sold: 234,
-    views: 1250,
-    attributes: {
-      "Tipe": "Portland Type I",
-      "Berat": "50kg",
-      "Asal": "Indonesia",
-      "Standar": "SNI",
-      "Kekuatan Tekan": "≥ 320 kg/cm²",
-      "Setting Time": "Initial: ≥ 60 menit, Final: ≤ 600 menit",
-    },
-    isActive: true,
-    isFeatured: false,
-    createdAt: "2025-01-15T00:00:00Z",
-    updatedAt: "2025-04-01T00:00:00Z",
+  // Handle share - copy URL to clipboard
+  const handleShare = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      toast.success("Link berhasil disalin!", {
+        description: "Link produk telah disalin ke clipboard",
+      });
+    } catch {
+      toast.error("Gagal menyalin link", {
+        description: "Terjadi kesalahan saat menyalin link",
+      });
+    }
   };
 
-  // Related products
-  const relatedProducts = [
+  // Fetch product by slug from backend
+  const { data: product, isLoading, error } = trpc.products.getBySlug.useQuery(
+    { slug },
+    { enabled: !!slug } // Only run query when slug is available
+  );
+
+  // Fetch related products (same category, exclude current product)
+  const { data: relatedProductsData } = trpc.products.getAll.useQuery(
     {
-      id: "68b8340ed2788dc4d9e608b6",
-      name: "Semen Tiga Roda 50kg",
-      slug: "semen-tiga-roda-50kg",
-      price: 62000,
-      originalPrice: undefined,
-      rating: { average: 4.7, count: 334 },
-      images: ["/images/dummy_image.jpg"],
-      discount: undefined,
+      category: product?.category,
+      limit: 4,
     },
-    {
-      id: "68b8340ed2788dc4d9e608b2",
-      name: "Cat Tembok Avian 5kg Putih",
-      slug: "cat-tembok-avian-5kg-putih",
-      price: 180000,
-      originalPrice: 211765,
-      rating: { average: 4.7, count: 189 },
-      images: ["/images/dummy_image.jpg"],
-      discount: { percentage: 15 },
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b3",
-      name: "Besi Beton 10mm Panjang 12m",
-      slug: "besi-beton-10mm-panjang-12m",
-      price: 85000,
-      originalPrice: 121429,
-      rating: { average: 4.9, count: 156 },
-      images: ["/images/dummy_image.jpg"],
-      discount: { percentage: 30 },
-    },
-    {
-      id: "68b8340ed2788dc4d9e608b4",
-      name: "Keramik Platinum 40x40 Glossy",
-      slug: "keramik-platinum-40x40-glossy",
-      price: 42000,
-      originalPrice: 56000,
-      rating: { average: 4.6, count: 423 },
-      images: ["/images/dummy_image.jpg"],
-      discount: { percentage: 25 },
-    },
-  ];
+    { enabled: !!product?.category }
+  );
+
+  // Loading state
+  if (isLoading || !slug) {
+    return (
+      <MainLayout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Image skeleton */}
+            <div className="space-y-4">
+              <Card className="overflow-hidden animate-pulse">
+                <div className="aspect-square bg-gray-200"></div>
+              </Card>
+              <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="aspect-square bg-gray-200 rounded-lg animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+            {/* Info skeleton */}
+            <div className="space-y-6 animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-12 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Error or not found
+  if (error || !product) {
+    return (
+      <MainLayout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Produk Tidak Ditemukan
+            </h1>
+            <p className="text-gray-600 mb-8">
+              Produk yang Anda cari tidak tersedia atau telah dihapus.
+            </p>
+            <Link href="/products">
+              <Button>Kembali ke Katalog</Button>
+            </Link>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Filter related products (exclude current product)
+  const relatedProducts = relatedProductsData?.products
+    ?.filter((p) => p._id.toString() !== product._id.toString())
+    .slice(0, 4) || [];
+
+  // Calculate discount price
+  const discountPrice = product.discount && product.discount.percentage > 0
+    ? product.price * (1 - product.discount.percentage / 100)
+    : product.price;
 
   const handleQuantityChange = (type: "increment" | "decrement") => {
     if (type === "increment" && quantity < product.stock) {
@@ -161,7 +168,7 @@ export default function ProductDetailPage() {
                   fill
                   className="object-cover"
                 />
-                {product.discount && (
+                {product.discount && product.discount.percentage > 0 && (
                   <Badge className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-base px-3 py-1">
                     -{product.discount.percentage}%
                   </Badge>
@@ -233,24 +240,30 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div className="mb-6">
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-4xl font-bold text-primary">
-                  Rp {product.price.toLocaleString("id-ID")}
-                </span>
-                {product.originalPrice && (
-                  <span className="text-xl text-gray-400 line-through">
-                    Rp {product.originalPrice.toLocaleString("id-ID")}
+              {product.discount && product.discount.percentage > 0 ? (
+                <div>
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <span className="text-lg text-gray-500 line-through">
+                      Rp {product.price.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <span className="text-4xl font-bold text-primary">
+                      Rp {discountPrice.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Hemat Rp{" "}
+                    {(product.price - discountPrice).toLocaleString("id-ID")}{" "}
+                    ({product.discount.percentage}%)
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-baseline gap-3 mb-2">
+                  <span className="text-4xl font-bold text-primary">
+                    Rp {product.price.toLocaleString("id-ID")}
                   </span>
-                )}
-              </div>
-              {product.discount && (
-                <p className="text-sm text-gray-600">
-                  Hemat Rp{" "}
-                  {(
-                    product.originalPrice! - product.price
-                  ).toLocaleString("id-ID")}{" "}
-                  ({product.discount.percentage}%)
-                </p>
+                </div>
               )}
             </div>
 
@@ -262,11 +275,11 @@ export default function ProductDetailPage() {
               <div className="flex items-center gap-2">
                 {product.stock > 50 ? (
                   <Badge className="bg-green-100 text-green-800">
-                    Stok Tersedia ({product.stock} {product.unit})
+                    Stok Tersedia ({product.stock})
                   </Badge>
                 ) : product.stock > 0 ? (
                   <Badge className="bg-orange-100 text-orange-800">
-                    Stok Terbatas ({product.stock} {product.unit})
+                    Stok Terbatas ({product.stock})
                   </Badge>
                 ) : (
                   <Badge className="bg-red-100 text-red-800">Stok Habis</Badge>
@@ -277,32 +290,39 @@ export default function ProductDetailPage() {
             {/* Quantity Selector with Unit Converter */}
             <div className="mb-6">
               <p className="text-sm text-gray-600 mb-3">Jumlah & Unit Pembelian</p>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center border-2 border-gray-300 rounded-lg">
-                    <button
-                      onClick={() => handleQuantityChange("decrement")}
-                      disabled={quantity <= 1}
-                      className="p-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="px-6 font-semibold text-lg">{quantity}</span>
-                    <button
-                      onClick={() => handleQuantityChange("increment")}
-                      disabled={quantity >= product.stock}
-                      className="p-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    {product.unit}
-                  </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center border-2 border-gray-300 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => handleQuantityChange("decrement")}
+                    disabled={quantity <= 1}
+                    className="p-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={product.stock}
+                    value={quantity}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1;
+                      if (value >= 1 && value <= product.stock) {
+                        setQuantity(value);
+                      }
+                    }}
+                    className="w-20 text-center font-semibold text-lg border-0 focus:outline-none focus:ring-0"
+                  />
+                  <button
+                    onClick={() => handleQuantityChange("increment")}
+                    disabled={quantity >= product.stock}
+                    className="p-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Stok tersedia: {product.stock} {product.unit}
-                </p>
+                <span className="text-sm text-gray-600">
+                  {product.unit}
+                </span>
               </div>
             </div>
 
@@ -319,7 +339,12 @@ export default function ProductDetailPage() {
               <Button size="lg" variant="outline" className="h-12">
                 <Heart className="h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="h-12">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="h-12"
+                onClick={handleShare}
+              >
                 <Share2 className="h-5 w-5" />
               </Button>
             </div>
@@ -355,27 +380,36 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Unit Converter */}
-        <div className="mb-12">
-          <UnitConverter 
-            category={product.category} 
-            productUnit={product.unit}
-            productPrice={product.price}
-            productStock={product.stock}
-            availableUnits={product.availableUnits}
-            onAddToCart={(quantity, unit, totalPrice) => {
-              // TODO: Implement cart functionality
-              console.log(`Adding to cart: ${quantity} ${unit} = Rp ${totalPrice}`);
-              toast.success("Berhasil ditambahkan ke keranjang!", {
-                description: `${quantity} ${unit} - Total: Rp ${totalPrice.toLocaleString("id-ID")}`,
-                action: {
-                  label: "Lihat Keranjang",
-                  onClick: () => window.location.href = "/cart",
-                },
-              });
-            }}
-          />
-        </div>
+        {/* Unit Converter - Beli dengan Custom Satuan */}
+        <Card className="mb-12">
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Beli dengan Satuan Lain
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Hitung dan beli produk ini dalam satuan yang Anda inginkan
+            </p>
+            <UnitConverter 
+              category={product.category} 
+              productUnit={product.unit}
+              productPrice={discountPrice}
+              productStock={product.stock}
+              availableUnits={product.availableUnits || [product.unit]}
+              productAttributes={product.attributes as Record<string, string | number>}
+              onAddToCart={(quantity, unit, totalPrice) => {
+                // TODO: Implement cart functionality
+                console.log(`Adding to cart: ${quantity} ${unit} = Rp ${totalPrice}`);
+                toast.success("Berhasil ditambahkan ke keranjang!", {
+                  description: `${quantity} ${unit} - Total: Rp ${totalPrice.toLocaleString("id-ID")}`,
+                  action: {
+                    label: "Lihat Keranjang",
+                    onClick: () => window.location.href = "/cart",
+                  },
+                });
+              }}
+            />
+          </div>
+        </Card>
 
         {/* Product Details Tabs */}
         <Card className="mb-12">
@@ -401,7 +435,7 @@ export default function ProductDetailPage() {
                 Spesifikasi
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(product.attributes).map(([key, value]) => (
+                {Object.entries(product.attributes || {}).map(([key, value]) => (
                   <div
                     key={key}
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
@@ -410,7 +444,7 @@ export default function ProductDetailPage() {
                       {key}
                     </span>
                     <span className="text-sm font-semibold text-gray-900">
-                      {value}
+                      {String(value)}
                     </span>
                   </div>
                 ))}
@@ -434,53 +468,62 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {relatedProducts.map((relatedProduct) => (
-              <Link
-                key={relatedProduct.id}
-                href={`/products/${relatedProduct.slug}`}
-              >
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow group">
-                  <div className="relative aspect-square">
-                    <Image
-                      src={relatedProduct.images[0]}
-                      alt={relatedProduct.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {relatedProduct.discount && (
-                      <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-                        -{relatedProduct.discount.percentage}%
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-sm">
-                      {relatedProduct.name}
-                    </h3>
-                    <div className="flex items-center gap-1 mb-2">
-                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                      <span className="text-xs font-medium text-gray-900">
-                        {relatedProduct.rating.average}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({relatedProduct.rating.count})
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-primary">
-                        Rp {relatedProduct.price.toLocaleString("id-ID")}
-                      </span>
-                      {relatedProduct.originalPrice && (
-                        <span className="text-xs text-gray-400 line-through">
-                          Rp{" "}
-                          {relatedProduct.originalPrice.toLocaleString("id-ID")}
-                        </span>
+            {relatedProducts.map((relatedProduct) => {
+              const relatedDiscountPrice = relatedProduct.discount && relatedProduct.discount.percentage > 0
+                ? relatedProduct.price * (1 - relatedProduct.discount.percentage / 100)
+                : null;
+              
+              return (
+                <Link
+                  key={relatedProduct._id.toString()}
+                  href={`/products/${relatedProduct.slug}`}
+                >
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow group">
+                    <div className="relative aspect-square">
+                      <Image
+                        src={relatedProduct.images[0]}
+                        alt={relatedProduct.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {relatedProduct.discount && relatedProduct.discount.percentage > 0 && (
+                        <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
+                          -{relatedProduct.discount.percentage}%
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-sm">
+                        {relatedProduct.name}
+                      </h3>
+                      <div className="flex items-center gap-1 mb-2">
+                        <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                        <span className="text-xs font-medium text-gray-900">
+                          {relatedProduct.rating.average}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ({relatedProduct.rating.count})
+                        </span>
+                      </div>
+                      {relatedDiscountPrice ? (
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-400 line-through">
+                            Rp {relatedProduct.price.toLocaleString("id-ID")}
+                          </div>
+                          <div className="text-base font-bold text-primary">
+                            Rp {relatedDiscountPrice.toLocaleString("id-ID")}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-base font-bold text-primary">
+                          Rp {relatedProduct.price.toLocaleString("id-ID")}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
