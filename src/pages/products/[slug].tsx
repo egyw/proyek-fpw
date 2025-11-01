@@ -40,6 +40,7 @@ export default function ProductDetailPage() {
     category: "Semen",
     brand: "Gresik",
     unit: "SAK",
+    availableUnits: ["sak", "kg", "ton"], // Units yang dipilih admin saat create product
     price: 65000,
     originalPrice: 81250,
     discount: { percentage: 20, validUntil: "2025-12-31T23:59:59Z" },
@@ -361,6 +362,7 @@ export default function ProductDetailPage() {
             productUnit={product.unit}
             productPrice={product.price}
             productStock={product.stock}
+            availableUnits={product.availableUnits}
             onAddToCart={(quantity, unit, totalPrice) => {
               // TODO: Implement cart functionality
               console.log(`Adding to cart: ${quantity} ${unit} = Rp ${totalPrice}`);

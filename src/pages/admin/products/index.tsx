@@ -44,12 +44,56 @@ import * as z from "zod";
 import Image from "next/image";
 import { Plus, Upload } from "lucide-react";
 
+// Category-specific units mapping (units available for each category)
+const categoryUnitsMap: Record<string, Array<{ value: string; label: string }>> = {
+  Semen: [
+    { value: "sak", label: "Sak (50kg)" },
+    { value: "kg", label: "Kilogram (kg)" },
+    { value: "zak", label: "Zak (40kg)" },
+    { value: "ton", label: "Ton (1000kg)" },
+  ],
+  Cat: [
+    { value: "kaleng", label: "Kaleng (5L)" },
+    { value: "liter", label: "Liter (L)" },
+    { value: "galon", label: "Galon (20L)" },
+    { value: "kg", label: "Kilogram (kg)" },
+  ],
+  Besi: [
+    { value: "batang", label: "Batang (7.4kg)" },
+    { value: "kg", label: "Kilogram (kg)" },
+    { value: "ton", label: "Ton (1000kg)" },
+    { value: "lonjor", label: "Lonjor (12m)" },
+  ],
+  Keramik: [
+    { value: "dus", label: "Dus (11 pcs)" },
+    { value: "pcs", label: "Pieces (pcs)" },
+    { value: "m2", label: "Meter Persegi (m²)" },
+    { value: "box", label: "Box (6 pcs)" },
+  ],
+  Pipa: [
+    { value: "batang", label: "Batang (4m)" },
+    { value: "meter", label: "Meter (m)" },
+    { value: "pcs", label: "Pieces (pcs)" },
+  ],
+  Kayu: [
+    { value: "lembar", label: "Lembar" },
+    { value: "pcs", label: "Pieces (pcs)" },
+    { value: "m3", label: "Meter Kubik (m³)" },
+  ],
+  Genteng: [
+    { value: "lembar", label: "Lembar" },
+    { value: "pcs", label: "Pieces (pcs)" },
+    { value: "m2", label: "Meter Persegi (m²)" },
+  ],
+};
+
 // Form validation schema
 const productSchema = z.object({
   name: z.string().min(3, "Nama produk minimal 3 karakter"),
   category: z.string().min(1, "Kategori harus dipilih"),
   brand: z.string().min(1, "Brand harus diisi"),
-  unit: z.string().min(1, "Unit harus dipilih"),
+  unit: z.string().min(1, "Unit utama harus dipilih"),
+  availableUnits: z.array(z.string()).min(1, "Minimal 1 unit harus dipilih untuk customer"),
   price: z.string().min(1, "Harga harus diisi").refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Harga harus berupa angka positif",
   }),
@@ -69,6 +113,7 @@ type ProductFormValues = z.infer<typeof productSchema>;
 export default function AdminProducts() {
   const [addDialog, setAddDialog] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   // Form setup
   const form = useForm<ProductFormValues>({
@@ -78,6 +123,7 @@ export default function AdminProducts() {
       category: "",
       brand: "",
       unit: "",
+      availableUnits: [],
       price: "",
       originalPrice: "",
       stock: "",
@@ -88,6 +134,10 @@ export default function AdminProducts() {
       isFeatured: false,
     },
   });
+
+  // Watch category changes to show relevant units
+  const watchedCategory = form.watch("category");
+  const watchedAvailableUnits = form.watch("availableUnits");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -451,7 +501,15 @@ export default function AdminProducts() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Kategori *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Reset unit fields when category changes
+                            form.setValue("unit", "");
+                            form.setValue("availableUnits", []);
+                          }} 
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Pilih kategori" />
@@ -464,10 +522,12 @@ export default function AdminProducts() {
                             <SelectItem value="Pipa">Pipa</SelectItem>
                             <SelectItem value="Keramik">Keramik</SelectItem>
                             <SelectItem value="Genteng">Genteng</SelectItem>
-                            <SelectItem value="Pasir">Pasir</SelectItem>
                             <SelectItem value="Kayu">Kayu</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Unit yang tersedia akan muncul setelah kategori dipilih
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -557,26 +617,33 @@ export default function AdminProducts() {
                     name="unit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Satuan *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>Satuan Utama Supplier *</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Auto-select this unit in availableUnits
+                            const currentUnits = form.getValues("availableUnits");
+                            if (!currentUnits.includes(value)) {
+                              form.setValue("availableUnits", [...currentUnits, value]);
+                            }
+                          }} 
+                          defaultValue={field.value}
+                          disabled={!watchedCategory}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Satuan" />
+                              <SelectValue placeholder="Pilih unit utama" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="PCS">PCS</SelectItem>
-                            <SelectItem value="SET">SET</SelectItem>
-                            <SelectItem value="SAK">SAK</SelectItem>
-                            <SelectItem value="BATANG">BATANG</SelectItem>
-                            <SelectItem value="LEMBAR">LEMBAR</SelectItem>
-                            <SelectItem value="M2">M2</SelectItem>
-                            <SelectItem value="M3">M3</SelectItem>
-                            <SelectItem value="KALENG">KALENG</SelectItem>
-                            <SelectItem value="GALON">GALON</SelectItem>
-                            <SelectItem value="KG">KG</SelectItem>
+                            {watchedCategory && categoryUnitsMap[watchedCategory]?.map((unit) => (
+                              <SelectItem key={unit.value} value={unit.value}>
+                                {unit.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>Unit yang digunakan supplier</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -595,6 +662,7 @@ export default function AdminProducts() {
                             {...field} 
                           />
                         </FormControl>
+                        <FormDescription>Dalam unit utama</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -613,11 +681,68 @@ export default function AdminProducts() {
                             {...field} 
                           />
                         </FormControl>
+                        <FormDescription>Untuk alert stok rendah</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
+
+                {/* Available Units for Customers */}
+                {watchedCategory && categoryUnitsMap[watchedCategory] && (
+                  <FormField
+                    control={form.control}
+                    name="availableUnits"
+                    render={() => (
+                      <FormItem>
+                        <div className="mb-4">
+                          <FormLabel className="text-base">Unit yang Tersedia untuk Customer *</FormLabel>
+                          <FormDescription>
+                            Pilih unit yang bisa dipilih customer saat checkout (unit utama otomatis terpilih)
+                          </FormDescription>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {categoryUnitsMap[watchedCategory].map((unit) => (
+                            <FormField
+                              key={unit.value}
+                              control={form.control}
+                              name="availableUnits"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={unit.value}
+                                    className="flex items-start space-x-3 border rounded-lg p-3"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(unit.value)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([...field.value, unit.value])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== unit.value
+                                                )
+                                              );
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                      <FormLabel className="font-medium cursor-pointer">
+                                        {unit.label}
+                                      </FormLabel>
+                                    </div>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

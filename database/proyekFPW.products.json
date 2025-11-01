@@ -1,0 +1,2030 @@
+[{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608c8"
+  },
+  "name": "Fumato Pipa PVC AW 1 inc",
+  "slug": "fumato-pipa-pvc-aw-1-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 47000,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 200,
+  "minStock": 20,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/pipa-pvc-1.jpg"
+  ],
+  "description": "Pipa PVC merek Fumato tipe AW ukuran 1 inch.",
+  "rating": {
+    "average": 4.3,
+    "count": 45
+  },
+  "sold": 120,
+  "views": 580,
+  "attributes": {
+    "diameter_inch": "1",
+    "diameter_mm": 32,
+    "type": "AW",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z",
+  "isActive": true,
+  "isFeatured": false
+},
+{
+  "_id": {
+    "$oid": "68b8346bd2788dc4d9e608d4"
+  },
+  "name": "Besi 10 full SNI",
+  "slug": "besi-10-full-sni",
+  "category": "Besi",
+  "unit": "kg",
+  "price": 67000,
+  "brand": "Sigma Besi",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 150,
+  "minStock": 15,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton",
+    "lonjor"
+  ],
+  "images": [
+    "/images/products/besi-10-full-sni.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 92
+  },
+  "sold": 78,
+  "views": 980,
+  "description": "Besi ulir SNI ukuran 10 mm.",
+  "attributes": {
+    "diameter_mm": 10,
+    "type": "Ulir",
+    "standard": "SNI"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8347fd2788dc4d9e608d9"
+  },
+  "name": "Semen Merdeka 50 Kg",
+  "slug": "semen-merdeka-50-kg",
+  "category": "Semen",
+  "unit": "sak",
+  "price": 53000,
+  "brand": "Merdeka",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 180,
+  "minStock": 20,
+  "availableUnits": [
+    "sak",
+    "kg",
+    "zak",
+    "ton"
+  ],
+  "images": [
+    "/images/products/semen-merdeka-50-kg.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 128
+  },
+  "sold": 142,
+  "views": 1520,
+  "description": "Semen merek Merdeka, kemasan 50 kg.",
+  "attributes": {
+    "weight_kg": 50,
+    "type": "Portland Cement"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8347fd2788dc4d9e608da"
+  },
+  "name": "Semen Conch 50 KG",
+  "slug": "semen-conch-50-kg",
+  "category": "Semen",
+  "unit": "sak",
+  "price": 52000,
+  "brand": "Conch",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 180,
+  "minStock": 20,
+  "availableUnits": [
+    "sak",
+    "kg",
+    "zak",
+    "ton"
+  ],
+  "images": [
+    "/images/products/semen-conch-50-kg.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 115
+  },
+  "sold": 136,
+  "views": 1450,
+  "description": "Semen merek Conch, kemasan 50 kg.",
+  "attributes": {
+    "weight_kg": 50,
+    "type": "Portland Cement"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608dc"
+  },
+  "name": "Triplek 3mm Segon",
+  "slug": "triplek-3mm-segon",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 42000,
+  "brand": "Segon",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 100,
+  "minStock": 30,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-3mm.jpg"
+  ],
+  "description": "Triplek merk Segon tebal 3 mm.",
+  "rating": {
+    "average": 4.2,
+    "count": 67
+  },
+  "sold": 245,
+  "views": 890,
+  "attributes": {
+    "thickness_mm": 3,
+    "type": "Segon"
+  },
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z",
+  "isActive": true,
+  "isFeatured": false
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608dd"
+  },
+  "name": "Triplek 4mm Segon",
+  "slug": "triplek-4mm-segon",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 52000,
+  "brand": "Segon",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 100,
+  "minStock": 10,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-4mm-segon.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 83
+  },
+  "sold": 58,
+  "views": 920,
+  "description": "Triplek merk Segon tebal 4 mm.",
+  "attributes": {
+    "thickness_mm": 4,
+    "type": "Segon"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608de"
+  },
+  "name": "Triplek 9mm Segon",
+  "slug": "triplek-9mm-segon",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 82000,
+  "brand": "Segon",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Triplek merk Segon tebal 9 mm.",
+  "attributes": {
+    "thickness_mm": 9,
+    "type": "Segon"
+  },
+  "stock": 250,
+  "minStock": 30,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-9mm-segon.jpg"
+  ],
+  "rating": {
+    "average": 4.2,
+    "count": 54
+  },
+  "sold": 120,
+  "views": 670,
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608df"
+  },
+  "name": "Triplek 9mm Semi Miranti",
+  "slug": "triplek-9mm-semi-miranti",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 90000,
+  "brand": "Semi Miranti",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Triplek merk Semi Miranti tebal 9 mm.",
+  "attributes": {
+    "thickness_mm": 9,
+    "type": "Semi Miranti"
+  },
+  "stock": 85,
+  "minStock": 10,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-9mm-semi-miranti.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 89
+  },
+  "sold": 38,
+  "views": 1050,
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608ea"
+  },
+  "name": "Kawat Licin 16 (50 KG)",
+  "slug": "kawat-licin-16-50kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 741750,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 16 mm, bobot 50 kg.",
+  "stock": 60,
+  "minStock": 8,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-16-50kg.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 32
+  },
+  "sold": 28,
+  "views": 480,
+  "attributes": {
+    "diameter_mm": 16,
+    "weight_kg": 50
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608ec"
+  },
+  "name": "Kawat Licin 20 (25 KG)",
+  "slug": "kawat-licin-20-25kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 406500,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 20 mm, bobot 25 kg.",
+  "stock": 75,
+  "minStock": 10,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-20-25kg.jpg"
+  ],
+  "rating": {
+    "average": 4.3,
+    "count": 41
+  },
+  "sold": 35,
+  "views": 550,
+  "attributes": {
+    "diameter_mm": 20,
+    "weight_kg": 25
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b834aed2788dc4d9e608ee"
+  },
+  "name": "Paku Beton Putih VPR",
+  "slug": "paku-beton-putih-vpr",
+  "category": "Paku",
+  "unit": "pcs",
+  "price": 5800,
+  "brand": "VPR",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Paku beton putih merek VPR.",
+  "stock": 500,
+  "minStock": 50,
+  "availableUnits": [
+    "pcs",
+    "kg",
+    "box"
+  ],
+  "images": [
+    "/images/products/paku-beton-putih-vpr.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 78
+  },
+  "sold": 215,
+  "views": 920,
+  "attributes": {
+    "type": "Beton",
+    "color": "Putih"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8350dd2788dc4d9e608f5"
+  },
+  "name": "Truss Screw 10 x 16 (LION)",
+  "slug": "truss-screw-10x16-lion",
+  "category": "Baut",
+  "unit": "pcs",
+  "price": 124,
+  "brand": "LION",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Screw truss merek LION ukuran 10 x 16 mm.",
+  "stock": 1500,
+  "minStock": 200,
+  "availableUnits": [
+    "pcs",
+    "kg",
+    "box"
+  ],
+  "images": [
+    "/images/products/truss-screw-10x16-lion.jpg"
+  ],
+  "rating": {
+    "average": 4.7,
+    "count": 145
+  },
+  "sold": 680,
+  "views": 1820,
+  "attributes": {
+    "size": "10 x 16 mm",
+    "type": "Truss Screw"
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340ed2788dc4d9e608b4"
+  },
+  "name": "Buana Tangki Air Plastik 350 LTR",
+  "slug": "buana-tangki-air-plastik-350-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 500000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 80,
+  "minStock": 5,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/tangki-buana-350.jpg"
+  ],
+  "description": "Tangki air plastik merek Buana kapasitas 350 liter.",
+  "rating": {
+    "average": 4.6,
+    "count": 112
+  },
+  "sold": 189,
+  "views": 1120,
+  "attributes": {
+    "capacity_liter": 350,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z",
+  "isActive": true,
+  "isFeatured": true
+},
+{
+  "_id": {
+    "$oid": "68b8340ed2788dc4d9e608b9"
+  },
+  "name": "Buana Tangki Air Plastik 2200 LTR",
+  "slug": "buana-tangki-air-plastik-2200-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 2100000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Buana kapasitas 2200 liter.",
+  "stock": 30,
+  "minStock": 3,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/buana-tangki-air-plastik-2200-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.7,
+    "count": 42
+  },
+  "sold": 15,
+  "views": 650,
+  "attributes": {
+    "capacity_liter": 2200,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340fd2788dc4d9e608c3"
+  },
+  "name": "Buana Tangki Air Plastik 5000 LTR",
+  "slug": "buana-tangki-air-plastik-5000-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 4400000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Buana kapasitas 5000 liter.",
+  "stock": 20,
+  "minStock": 2,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/buana-tangki-air-plastik-5000-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.9,
+    "count": 38
+  },
+  "sold": 12,
+  "views": 520,
+  "attributes": {
+    "capacity_liter": 5000,
+    "material": "Plastik",
+    "type": "Horizontal"
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608c6"
+  },
+  "name": "Fumato Pipa PVC AW 1/2 inc",
+  "slug": "fumato-pipa-pvc-aw-1-2-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 25000,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tipe AW ukuran 1/2 inch.",
+  "stock": 250,
+  "minStock": 30,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-aw-1-2-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 95
+  },
+  "sold": 180,
+  "views": 1230,
+  "attributes": {
+    "diameter_inch": "1/2",
+    "diameter_mm": 22,
+    "type": "AW",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608c9"
+  },
+  "name": "Fumato Pipa PVC AW 11/4 inc",
+  "slug": "fumato-pipa-pvc-aw-11-4-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 70500,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tipe AW ukuran 1 1/4 inch.",
+  "stock": 180,
+  "minStock": 20,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-aw-11-4-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 72
+  },
+  "sold": 98,
+  "views": 890,
+  "attributes": {
+    "diameter_inch": "1 1/4",
+    "diameter_mm": 42,
+    "type": "AW",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608cb"
+  },
+  "name": "Fumato Pipa PVC D 11/4 inc",
+  "slug": "fumato-pipa-pvc-d-11-4-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 42925,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tipe D ukuran 1 1/4 inch.",
+  "stock": 200,
+  "minStock": 25,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-d-11-4-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.3,
+    "count": 58
+  },
+  "sold": 85,
+  "views": 720,
+  "attributes": {
+    "diameter_inch": "1 1/4",
+    "diameter_mm": 42,
+    "type": "D",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608cd"
+  },
+  "name": "Fumato Pipa PVC Tanpa MOF 5/8 inc",
+  "slug": "fumato-pipa-pvc-tanpa-mof-5-8-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 9292,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tanpa MOF ukuran 5/8 inch.",
+  "stock": 300,
+  "minStock": 40,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-tanpa-mof-5-8-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.2,
+    "count": 86
+  },
+  "sold": 195,
+  "views": 1150,
+  "attributes": {
+    "diameter_inch": "5/8",
+    "diameter_mm": 17,
+    "type": "Tanpa MOF",
+    "length_meter": 4,
+    "has_mof": false
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8346bd2788dc4d9e608d5"
+  },
+  "name": "Besi 10 Ulir",
+  "slug": "besi-10-ulir",
+  "category": "Besi",
+  "unit": "kg",
+  "price": 68000,
+  "brand": "Sigma Besi",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Besi ulir non-SNI ukuran 10 mm.",
+  "stock": 140,
+  "minStock": 15,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton",
+    "lonjor"
+  ],
+  "images": [
+    "/images/products/besi-10-ulir.jpg"
+  ],
+  "rating": {
+    "average": 4.1,
+    "count": 63
+  },
+  "sold": 74,
+  "views": 830,
+  "attributes": {
+    "diameter_mm": 10,
+    "type": "Ulir",
+    "standard": "Non-SNI"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8347fd2788dc4d9e608d8"
+  },
+  "name": "Semen Bosowa",
+  "slug": "semen-bosowa",
+  "category": "Semen",
+  "unit": "sak",
+  "price": 60000,
+  "brand": "Bosowa",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Semen merek Bosowa, kemasan 50 kg.",
+  "stock": 200,
+  "minStock": 25,
+  "availableUnits": [
+    "sak",
+    "kg",
+    "zak",
+    "ton"
+  ],
+  "images": [
+    "/images/products/semen-bosowa.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 124
+  },
+  "sold": 156,
+  "views": 1480,
+  "attributes": {
+    "weight_kg": 50,
+    "type": "Portland Cement"
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608e0"
+  },
+  "name": "Triplek 12mm Semiranti",
+  "slug": "triplek-12mm-semiranti",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 135000,
+  "brand": "Semiranti",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Triplek merk Semiranti tebal 12 mm.",
+  "stock": 70,
+  "minStock": 8,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-12mm-semiranti.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 87
+  },
+  "sold": 48,
+  "views": 920,
+  "attributes": {
+    "thickness_mm": 12,
+    "type": "Semiranti"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608e5"
+  },
+  "name": "Kawat Licin 6 (50 KG)",
+  "slug": "kawat-licin-6-50kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 695000,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 6 mm, bobot 50 kg.",
+  "stock": 50,
+  "minStock": 6,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-6-50kg.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 34
+  },
+  "sold": 22,
+  "views": 420,
+  "attributes": {
+    "diameter_mm": 6,
+    "weight_kg": 50
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608e7"
+  },
+  "name": "Kawat Licin 10 (50 KG)",
+  "slug": "kawat-licin-10-50kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 695000,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 10 mm, bobot 50 kg.",
+  "stock": 55,
+  "minStock": 6,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-10-50kg.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 38
+  },
+  "sold": 24,
+  "views": 460,
+  "attributes": {
+    "diameter_mm": 10,
+    "weight_kg": 50
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608e8"
+  },
+  "name": "Kawat Licin 12 (50 KG)",
+  "slug": "kawat-licin-12-50kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 700000,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 12 mm, bobot 50 kg.",
+  "stock": 58,
+  "minStock": 6,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-12-50kg.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 41
+  },
+  "sold": 26,
+  "views": 490,
+  "attributes": {
+    "diameter_mm": 12,
+    "weight_kg": 50
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608e9"
+  },
+  "name": "Kawat Licin 14 (50 KG)",
+  "slug": "kawat-licin-14-50kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 712500,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 14 mm, bobot 50 kg.",
+  "stock": 52,
+  "minStock": 6,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-14-50kg.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 36
+  },
+  "sold": 20,
+  "views": 470,
+  "attributes": {
+    "diameter_mm": 14,
+    "weight_kg": 50
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608ed"
+  },
+  "name": "Kawat Licin 22 (25 KG)",
+  "slug": "kawat-licin-22-25kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 427500,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 22 mm, bobot 25 kg.",
+  "stock": 68,
+  "minStock": 8,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-22-25kg.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 31
+  },
+  "sold": 19,
+  "views": 410,
+  "attributes": {
+    "diameter_mm": 22,
+    "weight_kg": 25
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b834d5d2788dc4d9e608f1"
+  },
+  "name": "Aspal Cair 5 liter",
+  "slug": "aspal-cair-5-liter",
+  "category": "Aspal",
+  "unit": "liter",
+  "price": 165100,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Aspal cair volume besar untuk proyek konstruksi.",
+  "stock": 45,
+  "minStock": 5,
+  "availableUnits": [
+    "liter",
+    "kg",
+    "galon"
+  ],
+  "images": [
+    "/images/products/aspal-cair-5-liter.jpg"
+  ],
+  "rating": {
+    "average": 4.2,
+    "count": 26
+  },
+  "sold": 14,
+  "views": 340,
+  "attributes": {
+    "volume_liter": 5
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340ed2788dc4d9e608b8"
+  },
+  "name": "Buana Tangki Air Plastik 1450 LTR",
+  "slug": "buana-tangki-air-plastik-1450-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 1450000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Buana kapasitas 1450 liter.",
+  "stock": 40,
+  "minStock": 4,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/buana-tangki-air-plastik-1450-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.7,
+    "count": 68
+  },
+  "sold": 32,
+  "views": 890,
+  "attributes": {
+    "capacity_liter": 1450,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340fd2788dc4d9e608be"
+  },
+  "name": "Buana Tangki Air Plastik 650 LTR",
+  "slug": "buana-tangki-air-plastik-650-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 650000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Buana kapasitas 650 liter.",
+  "stock": 65,
+  "minStock": 6,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/buana-tangki-air-plastik-650-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 98
+  },
+  "sold": 54,
+  "views": 1180,
+  "attributes": {
+    "capacity_liter": 650,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340fd2788dc4d9e608c5"
+  },
+  "name": "Badak Tangki Air Plastik 1100 LTR",
+  "slug": "badak-tangki-air-plastik-1100-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 900000,
+  "brand": "Badak",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Badak kapasitas 1100 liter.",
+  "stock": 48,
+  "minStock": 5,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/badak-tangki-air-plastik-1100-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 74
+  },
+  "sold": 38,
+  "views": 960,
+  "attributes": {
+    "capacity_liter": 1100,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608c7"
+  },
+  "name": "Fumato Pipa PVC AW 3/4 inc",
+  "slug": "fumato-pipa-pvc-aw-3-4-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 34855,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tipe AW ukuran 3/4 inch.",
+  "stock": 220,
+  "minStock": 25,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-aw-3-4-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 102
+  },
+  "sold": 164,
+  "views": 1340,
+  "attributes": {
+    "diameter_inch": "3/4",
+    "diameter_mm": 26,
+    "type": "AW",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608ca"
+  },
+  "name": "Fumato Pipa PVC AW 11/2 inc",
+  "slug": "fumato-pipa-pvc-aw-11-2-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 87900,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tipe AW ukuran 1 1/2 inch.",
+  "stock": 160,
+  "minStock": 18,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-aw-11-2-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 65
+  },
+  "sold": 82,
+  "views": 790,
+  "attributes": {
+    "diameter_inch": "1 1/2",
+    "diameter_mm": 48,
+    "type": "AW",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608ce"
+  },
+  "name": "Fumato Conduit 5/8 inc",
+  "slug": "fumato-conduit-5-8-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 15150,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Conduit PVC merek Fumato ukuran 5/8 inch.",
+  "stock": 280,
+  "minStock": 35,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-conduit-5-8-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.3,
+    "count": 89
+  },
+  "sold": 192,
+  "views": 1120,
+  "attributes": {
+    "diameter_inch": "5/8",
+    "diameter_mm": 17,
+    "type": "Conduit",
+    "length_meter": 4,
+    "has_mof": false
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8346bd2788dc4d9e608d3"
+  },
+  "name": "Besi 8 SNI",
+  "slug": "besi-8-sni",
+  "category": "Besi",
+  "unit": "kg",
+  "price": 42500,
+  "brand": "Sigma Besi",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Besi ulir SNI ukuran 8 mm.",
+  "stock": 170,
+  "minStock": 20,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton",
+    "lonjor"
+  ],
+  "images": [
+    "/images/products/besi-8-sni.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 112
+  },
+  "sold": 98,
+  "views": 1050,
+  "attributes": {
+    "diameter_mm": 8,
+    "type": "Ulir",
+    "standard": "SNI"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608e2"
+  },
+  "name": "Triplek 18mm Semi Miranti",
+  "slug": "triplek-18mm-semi-miranti",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 195000,
+  "brand": "Semi Miranti",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Triplek merk Semi Miranti tebal 18 mm.",
+  "stock": 60,
+  "minStock": 6,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-18mm-semi-miranti.jpg"
+  ],
+  "rating": {
+    "average": 4.8,
+    "count": 76
+  },
+  "sold": 42,
+  "views": 850,
+  "attributes": {
+    "thickness_mm": 18,
+    "type": "Semi Miranti"
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8350dd2788dc4d9e608f6"
+  },
+  "name": "SDS Roofing 50 mm (LION KNG)",
+  "slug": "sds-roofing-50mm-lion-kng",
+  "category": "Baut",
+  "unit": "pcs",
+  "price": 353,
+  "brand": "LION KNG",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Baut atap SDS merek LION KNG panjang 50 mm.",
+  "stock": 2000,
+  "minStock": 250,
+  "availableUnits": [
+    "pcs",
+    "kg",
+    "box"
+  ],
+  "images": [
+    "/images/products/sds-roofing-50mm-lion-kng.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 158
+  },
+  "sold": 820,
+  "views": 2100,
+  "attributes": {
+    "length_mm": 50,
+    "type": "SDS Roofing"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340ed2788dc4d9e608b7"
+  },
+  "name": "Buana Tangki Air Plastik 1200 LTR",
+  "slug": "buana-tangki-air-plastik-1200-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 950000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Buana kapasitas 1200 liter.",
+  "stock": 42,
+  "minStock": 4,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/buana-tangki-air-plastik-1200-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.6,
+    "count": 82
+  },
+  "sold": 36,
+  "views": 1020,
+  "attributes": {
+    "capacity_liter": 1200,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340ed2788dc4d9e608bb"
+  },
+  "name": "Badak Tangki Air Plastik 600 LTR",
+  "slug": "badak-tangki-air-plastik-600-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 610000,
+  "brand": "Badak",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Badak kapasitas 600 liter.",
+  "stock": 58,
+  "minStock": 6,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/badak-tangki-air-plastik-600-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 94
+  },
+  "sold": 48,
+  "views": 1140,
+  "attributes": {
+    "capacity_liter": 600,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8340fd2788dc4d9e608bf"
+  },
+  "name": "Buana Tangki Air Plastik 1000 LTR",
+  "slug": "buana-tangki-air-plastik-1000-ltr",
+  "category": "Tangki Air",
+  "unit": "set",
+  "price": 920000,
+  "brand": "Buana",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Tangki air plastik merek Buana kapasitas 1000 liter.",
+  "stock": 45,
+  "minStock": 5,
+  "availableUnits": [
+    "set"
+  ],
+  "images": [
+    "/images/products/buana-tangki-air-plastik-1000-ltr.jpg"
+  ],
+  "rating": {
+    "average": 4.7,
+    "count": 103
+  },
+  "sold": 58,
+  "views": 1290,
+  "attributes": {
+    "capacity_liter": 1000,
+    "material": "Plastik",
+    "type": "Vertical"
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608cc"
+  },
+  "name": "Fumato Pipa PVC MOF 5/8 inc",
+  "slug": "fumato-pipa-pvc-mof-5-8-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 11110,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Pipa PVC merek Fumato tipe MOF ukuran 5/8 inch.",
+  "stock": 290,
+  "minStock": 35,
+  "availableUnits": [
+    "batang",
+    "meter",
+    "pcs"
+  ],
+  "images": [
+    "/images/products/fumato-pipa-pvc-mof-5-8-inc.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 107
+  },
+  "sold": 198,
+  "views": 1380,
+  "attributes": {
+    "diameter_inch": "5/8",
+    "diameter_mm": 17,
+    "type": "MOF",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8346bd2788dc4d9e608d2"
+  },
+  "name": "Besi 6 SNI",
+  "slug": "besi-6-sni",
+  "category": "Besi",
+  "unit": "kg",
+  "price": 25500,
+  "brand": "Sigma Besi",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Besi ulir SNI ukuran 6 mm.",
+  "stock": 200,
+  "minStock": 25,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton",
+    "lonjor"
+  ],
+  "images": [
+    "/images/products/besi-6-sni.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 136
+  },
+  "sold": 124,
+  "views": 1420,
+  "attributes": {
+    "diameter_mm": 6,
+    "type": "Ulir",
+    "standard": "SNI"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8346bd2788dc4d9e608d6"
+  },
+  "name": "Besi 12 full SNI",
+  "slug": "besi-12-full-sni",
+  "category": "Besi",
+  "unit": "kg",
+  "price": 98000,
+  "brand": "Sigma Besi",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Besi ulir SNI ukuran 12 mm.",
+  "stock": 130,
+  "minStock": 15,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton",
+    "lonjor"
+  ],
+  "images": [
+    "/images/products/besi-12-full-sni.jpg"
+  ],
+  "rating": {
+    "average": 4.7,
+    "count": 84
+  },
+  "sold": 68,
+  "views": 950,
+  "attributes": {
+    "diameter_mm": 12,
+    "type": "Ulir",
+    "standard": "SNI"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8347fd2788dc4d9e608d7"
+  },
+  "name": "Semen Tonasa",
+  "slug": "semen-tonasa",
+  "category": "Semen",
+  "unit": "sak",
+  "price": 62000,
+  "brand": "Tonasa",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Semen merek Tonasa, kemasan 50 kg.",
+  "stock": 190,
+  "minStock": 22,
+  "availableUnits": [
+    "sak",
+    "kg",
+    "zak",
+    "ton"
+  ],
+  "images": [
+    "/images/products/semen-tonasa.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 118
+  },
+  "sold": 148,
+  "views": 1560,
+  "attributes": {
+    "weight_kg": 50,
+    "type": "Portland Cement"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608e1"
+  },
+  "name": "Triplek 12mm Segon",
+  "slug": "triplek-12mm-segon",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 140000,
+  "brand": "Segon",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Triplek merk Segon tebal 12 mm.",
+  "stock": 72,
+  "minStock": 8,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-12mm-segon.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 79
+  },
+  "sold": 46,
+  "views": 880,
+  "attributes": {
+    "thickness_mm": 12,
+    "type": "Segon"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8348bd2788dc4d9e608e3"
+  },
+  "name": "Triplek 20mm Semi Miranti",
+  "slug": "triplek-20mm-semi-miranti",
+  "category": "Triplek",
+  "unit": "lembar",
+  "price": 200000,
+  "brand": "Semi Miranti",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Triplek merk Semi Miranti tebal 20 mm.",
+  "stock": 55,
+  "minStock": 6,
+  "availableUnits": [
+    "lembar",
+    "pcs",
+    "m3"
+  ],
+  "images": [
+    "/images/products/triplek-20mm-semi-miranti.jpg"
+  ],
+  "rating": {
+    "average": 4.8,
+    "count": 62
+  },
+  "sold": 34,
+  "views": 720,
+  "attributes": {
+    "thickness_mm": 20,
+    "type": "Semi Miranti"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608e6"
+  },
+  "name": "Kawat Licin 8 (50 KG)",
+  "slug": "kawat-licin-8-50kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 695000,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 8 mm, bobot 50 kg.",
+  "stock": 53,
+  "minStock": 6,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-8-50kg.jpg"
+  ],
+  "rating": {
+    "average": 4.5,
+    "count": 37
+  },
+  "sold": 21,
+  "views": 450,
+  "attributes": {
+    "diameter_mm": 8,
+    "weight_kg": 50
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b83495d2788dc4d9e608eb"
+  },
+  "name": "Kawat Licin 18 (25 KG)",
+  "slug": "kawat-licin-18-25kg",
+  "category": "Kawat",
+  "unit": "kg",
+  "price": 386000,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Kawat licin ukuran 18 mm, bobot 25 kg.",
+  "stock": 70,
+  "minStock": 8,
+  "availableUnits": [
+    "kg",
+    "batang",
+    "ton"
+  ],
+  "images": [
+    "/images/products/kawat-licin-18-25kg.jpg"
+  ],
+  "rating": {
+    "average": 4.4,
+    "count": 33
+  },
+  "sold": 19,
+  "views": 420,
+  "attributes": {
+    "diameter_mm": 18,
+    "weight_kg": 25
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b834d5d2788dc4d9e608f0"
+  },
+  "name": "Aspal Cair 1 liter",
+  "slug": "aspal-cair-1-liter",
+  "category": "Aspal",
+  "unit": "liter",
+  "price": 38100,
+  "brand": "N/A",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Aspal cair untuk perbaikan atap atau sambungan bahan bangunan.",
+  "stock": 120,
+  "minStock": 15,
+  "availableUnits": [
+    "liter",
+    "kg",
+    "galon"
+  ],
+  "images": [
+    "/images/products/aspal-cair-1-liter.jpg"
+  ],
+  "rating": {
+    "average": 4.3,
+    "count": 52
+  },
+  "sold": 68,
+  "views": 780,
+  "attributes": {
+    "volume_liter": 1
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b8350dd2788dc4d9e608f4"
+  },
+  "name": "Dynabolt M12 x 60 (WOWO)",
+  "slug": "dynabolt-m12x60-wowo",
+  "category": "Baut",
+  "unit": "pcs",
+  "price": 1659,
+  "brand": "WOWO",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "description": "Baut dinamik merek WOWO ukuran M12 x 60 mm.",
+  "stock": 800,
+  "minStock": 100,
+  "availableUnits": [
+    "pcs",
+    "kg",
+    "box"
+  ],
+  "images": [
+    "/images/products/dynabolt-m12x60-wowo.jpg"
+  ],
+  "rating": {
+    "average": 4.7,
+    "count": 142
+  },
+  "sold": 385,
+  "views": 1850,
+  "attributes": {
+    "size": "M12 x 60 mm",
+    "type": "Dynabolt"
+  },
+  "isActive": true,
+  "isFeatured": false,
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z"
+}]

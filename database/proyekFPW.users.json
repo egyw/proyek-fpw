@@ -1,0 +1,105 @@
+[{
+  "_id": {
+    "$oid": "68b82d09d2788dc4d9e60875"
+  },
+  "username": "eggy",
+  "email": "eggy@example.com",
+  "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq", 
+  "role": "admin",
+  "fullName": "eggy eggyan",
+  "phone": "081234567890",
+  "address": {
+    "street": "Jl. Admin No. 1",
+    "city": "Jakarta",
+    "province": "DKI Jakarta",
+    "postalCode": "12345"
+  },
+  "createdAt": "2025-09-03T10:00:00Z",
+  "updatedAt": "2025-11-01T08:30:00Z",
+  "isActive": true,
+  "lastLogin": "2025-11-01T08:30:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b82d09d2788dc4d9e60876"
+  },
+  "username": "staff01",
+  "email": "staff01@example.com",
+  "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq",
+  "role": "staff",
+  "fullName": "Budi Santoso",
+  "phone": "081298765432",
+  "address": {
+    "street": "Jl. Staff No. 12",
+    "city": "Bandung",
+    "province": "Jawa Barat",
+    "postalCode": "40123"
+  },
+  "createdAt": "2025-09-05T12:00:00Z",
+  "updatedAt": "2025-10-31T14:20:00Z",
+  "isActive": true,
+  "lastLogin": "2025-10-31T14:20:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b82d09d2788dc4d9e60877"
+  },
+  "username": "customer01",
+  "email": "customer01@example.com",
+  "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq",
+  "role": "user",
+  "fullName": "Andi Pratama",
+  "phone": "081387654321",
+  "address": {
+    "street": "Jl. Merdeka No. 45",
+    "city": "Surabaya",
+    "province": "Jawa Timur",
+    "postalCode": "60123"
+  },
+  "createdAt": "2025-10-15T09:30:00Z",
+  "updatedAt": "2025-10-30T16:45:00Z",
+  "isActive": true,
+  "lastLogin": "2025-10-30T16:45:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b82d09d2788dc4d9e60878"
+  },
+  "username": "customer02",
+  "email": "customer02@example.com",
+  "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq",
+  "role": "user",
+  "fullName": "Siti Nurhaliza",
+  "phone": "082134567890",
+  "address": {
+    "street": "Jl. Sudirman No. 88",
+    "city": "Yogyakarta",
+    "province": "DI Yogyakarta",
+    "postalCode": "55123"
+  },
+  "createdAt": "2025-10-18T11:15:00Z",
+  "updatedAt": "2025-10-29T19:30:00Z",
+  "isActive": true,
+  "lastLogin": "2025-10-29T19:30:00Z"
+},
+{
+  "_id": {
+    "$oid": "68b82d09d2788dc4d9e60879"
+  },
+  "username": "customer03",
+  "email": "customer03@example.com",
+  "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq",
+  "role": "user",
+  "fullName": "Dewi Lestari",
+  "phone": "085612345678",
+  "address": {
+    "street": "Jl. Ahmad Yani No. 234",
+    "city": "Semarang",
+    "province": "Jawa Tengah",
+    "postalCode": "50123"
+  },
+  "createdAt": "2025-10-20T14:45:00Z",
+  "updatedAt": "2025-10-28T10:20:00Z",
+  "isActive": true,
+  "lastLogin": "2025-10-28T10:20:00Z"
+}]

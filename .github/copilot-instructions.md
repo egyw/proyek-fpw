@@ -118,31 +118,36 @@ if (isLoading) return <Spinner />;
 - Design UI to handle loading states (even if not used with dummy data)
 
 ### Product Data Structure
-**Complete product schema** for consistent dummy data across the project:
+**Complete product schema** for consistent data across the project (based on MongoDB collection):
 
 ```typescript
 interface Product {
-  id: string;                    // MongoDB ObjectId or unique identifier
+  _id: {
+    $oid: string;                // MongoDB ObjectId
+  };
   name: string;                  // Product name
-  slug: string;                  // URL-friendly name (e.g., "buana-tangki-air-650")
-  category: string;              // Category name
+  slug: string;                  // URL-friendly name (e.g., "fumato-pipa-pvc-aw-1-inc")
+  category: string;              // Category name (Pipa, Besi, Semen, Triplek, Tangki Air, Kawat, Paku, Baut, Aspal)
   brand: string;                 // Brand name
-  unit: string;                  // Unit (e.g., "SET", "PCS", "M2")
+  unit: string;                  // Primary unit supplier uses (lowercase: "batang", "kg", "sak", "lembar", "set", "pcs", "liter")
   
   // Pricing
-  price: number;                 // Current selling price (after discount)
-  originalPrice?: number;        // Original price (before discount)
+  price: number;                 // Current selling price per primary unit
   discount?: {
-    percentage: number;          // Discount percentage (0-100)
-    validUntil: string;          // ISO date string
+    percentage: number;          // Discount percentage (0-100), 0 = no discount
+    validUntil: string;          // ISO date string, empty "" if no discount
   };
   
   // Stock
-  stock: number;                 // Available stock quantity
-  minStock?: number;             // Minimum stock for restock alert
+  stock: number;                 // Available stock quantity in primary unit
+  minStock: number;              // Minimum stock for restock alert
+  
+  // Multi-Unit Sales System - Customer can buy in different units
+  availableUnits: string[];      // Units customers can purchase in (e.g., ["batang", "meter", "pcs"])
+  // Unit conversions are category-specific, defined in UnitConverter component
   
   // Media
-  images: string[];              // Array of image URLs/paths
+  images: string[];              // Array of image URLs/paths (always array, even for single image)
   
   // Description
   description: string;           // Product description
@@ -153,14 +158,22 @@ interface Product {
     count: number;               // Number of reviews
   };
   sold: number;                  // Total units sold
-  views?: number;                // Product page views
+  views: number;                 // Product page views
   
-  // Attributes (product specifications)
-  attributes?: Record<string, string>; // e.g., { material: "Plastik HDPE", capacity: "650L" }
+  // Attributes (product specifications - category-specific)
+  attributes: Record<string, any>; // Examples:
+  // Pipa: { diameter_inch, diameter_mm, type, length_meter, has_mof }
+  // Besi: { diameter_mm, type, standard }
+  // Semen: { weight_kg, type }
+  // Triplek: { thickness_mm, type }
+  // Kawat: { diameter_mm, weight_kg }
+  // Tangki Air: { capacity_liter, material, type }
+  // Paku/Baut: { size, type, color, length_mm }
+  // Aspal: { volume_liter }
   
   // Status
-  isActive: boolean;             // Product visibility
-  isFeatured?: boolean;          // Featured product flag
+  isActive: boolean;             // Product visibility (true = active, false = hidden)
+  isFeatured: boolean;           // Featured product flag (true = show in featured section)
   
   // Timestamps
   createdAt: string;             // ISO date string
@@ -168,39 +181,145 @@ interface Product {
 }
 ```
 
-**Example dummy product:**
+**Example from actual database (Fumato Pipa PVC AW 1 inc):**
 ```typescript
 {
-  id: "68b8340ed2788dc4d9e608b5",
-  name: "Buana Tangki Air Plastik 650 LTR",
-  slug: "buana-tangki-air-plastik-650-ltr",
-  category: "Tangki Air",
-  brand: "Buana",
-  unit: "SET",
-  price: 552500,
-  originalPrice: 650000,
-  discount: { percentage: 15, validUntil: "2025-12-31T23:59:59Z" },
-  stock: 150,
-  minStock: 10,
-  images: ["/images/products/tangki-air-1.jpg", "/images/products/tangki-air-2.jpg"],
-  description: "Tangki air plastik merek Buana kapasitas 650 liter.",
-  rating: { average: 4.5, count: 128 },
-  sold: 245,
-  views: 1250,
-  attributes: { material: "Plastik HDPE", capacity: "650 Liter", color: "Biru" },
-  isActive: true,
-  isFeatured: false,
-  createdAt: "2025-04-01T00:00:00Z",
-  updatedAt: "2025-04-01T00:00:00Z"
+  "_id": {
+    "$oid": "68b8342bd2788dc4d9e608c8"
+  },
+  "name": "Fumato Pipa PVC AW 1 inc",
+  "slug": "fumato-pipa-pvc-aw-1-inc",
+  "category": "Pipa",
+  "unit": "batang",
+  "price": 47000,
+  "brand": "Fumato",
+  "discount": {
+    "percentage": 0,
+    "validUntil": ""
+  },
+  "stock": 200,
+  "minStock": 20,
+  "availableUnits": ["batang", "meter", "pcs"],
+  "images": ["/images/products/pipa-pvc-1.jpg"],
+  "description": "Pipa PVC merek Fumato tipe AW ukuran 1 inch.",
+  "rating": {
+    "average": 4.3,
+    "count": 45
+  },
+  "sold": 120,
+  "views": 580,
+  "attributes": {
+    "diameter_inch": "1",
+    "diameter_mm": 32,
+    "type": "AW",
+    "length_meter": 4,
+    "has_mof": true
+  },
+  "createdAt": "2025-04-01T00:00:00Z",
+  "updatedAt": "2025-04-01T00:00:00Z",
+  "isActive": true,
+  "isFeatured": false
 }
 ```
 
 **Important notes:**
-- Always use this complete structure for product dummy data
-- UI can display subset of fields (don't clutter interface)
-- Price = final price after discount (originalPrice optional for comparison)
-- Images should be array even if single image
-- Rating & sold are key for social proof
+- **Database location**: `database/proyekFPW.products.json` (50 products, ready for MongoDB import)
+- **Field order in DB**: _id, name, slug, category, unit, price, brand, discount, stock, minStock, availableUnits, images, description, rating, sold, views, attributes, createdAt, updatedAt, isActive, isFeatured
+- **All fields are REQUIRED** except `discount` (optional, use `{ percentage: 0, validUntil: "" }` for no discount)
+- **Units are lowercase**: batang, kg, sak, lembar, set, pcs, liter, meter, ton, etc.
+- **Categories**: Pipa, Besi, Semen, Triplek, Tangki Air, Kawat, Paku, Baut, Aspal
+- **Discount format**: When no discount, use `percentage: 0` and `validUntil: ""` (empty string)
+- **Images array**: Always use array format even for single image
+- **Attributes**: Category-specific, always present (never empty/undefined)
+- **Featured products**: ~14% of products (7 out of 50) have `isFeatured: true`
+
+### User Data Structure
+**Complete user schema** for authentication and authorization system (based on MongoDB collection):
+
+```typescript
+interface User {
+  _id: {
+    $oid: string;                // MongoDB ObjectId
+  };
+  username: string;              // Unique username for login
+  email: string;                 // Unique email address
+  password: string;              // Hashed password (bcrypt)
+  role: "admin" | "staff" | "user"; // User role for permissions
+  fullName: string;              // Full name of user
+  phone: string;                 // Phone number (format: 08xxxxxxxxxx)
+  
+  // Address
+  address: {
+    street: string;              // Street address
+    city: string;                // City name
+    province: string;            // Province name
+    postalCode: string;          // Postal code (5 digits)
+  };
+  
+  // Status & Tracking
+  isActive: boolean;             // Account status (true = active, false = suspended)
+  lastLogin: string;             // ISO date string of last login
+  
+  // Timestamps
+  createdAt: string;             // ISO date string
+  updatedAt: string;             // ISO date string
+}
+```
+
+**Example from actual database (Admin user):**
+```typescript
+{
+  "_id": {
+    "$oid": "68b82d09d2788dc4d9e60875"
+  },
+  "username": "eggy",
+  "email": "eggy@example.com",
+  "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq",
+  "role": "admin",
+  "fullName": "Eggy Wijaya",
+  "phone": "081234567890",
+  "address": {
+    "street": "Jl. Admin No. 1",
+    "city": "Jakarta",
+    "province": "DKI Jakarta",
+    "postalCode": "12345"
+  },
+  "createdAt": "2025-09-03T10:00:00Z",
+  "updatedAt": "2025-11-01T08:30:00Z",
+  "isActive": true,
+  "lastLogin": "2025-11-01T08:30:00Z"
+}
+```
+
+**Important notes:**
+- **Database location**: `database/proyekFPW.users.json` (5 users, ready for MongoDB import)
+- **Field order in DB**: _id, username, email, password, role, fullName, phone, address, createdAt, updatedAt, isActive, lastLogin
+- **All fields are REQUIRED**
+- **Roles**: 
+  - `admin` - Full access to all features (user management, products, orders, reports, settings)
+  - `staff` - Limited access (products, orders, inventory - NO user management)
+  - `user` - Customer role (browse products, place orders, view own orders)
+- **Password**: Always hashed with bcrypt (`$2y$10$...`), never store plain text
+- **Phone format**: Indonesian phone numbers (081234567890)
+- **Role permissions**: Logic handled in backend tRPC procedures and frontend route guards (NOT in database)
+- **Sample data**: 1 admin, 1 staff, 3 customers (users)
+
+**Role-based access pattern:**
+```typescript
+// Backend tRPC - Admin only
+if (ctx.user.role !== 'admin') {
+  throw new TRPCError({ code: 'FORBIDDEN' });
+}
+
+// Backend tRPC - Admin & Staff
+if (!['admin', 'staff'].includes(ctx.user.role)) {
+  throw new TRPCError({ code: 'FORBIDDEN' });
+}
+
+// Frontend - Conditional rendering
+{user.role === 'admin' && <AdminPanel />}
+{['admin', 'staff'].includes(user.role) && <ProductManagement />}
+```
 
 ### Adding New Features
 1. **API**: Add procedure to `src/server/routers/_app.ts` with Zod input validation
@@ -1101,6 +1220,7 @@ const formatCurrency = (amount: number) => {
 9. **Indonesian language** - UI text and placeholders in Bahasa Indonesia
 10. **Windows environment** - Use `cmd /c` for npx commands if PowerShell execution policy blocks
 11. **Avoid `cn` utility** - Use template literals `${...}` for conditional classNames instead of `cn()` function
+12. **NO documentation files** - NEVER create new .md, .txt, or guide files to document changes. Only modify this instruction file (`.github/copilot-instructions.md`) when adding new patterns or rules. Do NOT create summary files like CHANGES.md, GUIDE.md, TODO.md, etc.
 
 ## UI/UX Patterns
 
@@ -1143,39 +1263,86 @@ const formatCurrency = (amount: number) => {
 
 **Features**:
 - Real-time unit conversion calculator
-- Price calculation in custom unit
-- Stock availability check in selected unit
-- Add to cart with custom unit selection
-- Supports 7 product categories: Semen, Keramik, Cat, Besi, Pipa, Kayu, Atap
+- **"Dari" unit LOCKED** to supplier's unit (tidak bisa diubah customer)
+- **"Ke" unit customizable** by customer (dropdown pilihan)
+- Price calculation based on supplier's unit
+- Stock availability check in supplier's unit
+- Add to cart with supplier's unit (bukan converted unit)
+- Supports 7 product categories: Semen, Keramik, Cat, Besi, Pipa, Kayu, Genteng
+- **Admin controls which units are available** via checkbox in product form
+
+**How It Works**:
+1. Admin creates product → selects category (e.g., "Semen")
+2. Category-specific units appear as checkboxes (e.g., Sak, Kg, Ton, Zak)
+3. Admin checks which units customers can purchase in → saved to `availableUnits` array in database
+4. Customer sees:
+   - **"Dari" field**: Locked to supplier's unit (e.g., "Sak") - gray background, tidak bisa edit
+   - **"Ke" field**: Dropdown dengan unit yang dipilih admin (e.g., Kg, Ton)
 
 **Usage Pattern**:
 ```tsx
 <UnitConverter 
   category={product.category}        // Product category (e.g., "Semen")
-  productUnit={product.unit}         // Default unit (e.g., "SAK")
-  productPrice={product.price}       // Price per unit
-  productStock={product.stock}       // Available stock
+  productUnit={product.unit}         // Supplier's primary unit (e.g., "sak") - LOCKED
+  productPrice={product.price}       // Price per primary unit
+  productStock={product.stock}       // Available stock in primary unit
+  availableUnits={product.availableUnits}  // ["sak", "kg", "ton"] from database
   onAddToCart={(qty, unit, total) => {
-    // Handle add to cart with custom unit
+    // qty & unit are in SUPPLIER'S UNIT (e.g., 2 sak, not 100kg)
+    // total is calculated price
   }}
 />
+```
+
+**Example Flow**:
+```
+Supplier: 1 Sak Semen = Rp 65,000, Stok 150 Sak
+Customer Input: 
+  - Dari: 2 Sak (LOCKED, tidak bisa diganti)
+  - Ke: Ton (pilih dari dropdown)
+  - Hasil: 2 Sak = 0.10 Ton
+  - Harga: Rp 130,000 (2 × 65,000)
+  - Stok: 150 Sak tersedia
+  - Klik "Beli 2 Sak" → Cart: 2 Sak @ Rp 65,000
 ```
 
 **Base Unit System**:
 - Each category has a base unit (e.g., Semen → kg, Keramik → pcs)
 - Conversions defined as multiplier to base unit
-- Example: 1 SAK = 50kg, 1 Zak = 40kg, 1 Ton = 1000kg
+- Example: 1 sak = 50kg, 1 zak = 40kg, 1 ton = 1000kg
+
+**Category Units Mapping** (defined in both Admin Products & UnitConverter):
+```typescript
+const categoryUnitsMap: Record<string, Array<{ value: string; label: string }>> = {
+  Semen: [
+    { value: "sak", label: "Sak (50kg)" },
+    { value: "kg", label: "Kilogram (kg)" },
+    { value: "zak", label: "Zak (40kg)" },
+    { value: "ton", label: "Ton (1000kg)" },
+  ],
+  Cat: [
+    { value: "kaleng", label: "Kaleng (5L)" },
+    { value: "liter", label: "Liter (L)" },
+    { value: "galon", label: "Galon (20L)" },
+    { value: "kg", label: "Kilogram (kg)" },
+  ],
+  // ... other categories
+};
+```
 
 **Props Interface**:
 ```typescript
 interface UnitConverterProps {
   category: string;              // Product category
-  productUnit: string;           // Product's default unit
+  productUnit: string;           // Product's primary unit (supplier uses)
   productPrice: number;          // Price per productUnit
   productStock: number;          // Stock in productUnit
+  availableUnits?: string[];     // Units allowed for customers (from DB)
   onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
 }
 ```
+
+**Database Field**: `availableUnits: string[]` (e.g., `["sak", "kg", "ton"]`)
 
 **DO NOT use Form component** - UnitConverter uses simple `useState` for real-time calculation, NOT react-hook-form
 
