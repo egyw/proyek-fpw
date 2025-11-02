@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,11 +14,19 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { trpc } from '@/utils/trpc';
+import { toast } from 'sonner';
 
+// Match backend validation schema (without address - will be added later in profile/checkout)
 const registerSchema = z.object({
+  username: z.string()
+    .min(3, 'Username minimal 3 karakter')
+    .max(30, 'Username maksimal 30 karakter')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username hanya boleh huruf, angka, dan underscore'),
   fullName: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
   email: z.string().email('Email tidak valid'),
-  phoneNumber: z.string().min(10, 'Nomor HP minimal 10 digit').regex(/^[0-9]+$/, 'Hanya boleh angka'),
+  phone: z.string()
+    .regex(/^08\d{8,11}$/, 'Format: 08XXXXXXXXXX (10-13 digit)'),
   password: z.string().min(8, 'Password minimal 8 karakter'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -28,20 +37,48 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const registerMutation = trpc.auth.register.useMutation({
+    onSuccess: (data) => {
+      toast.success('Registrasi Berhasil!', {
+        description: `Selamat datang ${data.user.fullName}! Silakan login dengan akun Anda.`,
+      });
+      // Redirect to login page after 1.5 seconds
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 1500);
+    },
+    onError: (error) => {
+      toast.error('Registrasi Gagal', {
+        description: error.message,
+      });
+    },
+  });
+
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      username: '',
       fullName: '',
       email: '',
-      phoneNumber: '',
+      phone: '',
       password: '',
       confirmPassword: '',
     },
   });
 
   const onSubmit = (data: RegisterFormValues) => {
-    console.log(data);
-    // TODO: Implement registration logic with tRPC
+    // Add default address for backend (will be updated later in profile/checkout)
+    const registerData = {
+      ...data,
+      address: {
+        street: '-',
+        city: '-',
+        province: '-',
+        postalCode: '00000',
+      },
+    };
+    registerMutation.mutate(registerData);
   };
   return (
     <div className="h-screen flex relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
@@ -199,10 +236,29 @@ export default function RegisterPage() {
                 )}
               />
 
+              {/* Username */}
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-medium">Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Contoh: johndoe123"
+                        className="h-9 text-sm placeholder:text-gray-400"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
               {/* Nomor HP */}
               <FormField
                 control={form.control}
-                name="phoneNumber"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-medium">Nomor HP</FormLabel>
@@ -259,8 +315,12 @@ export default function RegisterPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full mt-5 h-10 text-sm">
-                Daftar Sekarang
+              <Button 
+                type="submit" 
+                className="w-full mt-5 h-10 text-sm"
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending ? 'Mendaftar...' : 'Daftar Sekarang'}
               </Button>
             </form>
           </Form>

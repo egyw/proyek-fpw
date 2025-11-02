@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +14,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { signIn } from 'next-auth/react';
+import { toast } from 'sonner';
+import { useState } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -22,6 +26,9 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -30,10 +37,38 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    console.log(data);
-    window.location.href = '/';
-    // TODO: Implement login logic with tRPC
+  const onSubmit = async (data: LoginFormValues) => {
+    setIsLoading(true);
+    
+    try {
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error('Login Gagal', {
+          description: result.error,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success('Login Berhasil!', {
+        description: 'Selamat datang kembali!',
+      });
+
+      // Redirect to homepage
+      setTimeout(() => {
+        router.push('/');
+      }, 500);
+    } catch {
+      toast.error('Login Gagal', {
+        description: 'Terjadi kesalahan saat login.',
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -143,8 +178,9 @@ export default function LoginPage() {
                 <Button 
                   type="submit" 
                   className="w-full h-11 text-base font-semibold mt-5 shadow-lg hover:shadow-xl transition-all"
+                  disabled={isLoading}
                 >
-                  Masuk
+                  {isLoading ? 'Memproses...' : 'Masuk'}
                 </Button>
               </form>
             </Form>

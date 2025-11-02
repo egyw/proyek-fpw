@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,28 +13,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ShoppingCart, User, Package, LogOut } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Navbar() {
-  // TODO: Replace with tRPC auth query
-  // Expected: const { data: user } = trpc.auth.getCurrentUser.useQuery();
-  // Expected: const isLoggedIn = !!user;
-  // NOTE: Change `false` to `true` below to test logged-in state UI
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Toggle untuk testing UI
-  const dummyUser = {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: "", // Empty = show initials
-  };
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated";
 
-  // TODO: Replace with cart context
+  // TODO: Replace with cart context (Zustand)
   // Expected: const { items } = useCart();
   const cartItemCount = 3; // Dummy data - should come from cart context
 
-  const handleLogout = () => {
-    // TODO: Implement with tRPC
-    // Expected: logoutMutation.mutate();
-    setIsLoggedIn(false);
-    console.log("Logout clicked");
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/" });
+    toast.success("Berhasil logout", {
+      description: "Anda telah keluar dari akun.",
+    });
   };
 
   return (
@@ -72,17 +65,17 @@ export default function Navbar() {
             </Link>
 
             {/* Conditional: Show Login/Register OR Profile Dropdown */}
-            {isLoggedIn ? (
+            {isLoggedIn && session?.user ? (
               /* Profile Dropdown */
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={dummyUser.avatar} alt={dummyUser.name} />
+                      <AvatarImage src="" alt={session.user.name || "User"} />
                       <AvatarFallback className="bg-primary text-white">
-                        {dummyUser.name
+                        {(session.user.name || "U")
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")
                           .toUpperCase()}
                       </AvatarFallback>
@@ -92,9 +85,9 @@ export default function Navbar() {
                 <DropdownMenuContent className="w-56" align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{dummyUser.name}</p>
+                      <p className="text-sm font-medium leading-none">{session.user.name}</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {dummyUser.email}
+                        {session.user.email}
                       </p>
                     </div>
                   </DropdownMenuLabel>

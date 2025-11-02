@@ -26,7 +26,6 @@ const UserSchema = new Schema<IUser>(
     username: {
       type: String,
       required: [true, 'Username harus diisi'],
-      unique: true,
       trim: true,
       minlength: [3, 'Username minimal 3 karakter'],
       maxlength: [30, 'Username maksimal 30 karakter'],
@@ -34,7 +33,6 @@ const UserSchema = new Schema<IUser>(
     email: {
       type: String,
       required: [true, 'Email harus diisi'],
-      unique: true,
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, 'Format email tidak valid'],
@@ -96,9 +94,9 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Indexes untuk performa query
-UserSchema.index({ username: 1 });
-UserSchema.index({ email: 1 });
+// Indexes untuk performa query dan unique constraints
+UserSchema.index({ username: 1 }, { unique: true });
+UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1, isActive: 1 });
 
 // Export Model

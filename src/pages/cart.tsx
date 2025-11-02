@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   Form,
   FormControl,
@@ -95,6 +96,9 @@ const addressSchema = z.object({
 type AddressFormValues = z.infer<typeof addressSchema>;
 
 export default function CartPage() {
+  // Protect this page - require authentication
+  useRequireAuth();
+
   // TODO: Replace with cart context/state management
   // Expected: useCart() hook from CartContext
   // Functions: addItem, removeItem, updateQuantity, clearCart
