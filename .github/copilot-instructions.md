@@ -1,17 +1,20 @@
 # AI Agent Instructions for proyek-fpw
 
 ## Project Overview
+
 Next.js 15 + TypeScript + tRPC application for a building materials e-commerce platform. Uses Pages Router (NOT App Router), shadcn/ui components, and Tailwind CSS v4.
 
 ## Architecture & Key Decisions
 
 ### tRPC Setup (Type-Safe API)
+
 - **Server**: Define procedures in organized routers (`src/server/routers/products.ts`, `auth.ts`)
-- **Main Router**: Combine all routers in `src/server/routers/_app.ts` 
+- **Main Router**: Combine all routers in `src/server/routers/_app.ts`
 - **Client**: Auto-generated hooks via `trpc.products.getAll.useQuery()` or `.useMutation()`
 - **DO NOT modify**: `_app.tsx`, `api/trpc/[trpc].ts`, `server/trpc.ts`, `utils/trpc.ts` (core setup)
 
 **Router Structure** (Feature-based organization):
+
 ```typescript
 // src/server/routers/_app.ts
 export const appRouter = router({
@@ -19,7 +22,7 @@ export const appRouter = router({
   auth: authRouter,           // → 1 procedure (register)
 });
 
-// src/server/routers/products.ts  
+// src/server/routers/products.ts
 export const productsRouter = router({
   getAll: procedure.input(z.object({...})).query(async ({ input }) => {
     // Product catalog with filters, search, pagination
@@ -31,6 +34,7 @@ export const productsRouter = router({
 ```
 
 **Error Handling Pattern**:
+
 ```typescript
 // ✅ ALWAYS use try-catch with TRPCError for proper error tracking
 procedure.query(async ({ input }) => {
@@ -40,7 +44,7 @@ procedure.query(async ({ input }) => {
     return result;
   } catch (error) {
     console.error("[procedureName] Error:", error);
-    
+
     if (error instanceof Error) {
       if (error.message.includes("connection")) {
         throw new TRPCError({
@@ -50,9 +54,9 @@ procedure.query(async ({ input }) => {
         });
       }
     }
-    
+
     throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR", 
+      code: "INTERNAL_SERVER_ERROR",
       message: "Operation failed",
       cause: error,
     });
@@ -61,11 +65,13 @@ procedure.query(async ({ input }) => {
 ```
 
 ### Pages Router (NOT App Router)
+
 - Routes: `src/pages/` → file-based routing (e.g., `auth/login.tsx` = `/auth/login`)
 - API routes: `src/pages/api/` (tRPC handler at `api/trpc/[trpc].ts`)
 - **Critical**: This is Pages Router, NOT App Router. No `app/` directory exists.
 
 ### UI Components (shadcn/ui)
+
 - Install via: `npx shadcn@latest add <component>` (use `cmd /c` on Windows if PowerShell blocks)
 - Location: `src/components/ui/`
 - **Installed components**: button, input, label, card, badge, separator, form, carousel, table, dropdown-menu, avatar, select, dialog, sheet, tabs, textarea
@@ -79,6 +85,7 @@ procedure.query(async ({ input }) => {
 - **Avoid `cn` utility**: Use template literals for conditional classNames instead of `cn()` function
 
 ### Layout Components
+
 - **MainLayout**: Wrapper with Navbar + children + Footer (for public pages like homepage, products)
   - Usage: `<MainLayout>{content}</MainLayout>`
   - Located: `src/components/layouts/MainLayout.tsx`
@@ -92,6 +99,7 @@ procedure.query(async ({ input }) => {
 - **Auth pages**: Login/Register pages do NOT use any layout (standalone design)
 
 ### Styling Conventions
+
 - **Tailwind v4** with `@import "tailwindcss"` syntax (NOT CDN)
 - **OKLCH colors** in CSS variables (e.g., `oklch(0.43 0.12 240)`)
 - **Primary color**: #1a5fa4 (navy blue) - brand color for this building materials store
@@ -99,12 +107,14 @@ procedure.query(async ({ input }) => {
 - **Responsive**: Mobile-first, hide desktop elements with `hidden lg:flex`
 
 ### Path Aliases
+
 - `@/*` maps to `./src/*` (e.g., `@/components/ui/button`)
 - Configured in `tsconfig.json` and `components.json`
 
 ## Development Workflow
 
 ### Commands (Windows)
+
 ```bash
 npm run dev          # Start dev server with Turbopack
 npm run build        # Production build
@@ -112,9 +122,11 @@ npm run lint         # Run ESLint
 ```
 
 ### Frontend Development with Dummy Data (Current Phase)
+
 **Project is currently using dummy/mock data** - Database not yet integrated.
 
 **When creating frontend pages/components:**
+
 1. **Use dummy data arrays** - Create mock data inline or in separate constants
 2. **Add clear TODO comments** - Mark where backend integration is needed
 3. **Structure for easy backend swap** - Design components to easily replace dummy data with tRPC hooks
@@ -125,13 +137,13 @@ npm run lint         # Run ESLint
    // Input: { categoryId?: number, search?: string }
    // Output: Product[]
    const dummyProducts: Product[] = [
-     { 
-       id: 1, 
-       name: "Product 1", 
-       price: 100000, 
+     {
+       id: 1,
+       name: "Product 1",
+       price: 100000,
        originalPrice: 120000,
        discount: { percentage: 15, validUntil: "2025-12-31" },
-       stock: 50, 
+       stock: 50,
        images: ["/images/dummy_image.jpg"],
        rating: { average: 4.5, count: 128 },
        sold: 245,
@@ -142,64 +154,69 @@ npm run lint         # Run ESLint
    ```
 
 **Backend Integration Pattern** (for future AI agents):
+
 ```typescript
 // BEFORE (dummy data):
 const products = dummyProducts;
 
 // AFTER (with backend):
-const { data: products, isLoading } = trpc.products.getAll.useQuery({ categoryId: 1 });
+const { data: products, isLoading } = trpc.products.getAll.useQuery({
+  categoryId: 1,
+});
 if (isLoading) return <Spinner />;
 ```
 
 **Key principles:**
+
 - Keep data structure consistent (same fields/types for dummy and real data)
 - Use TypeScript interfaces for data shapes (even for dummy data)
 - Comment expected tRPC procedure names and input/output schemas
 - Design UI to handle loading states (even if not used with dummy data)
 
 ### Product Data Structure
+
 **Complete product schema** for consistent data across the project (based on MongoDB collection):
 
 ```typescript
 interface Product {
   _id: {
-    $oid: string;                // MongoDB ObjectId
+    $oid: string; // MongoDB ObjectId
   };
-  name: string;                  // Product name
-  slug: string;                  // URL-friendly name (e.g., "fumato-pipa-pvc-aw-1-inc")
-  category: string;              // Category name (Pipa, Besi, Semen, Triplek, Tangki Air, Kawat, Paku, Baut, Aspal)
-  brand: string;                 // Brand name
-  unit: string;                  // Primary unit supplier uses (lowercase: "batang", "kg", "sak", "lembar", "set", "pcs", "liter")
-  
+  name: string; // Product name
+  slug: string; // URL-friendly name (e.g., "fumato-pipa-pvc-aw-1-inc")
+  category: string; // Category name (Pipa, Besi, Semen, Triplek, Tangki Air, Kawat, Paku, Baut, Aspal)
+  brand: string; // Brand name
+  unit: string; // Primary unit supplier uses (lowercase: "batang", "kg", "sak", "lembar", "set", "pcs", "liter")
+
   // Pricing
-  price: number;                 // Current selling price per primary unit
+  price: number; // Current selling price per primary unit
   discount?: {
-    percentage: number;          // Discount percentage (0-100), 0 = no discount
-    validUntil: string;          // ISO date string, empty "" if no discount
+    percentage: number; // Discount percentage (0-100), 0 = no discount
+    validUntil: string; // ISO date string, empty "" if no discount
   };
-  
+
   // Stock
-  stock: number;                 // Available stock quantity in primary unit
-  minStock: number;              // Minimum stock for restock alert
-  
+  stock: number; // Available stock quantity in primary unit
+  minStock: number; // Minimum stock for restock alert
+
   // Multi-Unit Sales System - Customer can buy in different units
-  availableUnits: string[];      // Units customers can purchase in (e.g., ["batang", "meter", "pcs"])
+  availableUnits: string[]; // Units customers can purchase in (e.g., ["batang", "meter", "pcs"])
   // Unit conversions are category-specific, defined in UnitConverter component
-  
+
   // Media
-  images: string[];              // Array of image URLs/paths (always array, even for single image)
-  
+  images: string[]; // Array of image URLs/paths (always array, even for single image)
+
   // Description
-  description: string;           // Product description
-  
+  description: string; // Product description
+
   // Rating & Social Proof
   rating: {
-    average: number;             // Average rating (0-5)
-    count: number;               // Number of reviews
+    average: number; // Average rating (0-5)
+    count: number; // Number of reviews
   };
-  sold: number;                  // Total units sold
-  views: number;                 // Product page views
-  
+  sold: number; // Total units sold
+  views: number; // Product page views
+
   // Attributes (product specifications - category-specific)
   attributes: Record<string, any>; // Examples:
   // Pipa: { diameter_inch, diameter_mm, type, length_meter, has_mof }
@@ -210,18 +227,19 @@ interface Product {
   // Tangki Air: { capacity_liter, material, type }
   // Paku/Baut: { size, type, color, length_mm }
   // Aspal: { volume_liter }
-  
+
   // Status
-  isActive: boolean;             // Product visibility (true = active, false = hidden)
-  isFeatured: boolean;           // Featured product flag (true = show in featured section)
-  
+  isActive: boolean; // Product visibility (true = active, false = hidden)
+  isFeatured: boolean; // Featured product flag (true = show in featured section)
+
   // Timestamps
-  createdAt: string;             // ISO date string
-  updatedAt: string;             // ISO date string
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
 }
 ```
 
 **Example from actual database (Fumato Pipa PVC AW 1 inc):**
+
 ```typescript
 {
   "_id": {
@@ -263,25 +281,27 @@ interface Product {
 ```
 
 **MongoDB Date Handling Pattern** (Critical for date queries):
+
 ```typescript
 // ✅ CORRECT: Convert JavaScript Date to ISO string for MongoDB comparison
 const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 const startOfThisMonthISO = startOfThisMonth.toISOString(); // "2025-11-01T00:00:00.000Z"
 
 Product.countDocuments({
-  createdAt: { $gte: startOfThisMonthISO },  // ✅ Works with MongoDB ISO strings
-  isActive: true
+  createdAt: { $gte: startOfThisMonthISO }, // ✅ Works with MongoDB ISO strings
+  isActive: true,
 });
 
 // ❌ WRONG: Using Date object directly
 Product.countDocuments({
-  createdAt: { $gte: startOfThisMonth },  // ❌ Type mismatch with MongoDB strings
+  createdAt: { $gte: startOfThisMonth }, // ❌ Type mismatch with MongoDB strings
 });
 ```
 
 **Important notes:**
+
 - **Database location**: `database/proyekFPW.products.json` (50 products, ready for MongoDB import)
-- **Field order in DB**: _id, name, slug, category, unit, price, brand, discount, stock, minStock, availableUnits, images, description, rating, sold, views, attributes, createdAt, updatedAt, isActive, isFeatured
+- **Field order in DB**: \_id, name, slug, category, unit, price, brand, discount, stock, minStock, availableUnits, images, description, rating, sold, views, attributes, createdAt, updatedAt, isActive, isFeatured
 - **All fields are REQUIRED** except `discount` (optional, use `{ percentage: 0, validUntil: "" }` for no discount)
 - **Units are lowercase**: batang, kg, sak, lembar, set, pcs, liter, meter, ton, etc.
 - **Categories**: Pipa, Besi, Semen, Triplek, Tangki Air, Kawat, Paku, Baut, Aspal
@@ -291,39 +311,41 @@ Product.countDocuments({
 - **Featured products**: ~14% of products (7 out of 50) have `isFeatured: true`
 
 ### User Data Structure
+
 **Complete user schema** for authentication and authorization system (based on MongoDB collection):
 
 ```typescript
 interface User {
   _id: {
-    $oid: string;                // MongoDB ObjectId
+    $oid: string; // MongoDB ObjectId
   };
-  username: string;              // Unique username for login
-  email: string;                 // Unique email address
-  password: string;              // Hashed password (bcrypt)
+  username: string; // Unique username for login
+  email: string; // Unique email address
+  password: string; // Hashed password (bcrypt)
   role: "admin" | "staff" | "user"; // User role for permissions
-  fullName: string;              // Full name of user
-  phone: string;                 // Phone number (format: 08xxxxxxxxxx)
-  
+  fullName: string; // Full name of user
+  phone: string; // Phone number (format: 08xxxxxxxxxx)
+
   // Address
   address: {
-    street: string;              // Street address
-    city: string;                // City name
-    province: string;            // Province name
-    postalCode: string;          // Postal code (5 digits)
+    street: string; // Street address
+    city: string; // City name
+    province: string; // Province name
+    postalCode: string; // Postal code (5 digits)
   };
-  
+
   // Status & Tracking
-  isActive: boolean;             // Account status (true = active, false = suspended)
-  lastLogin: string;             // ISO date string of last login
-  
+  isActive: boolean; // Account status (true = active, false = suspended)
+  lastLogin: string; // ISO date string of last login
+
   // Timestamps
-  createdAt: string;             // ISO date string
-  updatedAt: string;             // ISO date string
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
 }
 ```
 
 **Example from actual database (Admin user):**
+
 ```typescript
 {
   "_id": {
@@ -349,10 +371,11 @@ interface User {
 ```
 
 **Important notes:**
+
 - **Database location**: `database/proyekFPW.users.json` (5 users, ready for MongoDB import)
-- **Field order in DB**: _id, username, email, password, role, fullName, phone, address, createdAt, updatedAt, isActive, lastLogin
+- **Field order in DB**: \_id, username, email, password, role, fullName, phone, address, createdAt, updatedAt, isActive, lastLogin
 - **All fields are REQUIRED**
-- **Roles**: 
+- **Roles**:
   - `admin` - Full access to all features (user management, products, orders, reports, settings)
   - `staff` - Limited access (products, orders, inventory - NO user management)
   - `user` - Customer role (browse products, place orders, view own orders)
@@ -362,29 +385,36 @@ interface User {
 - **Sample data**: 1 admin, 1 staff, 3 customers (users)
 
 **Role-based access pattern:**
+
 ```typescript
 // Backend tRPC - Admin only
-if (ctx.user.role !== 'admin') {
-  throw new TRPCError({ code: 'FORBIDDEN' });
+if (ctx.user.role !== "admin") {
+  throw new TRPCError({ code: "FORBIDDEN" });
 }
 
 // Backend tRPC - Admin & Staff
-if (!['admin', 'staff'].includes(ctx.user.role)) {
-  throw new TRPCError({ code: 'FORBIDDEN' });
+if (!["admin", "staff"].includes(ctx.user.role)) {
+  throw new TRPCError({ code: "FORBIDDEN" });
 }
 
 // Frontend - Conditional rendering
-{user.role === 'admin' && <AdminPanel />}
-{['admin', 'staff'].includes(user.role) && <ProductManagement />}
+{
+  user.role === "admin" && <AdminPanel />;
+}
+{
+  ["admin", "staff"].includes(user.role) && <ProductManagement />;
+}
 ```
 
 ### Adding New Features
+
 1. **API**: Add procedure to `src/server/routers/_app.ts` with Zod input validation
 2. **Page**: Create file in `src/pages/` (no registration needed)
 3. **Component**: Use shadcn/ui or create in `src/components/`
 4. **Types**: tRPC auto-generates types; export `AppRouter` type from `_app.ts`
 
 ### Static Assets
+
 - Images: `public/images/` (e.g., logo at `public/images/logo_4x1.png`)
 - Hero image: `public/images/hero_image.png`
 - Dummy/placeholder: `public/images/dummy_image.jpg`
@@ -393,7 +423,9 @@ if (!['admin', 'staff'].includes(ctx.user.role)) {
 ## Project-Specific Patterns
 
 ### Auth Pages - Two Different Designs
+
 **Register Page** (`src/pages/auth/register.tsx`):
+
 - Split-screen layout: Benefits sidebar (left) + Form (right)
 - Benefits hidden on mobile with `hidden lg:flex`
 - Animated gradient background with patterns
@@ -401,6 +433,7 @@ if (!['admin', 'staff'].includes(ctx.user.role)) {
 - 5 fields: fullName, email, phoneNumber, password, confirmPassword
 
 **Login Page** (`src/pages/auth/login.tsx`):
+
 - Centered card design (NOT split-screen)
 - Gradient header with logo
 - Animated background patterns (same as register)
@@ -409,6 +442,7 @@ if (!['admin', 'staff'].includes(ctx.user.role)) {
 - "Lupa password?" link
 
 **Shared Background Pattern**:
+
 ```tsx
 // Animated gradient with geometric shapes, grid, and diagonal lines
 <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary/80">
@@ -422,15 +456,23 @@ if (!['admin', 'staff'].includes(ctx.user.role)) {
 ```
 
 ### Form Validation Pattern (react-hook-form + Zod)
+
 ```typescript
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 const schema = z.object({
-  email: z.string().email('Email tidak valid'),
-  password: z.string().min(8, 'Password minimal 8 karakter'),
+  email: z.string().email("Email tidak valid"),
+  password: z.string().min(8, "Password minimal 8 karakter"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -438,7 +480,7 @@ type FormValues = z.infer<typeof schema>;
 export default function Page() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = (data: FormValues) => {
@@ -470,19 +512,26 @@ export default function Page() {
 ```
 
 ### tRPC Client Usage
+
 ```typescript
-import { trpc } from '@/utils/trpc';
+import { trpc } from "@/utils/trpc";
 
 export default function Page() {
   const { data, isLoading } = trpc.getUser.useQuery({ id: 1 });
   const createMutation = trpc.createUser.useMutation();
-  
-  return <button onClick={() => createMutation.mutate({ name: "John" })}>Create</button>;
+
+  return (
+    <button onClick={() => createMutation.mutate({ name: "John" })}>
+      Create
+    </button>
+  );
 }
 ```
 
 ### Admin Dashboard Pattern
+
 **AdminLayout Structure** (`src/components/layouts/AdminLayout.tsx`):
+
 - Collapsible sidebar (toggle width between `w-64` and `w-20`)
 - Navigation items with active state highlighting (bg-primary for active)
 - Header with page title, notification bell, and user dropdown menu
@@ -490,6 +539,7 @@ export default function Page() {
 - Mobile responsive (sidebar can be hidden on small screens)
 
 **Admin Pages Structure**:
+
 - All admin pages located in `src/pages/admin/`
 - Always wrap content with `<AdminLayout>`
 - Use shadcn Table for data display (NOT HTML `<table>`)
@@ -498,11 +548,25 @@ export default function Page() {
 - Badge component for status indicators
 
 **Example Admin Page**:
+
 ```typescript
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AdminPage() {
   return (
@@ -514,7 +578,7 @@ export default function AdminPage() {
           <h3 className="text-2xl font-bold">1,234</h3>
         </Card>
       </div>
-      
+
       {/* Filters with shadcn Select */}
       <Select>
         <SelectTrigger className="w-[180px]">
@@ -524,7 +588,7 @@ export default function AdminPage() {
           <SelectItem value="all">Semua</SelectItem>
         </SelectContent>
       </Select>
-      
+
       {/* Data Table with shadcn Table */}
       <Card>
         <Table>
@@ -546,9 +610,11 @@ export default function AdminPage() {
 ```
 
 ### Orders Page Pattern
+
 **Location**: `src/pages/orders/index.tsx`
 
 **Features Implemented**:
+
 - Filter by status (Select dropdown): all, processing, shipping, delivered, completed
 - Order cards with expand/collapse (show 1 item by default, Button to show more)
 - Return request Dialog with Textarea for reason input, validation (disabled if empty)
@@ -556,6 +622,7 @@ export default function AdminPage() {
 - All shadcn components (verified no HTML primitives)
 
 **Key Implementation**:
+
 ```tsx
 // Expand/Collapse Orders
 const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -570,49 +637,60 @@ const toggleExpand = (orderId: string) => {
 };
 
 // Show only 1 item by default
-{expandedOrders.has(order.id) ? order.items : order.items.slice(0, 1)}
+{
+  expandedOrders.has(order.id) ? order.items : order.items.slice(0, 1);
+}
 ```
 
 **Return Request Dialog**:
+
 ```tsx
 const [returnReason, setReturnReason] = useState("");
 <Dialog>
   <DialogContent>
-    <Textarea 
+    <Textarea
       value={returnReason}
       onChange={(e) => setReturnReason(e.target.value)}
     />
     <Button disabled={!returnReason.trim()}>Ajukan Pengembalian</Button>
   </DialogContent>
-</Dialog>
+</Dialog>;
 ```
 
 **Rating System**:
+
 ```tsx
 // 5 star buttons with active state
-{[1, 2, 3, 4, 5].map((star) => (
-  <Button
-    key={star}
-    variant="ghost"
-    size="sm"
-    onClick={() => handleRate(star)}
-  >
-    <Star className={`h-5 w-5 ${star <= selectedRating ? 'fill-yellow-400' : ''}`} />
-  </Button>
-))}
+{
+  [1, 2, 3, 4, 5].map((star) => (
+    <Button
+      key={star}
+      variant="ghost"
+      size="sm"
+      onClick={() => handleRate(star)}
+    >
+      <Star
+        className={`h-5 w-5 ${star <= selectedRating ? "fill-yellow-400" : ""}`}
+      />
+    </Button>
+  ));
+}
 ```
 
 ### Admin Reports System
+
 **Location**: `src/pages/admin/reports/`
 
 **Architecture** - Hybrid Tabs + Components:
+
 - **Main Hub** (`index.tsx`): Tabs navigation with 10 report tabs
 - **Reusable Components** (`src/components/reports/`):
   - `SalesReportContent.tsx` - Full sales report with Recharts
-  - `PlaceholderReport.tsx` - Coming Soon component for未实现 reports
+  - `PlaceholderReport.tsx` - Coming Soon component for 未实现 reports
 - **Individual Routes**: Each report accessible via standalone route + breadcrumb
 
 **File Structure**:
+
 ```
 src/
 ├── components/
@@ -630,6 +708,7 @@ src/
 ```
 
 **Tabs Navigation** (`index.tsx`):
+
 ```tsx
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SalesReportContent from "@/components/reports/SalesReportContent";
@@ -647,10 +726,11 @@ import PlaceholderReport from "@/components/reports/PlaceholderReport";
   <TabsContent value="report2">
     <PlaceholderReport title="Laporan 2" description="..." />
   </TabsContent>
-</Tabs>
+</Tabs>;
 ```
 
 **Sales Report Features** (`SalesReportContent.tsx`):
+
 - 3 Stats cards with icons: Total Revenue (TrendingUp/Down), Total Orders, Products Sold
 - Interactive Recharts: LineChart/BarChart toggle via Select
 - Year filter (2025, 2024, 2023) with Select
@@ -659,15 +739,17 @@ import PlaceholderReport from "@/components/reports/PlaceholderReport";
 - All using shadcn components (Card, Button, Select) + Recharts + Lucide icons
 
 **Placeholder Component** (`PlaceholderReport.tsx`):
+
 ```tsx
 interface PlaceholderReportProps {
-  title: string;        // e.g., "Laporan 2"
-  description: string;  // e.g., "Konten laporan 2 sedang dalam pengembangan"
+  title: string; // e.g., "Laporan 2"
+  description: string; // e.g., "Konten laporan 2 sedang dalam pengembangan"
 }
 // Shows: Package icon, "Coming Soon" heading, description, info box, disabled button
 ```
 
 **Individual Routes Pattern**:
+
 ```tsx
 // src/pages/admin/reports/sales.tsx
 export default function SalesReportPage() {
@@ -683,11 +765,13 @@ export default function SalesReportPage() {
 ```
 
 **Report Naming Convention**:
+
 - **Laporan Penjualan** (sales.tsx) - Specific, completed report
 - **Laporan 2-10** (report2.tsx - report10.tsx) - Generic placeholders
-- Use generic names for未确定 reports for flexibility
+- Use generic names for 未确定 reports for flexibility
 
 **Benefits of Hybrid Approach**:
+
 - ✅ Tabs UI for best UX (quick navigation between reports)
 - ✅ Component reusability (1 component for tabs + standalone route)
 - ✅ No code duplication (DRY principle)
@@ -695,11 +779,13 @@ export default function SalesReportPage() {
 - ✅ Easy to add new reports (create component, import in both places)
 
 ### Admin Orders Management
+
 **Location**: `src/pages/admin/orders/index.tsx`
 
 **Purpose**: Complete order management system for admin to process, ship, and track customer orders.
 
 **Key Features**:
+
 - **4 Stats Cards** with Lucide icons:
   - Perlu Diproses (Paid - blue, ShoppingCart icon) - Orders that need to be processed
   - Sedang Diproses (Processing - yellow, Package icon) - Orders being prepared
@@ -714,6 +800,7 @@ export default function SalesReportPage() {
 - **5 Dialog Types**:
 
 **1. View Detail Dialog** (Read-only, max-w-3xl):
+
 ```tsx
 // Full order information display
 - Customer: name, phone, email
@@ -726,6 +813,7 @@ export default function SalesReportPage() {
 ```
 
 **2. Process Order Dialog** (Confirmation):
+
 ```tsx
 // Simple confirmation to change paid → processing
 <DialogContent className="max-w-md">
@@ -735,6 +823,7 @@ export default function SalesReportPage() {
 ```
 
 **3. Ship Order Dialog** (Form with validation):
+
 ```tsx
 // IMPORTANT: Form fields have space-y-2 for proper label-input spacing
 <div className="space-y-4">
@@ -765,11 +854,12 @@ export default function SalesReportPage() {
 ```
 
 **4. Cancel Order Dialog** (Textarea validation):
+
 ```tsx
 // Textarea for cancel reason with validation
 <div className="space-y-2"> {/* Label-textarea gap */}
   <Label>Alasan Pembatalan</Label>
-  <Textarea 
+  <Textarea
     rows={4}
     value={cancelReason}
     onChange={(e) => setCancelReason(e.target.value)}
@@ -784,6 +874,7 @@ export default function SalesReportPage() {
 ```
 
 **Order Interface** (18 fields):
+
 ```typescript
 interface Order {
   id: string;
@@ -792,7 +883,13 @@ interface Order {
   customerPhone: string;
   customerEmail: string;
   orderDate: string; // ISO date string
-  status: "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+  status:
+    | "paid"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "completed"
+    | "cancelled";
   items: Array<{
     id: string;
     name: string;
@@ -821,10 +918,15 @@ interface Order {
 ```
 
 **Status Configuration**:
+
 ```typescript
 const statusConfig = {
   paid: { label: "Perlu Diproses", color: "bg-blue-500", icon: ShoppingCart },
-  processing: { label: "Sedang Diproses", color: "bg-yellow-500", icon: Package },
+  processing: {
+    label: "Sedang Diproses",
+    color: "bg-yellow-500",
+    icon: Package,
+  },
   shipped: { label: "Dalam Pengiriman", color: "bg-purple-500", icon: Truck },
   delivered: { label: "Terkirim", color: "bg-indigo-500", icon: CheckCircle },
   completed: { label: "Selesai", color: "bg-green-500", icon: CheckCircle },
@@ -833,6 +935,7 @@ const statusConfig = {
 ```
 
 **Important Patterns**:
+
 - **Form Spacing**: ALWAYS use `space-y-2` in form field containers for 8px gap between label and input/select/textarea
 - **Shadcn Components**: Dialog, Select, Input, Textarea, Badge, Table, Button (NO HTML primitives)
 - **Button States**: Disable buttons until validation passes (courier + trackingNumber + date OR cancelReason)
@@ -840,11 +943,13 @@ const statusConfig = {
 - **TODO Comments**: Ready for tRPC mutations (`updateOrderStatus`, `shipOrder`, `cancelOrder`)
 
 ### Admin Inventory Stock Movements
+
 **Location**: `src/pages/admin/inventory/index.tsx`
 
 **Purpose**: Track automatic stock movements (IN/OUT) from transactions without manual stock entry.
 
 **Key Features**:
+
 - **3 Stats Cards** with Lucide icons:
   - Total Masuk (green, ArrowUpCircle) - Sum of all stock IN movements
   - Total Keluar (red, ArrowDownCircle) - Sum of all stock OUT movements
@@ -853,11 +958,12 @@ const statusConfig = {
   ```tsx
   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
     <p className="text-sm text-blue-800">
-      <strong>ℹ️ Info:</strong> Pergerakan stok dicatat otomatis dari transaksi...
+      <strong>ℹ️ Info:</strong> Pergerakan stok dicatat otomatis dari
+      transaksi...
     </p>
   </div>
   ```
-- **Filters**: 
+- **Filters**:
   - Search input (product name/code)
   - Type Select (Semua, Masuk, Keluar)
   - Date Input (type="date")
@@ -873,6 +979,7 @@ const statusConfig = {
   - Saldo (current balance after movement)
 
 **Movement Interface**:
+
 ```typescript
 interface StockMovement {
   id: string;
@@ -889,6 +996,7 @@ interface StockMovement {
 ```
 
 **Important Notes**:
+
 - **Automatic Recording**: Stock movements are NOT manually entered, they are generated from:
   - Stock IN → Purchase orders, returns from customers
   - Stock OUT → Sales orders, damaged/lost items
@@ -897,11 +1005,13 @@ interface StockMovement {
 - **AdminLayout Menu**: Icon 📋 between Pesanan and Pelanggan
 
 ### Admin Product Add Form
+
 **Location**: `src/pages/admin/products/index.tsx`
 
 **Purpose**: Comprehensive form to add new products with complete validation using react-hook-form + Zod.
 
 **Dialog Configuration**:
+
 - Size: `max-w-5xl` (1024px wide) + `max-h-95vh` (95% viewport height)
 - Title: `text-2xl` for prominence
 - Form: `space-y-8` for generous section separation
@@ -909,15 +1019,16 @@ interface StockMovement {
 **Form Structure** (4 Sections with Visual Hierarchy):
 
 **Section 1: Informasi Produk** (`space-y-5`, header with `border-b pb-2`):
+
 ```tsx
 <div className="space-y-5">
   <h3 className="text-lg font-semibold border-b pb-2">Informasi Produk</h3>
-  
+
   {/* Nama Produk */}
   <FormField name="name" render={...}>
     <Input placeholder="Contoh: Semen Gresik 50kg" />
   </FormField>
-  
+
   {/* Kategori + Brand (Grid 2 columns) */}
   <div className="grid grid-cols-2 gap-4">
     <FormField name="category" render={...}>
@@ -927,7 +1038,7 @@ interface StockMovement {
       <Input placeholder="Contoh: Gresik" />
     </FormField>
   </div>
-  
+
   {/* Deskripsi */}
   <FormField name="description" render={...}>
     <Textarea rows={4} placeholder="Deskripsi produk..." />
@@ -936,10 +1047,11 @@ interface StockMovement {
 ```
 
 **Section 2: Harga & Stok** (`space-y-5`, `pt-6 border-t`, header with `border-b pb-2`):
+
 ```tsx
 <div className="space-y-5 pt-6 border-t">
   <h3 className="text-lg font-semibold border-b pb-2">Harga & Stok</h3>
-  
+
   {/* Harga Jual + Harga Asli (Grid 2) */}
   <div className="grid grid-cols-2 gap-4">
     <FormField name="price" render={...}>
@@ -951,7 +1063,7 @@ interface StockMovement {
       <FormDescription>Harga sebelum diskon (opsional)</FormDescription>
     </FormField>
   </div>
-  
+
   {/* Satuan + Stok + Stok Min (Grid 3) */}
   <div className="grid grid-cols-3 gap-4">
     <FormField name="unit" render={...}>
@@ -965,7 +1077,7 @@ interface StockMovement {
       <FormDescription>Untuk alert stok rendah</FormDescription>
     </FormField>
   </div>
-  
+
   {/* Diskon */}
   <FormField name="discount" render={...}>
     <Input type="number" placeholder="15" />
@@ -975,10 +1087,11 @@ interface StockMovement {
 ```
 
 **Section 3: Gambar Produk** (`space-y-5`, `pt-6 border-t`, header with `border-b pb-2`):
+
 ```tsx
 <div className="space-y-5 pt-6 border-t">
   <h3 className="text-lg font-semibold border-b pb-2">Gambar Produk</h3>
-  
+
   <div className="border-2 border-dashed rounded-lg p-6">
     {imagePreview ? (
       <div className="space-y-4">
@@ -991,11 +1104,11 @@ interface StockMovement {
       <label className="flex flex-col items-center cursor-pointer">
         <Upload className="h-12 w-12 text-gray-400 mb-2" />
         <p className="text-sm text-gray-600">Klik untuk upload gambar</p>
-        <Input 
-          type="file" 
-          accept="image/*" 
-          className="hidden" 
-          onChange={handleImageChange} 
+        <Input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageChange}
         />
       </label>
     )}
@@ -1004,45 +1117,49 @@ interface StockMovement {
 ```
 
 **Section 4: Status Produk** (`space-y-5`, `pt-6 border-t`, header with `border-b pb-2`):
+
 ```tsx
 <div className="space-y-5 pt-6 border-t">
   <h3 className="text-lg font-semibold border-b pb-2">Status Produk</h3>
-  
+
   {/* isActive Checkbox */}
-  <FormField name="isActive" render={({ field }) => (
-    <FormItem className="flex items-start space-x-3">
-      <FormControl>
-        <Checkbox 
-          checked={field.value} 
-          onCheckedChange={field.onChange} 
-        />
-      </FormControl>
-      <div className="space-y-1">
-        <FormLabel>Produk Aktif</FormLabel>
-        <FormDescription>Produk akan ditampilkan di katalog</FormDescription>
-      </div>
-    </FormItem>
-  )} />
-  
+  <FormField
+    name="isActive"
+    render={({ field }) => (
+      <FormItem className="flex items-start space-x-3">
+        <FormControl>
+          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+        </FormControl>
+        <div className="space-y-1">
+          <FormLabel>Produk Aktif</FormLabel>
+          <FormDescription>Produk akan ditampilkan di katalog</FormDescription>
+        </div>
+      </FormItem>
+    )}
+  />
+
   {/* isFeatured Checkbox */}
-  <FormField name="isFeatured" render={({ field }) => (
-    <FormItem className="flex items-start space-x-3">
-      <FormControl>
-        <Checkbox 
-          checked={field.value} 
-          onCheckedChange={field.onChange} 
-        />
-      </FormControl>
-      <div className="space-y-1">
-        <FormLabel>Produk Unggulan</FormLabel>
-        <FormDescription>Tampilkan di section featured products</FormDescription>
-      </div>
-    </FormItem>
-  )} />
+  <FormField
+    name="isFeatured"
+    render={({ field }) => (
+      <FormItem className="flex items-start space-x-3">
+        <FormControl>
+          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+        </FormControl>
+        <div className="space-y-1">
+          <FormLabel>Produk Unggulan</FormLabel>
+          <FormDescription>
+            Tampilkan di section featured products
+          </FormDescription>
+        </div>
+      </FormItem>
+    )}
+  />
 </div>
 ```
 
 **Zod Validation Schema**:
+
 ```typescript
 const productSchema = z.object({
   name: z.string().min(3, "Nama produk minimal 3 karakter"),
@@ -1065,6 +1182,7 @@ const productSchema = z.object({
 ```
 
 **Image Upload Handler**:
+
 ```typescript
 const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
@@ -1079,6 +1197,7 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 ```
 
 **Critical Patterns**:
+
 - **MUST use react-hook-form + Zod** for complex forms (12+ fields)
 - **Shadcn Checkbox**: Use `<Checkbox checked={value} onCheckedChange={onChange} />` (NOT HTML `<input type="checkbox">`)
 - **Checkbox Layout**: `flex items-start space-x-3` with label and description in separate div
@@ -1091,12 +1210,14 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 - **TODO Comment**: Ready for tRPC mutation to create product
 
 **Important for AI Agents**:
+
 - When creating complex CRUD forms, ALWAYS follow this pattern (sections, spacing, validation)
 - Check shadcn component availability BEFORE using HTML primitives (input, select, checkbox)
 - For forms with 12+ fields, dialog MUST be max-w-5xl or larger
 - Section headers with border-b improve visual hierarchy significantly
 
 ### NextAuth Authentication System (COMPLETED)
+
 **Status**: ✅ Production-ready, fully tested, no redundant code
 
 **Complete Guide**: See `guide/auth_middleware.md` for detailed documentation
@@ -1104,12 +1225,14 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 **Quick Reference**:
 
 #### **Architecture Overview**
+
 - **Registration**: tRPC mutation → MongoDB (NextAuth doesn't handle registration)
 - **Login**: NextAuth `signIn()` → CredentialsProvider → JWT → HTTP-only cookies
 - **Session**: 30-day JWT stored in HTTP-only cookies (secure, no localStorage)
 - **Protection**: 3-level (page, action, role-based)
 
 #### **Key Files**
+
 ```
 src/
 ├── pages/
@@ -1131,18 +1254,20 @@ src/
 #### **Usage Patterns**
 
 **1. Get Current User (Any Component)**:
+
 ```typescript
-import { useSession } from 'next-auth/react';
+import { useSession } from "next-auth/react";
 
 const { data: session, status } = useSession();
 const user = session?.user; // { id, name, email, username, role, phone, address, isActive }
-const isLoading = status === 'loading';
-const isAuthenticated = status === 'authenticated';
+const isLoading = status === "loading";
+const isAuthenticated = status === "authenticated";
 ```
 
 **2. Protect Page (Redirect if Not Logged In)**:
+
 ```typescript
-import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function CartPage() {
   const { isAuthenticated, isLoading, session } = useRequireAuth();
@@ -1152,18 +1277,20 @@ export default function CartPage() {
 ```
 
 **3. Protect Admin/Staff Pages (Role-Based)**:
+
 ```typescript
-import { useRequireRole } from '@/hooks/useRequireAuth';
+import { useRequireRole } from "@/hooks/useRequireAuth";
 
 export default function AdminPage() {
-  const { user, isAuthenticated, isLoading } = useRequireRole(['admin']);
+  const { user, isAuthenticated, isLoading } = useRequireRole(["admin"]);
   // Redirects to home if user is not admin
 }
 ```
 
 **4. Protect Action Buttons (Add to Cart, Checkout)**:
+
 ```tsx
-import { RequireAuth } from '@/components/RequireAuth';
+import { RequireAuth } from "@/components/RequireAuth";
 
 <RequireAuth onAuthenticated={handleAddToCart}>
   {({ onClick }) => (
@@ -1172,20 +1299,22 @@ import { RequireAuth } from '@/components/RequireAuth';
       Tambah ke Keranjang
     </Button>
   )}
-</RequireAuth>
+</RequireAuth>;
 ```
 
 **5. Logout**:
+
 ```typescript
-import { signOut } from 'next-auth/react';
+import { signOut } from "next-auth/react";
 
 const handleLogout = async () => {
-  await signOut({ callbackUrl: '/' });
-  toast.success('Berhasil logout');
+  await signOut({ callbackUrl: "/" });
+  toast.success("Berhasil logout");
 };
 ```
 
 #### **Custom Session Fields**
+
 ```typescript
 session.user = {
   id: string;                // MongoDB _id
@@ -1205,6 +1334,7 @@ session.user = {
 ```
 
 #### **Security Features**
+
 - ✅ HTTP-only cookies (immune to XSS attacks)
 - ✅ CSRF protection (built-in NextAuth)
 - ✅ JWT token signing with JWT_SECRET
@@ -1214,6 +1344,7 @@ session.user = {
 - ✅ No sensitive data in localStorage
 
 #### **Important Notes**
+
 - **Registration uses tRPC** (NextAuth doesn't provide registration API)
 - **Login uses NextAuth** (production-ready, secure)
 - **tRPC login endpoint removed** (redundant - NextAuth handles it)
@@ -1221,11 +1352,13 @@ session.user = {
 - **Logout redirects to homepage** (not login page - better UX)
 
 ### Admin Customers Management
+
 **Location**: `src/pages/admin/customers/index.tsx`
 
 **Purpose**: Manage customer data, view customer information, and track customer activity.
 
 **Key Features**:
+
 - **4 Stats Cards** with Lucide icons:
   - Total Pelanggan (blue, UserCheck) - Total number of customers
   - Pelanggan Aktif (green, UserCheck) - Active customers who made recent orders
@@ -1247,6 +1380,7 @@ session.user = {
 Three sections with full customer information:
 
 **1. Informasi Pelanggan** (Grid 2 columns):
+
 ```tsx
 <div className="grid grid-cols-2 gap-4">
   <div>
@@ -1269,15 +1403,19 @@ Three sections with full customer information:
 ```
 
 **2. Alamat Pengiriman**:
+
 ```tsx
 <div>
   <p className="text-gray-900">{customer.address.street}</p>
-  <p className="text-gray-900">{customer.address.city}, {customer.address.province}</p>
+  <p className="text-gray-900">
+    {customer.address.city}, {customer.address.province}
+  </p>
   <p className="text-gray-900">{customer.address.postalCode}</p>
 </div>
 ```
 
 **3. Statistik Pesanan** (Grid 2×2, colored cards):
+
 ```tsx
 <div className="grid grid-cols-2 gap-4">
   {/* Total Pesanan - Blue */}
@@ -1288,25 +1426,29 @@ Three sections with full customer information:
     </div>
     <p className="text-2xl font-bold text-blue-900">{customer.totalOrders}</p>
   </div>
-  
+
   {/* Total Belanja - Green */}
   <div className="bg-green-50 p-4 rounded-lg">
     <div className="flex items-center gap-2 mb-2">
       <ShoppingBag className="h-5 w-5 text-green-600" />
       <p className="text-sm text-green-600 font-medium">Total Belanja</p>
     </div>
-    <p className="text-2xl font-bold text-green-900">{formatCurrency(totalSpent)}</p>
+    <p className="text-2xl font-bold text-green-900">
+      {formatCurrency(totalSpent)}
+    </p>
   </div>
-  
+
   {/* Tgl Registrasi - Purple */}
   <div className="bg-purple-50 p-4 rounded-lg">
     <div className="flex items-center gap-2 mb-2">
       <Calendar className="h-5 w-5 text-purple-600" />
       <p className="text-sm text-purple-600 font-medium">Tgl Registrasi</p>
     </div>
-    <p className="text-sm font-medium text-purple-900">{formatDate(registeredDate)}</p>
+    <p className="text-sm font-medium text-purple-900">
+      {formatDate(registeredDate)}
+    </p>
   </div>
-  
+
   {/* Pesanan Terakhir - Orange */}
   <div className="bg-orange-50 p-4 rounded-lg">
     <div className="flex items-center gap-2 mb-2">
@@ -1321,6 +1463,7 @@ Three sections with full customer information:
 ```
 
 **Customer Interface** (9 fields):
+
 ```typescript
 interface Customer {
   id: string;
@@ -1342,6 +1485,7 @@ interface Customer {
 ```
 
 **Helper Functions**:
+
 ```typescript
 // Format date to Indonesian locale
 const formatDate = (dateString: string) => {
@@ -1364,6 +1508,7 @@ const formatCurrency = (amount: number) => {
 ```
 
 **Important Patterns**:
+
 - **Lucide Icons Only**: UserCheck, UserX, ShoppingBag, Calendar, Search, Eye (NO emoji)
 - **Shadcn Components**: Table, Dialog, Badge, Card, Button, Input, Select (NO HTML primitives)
 - **Status Logic**: Active = has recent orders, Inactive = no orders or old orders
@@ -1375,6 +1520,7 @@ const formatCurrency = (amount: number) => {
 - **TODO Comment**: Ready for tRPC query (`trpc.customers.getAll.useQuery()`)
 
 **Dialog Pattern**:
+
 - Size: `max-w-2xl` for customer detail view (not too wide)
 - Three distinct sections with headers (`border-b pb-2`)
 - Grid layouts for organized information display
@@ -1382,6 +1528,7 @@ const formatCurrency = (amount: number) => {
 - Single action button: "Tutup" (Close)
 
 **Important for AI Agents**:
+
 - When showing customer statistics, always use colored cards with icons
 - Format currency with IDR locale (Intl.NumberFormat)
 - Format dates with Indonesian locale (id-ID)
@@ -1391,6 +1538,7 @@ const formatCurrency = (amount: number) => {
 ## Critical Rules
 
 ### Architecture & Code Standards
+
 1. **Never create App Router files** - This is Pages Router only (no `app/` directory)
 2. **Use shadcn components first** - Install missing ones rather than creating custom components
 3. **NO HTML primitives when shadcn exists** - Use Table, Select, Avatar, DropdownMenu from shadcn
@@ -1398,6 +1546,7 @@ const formatCurrency = (amount: number) => {
 5. **Keep tRPC routers in single file** - `_app.ts` contains all procedures (not split into multiple files)
 
 ### Styling & UI
+
 6. **Match brand colors** - Use #1a5fa4 primary color (navy blue) for building materials branding
 7. **Consistent backgrounds** - Use animated gradient pattern for auth pages (see login/register)
 8. **Clean UI preference** - User prefers minimal, clean designs without excessive decorations
@@ -1405,39 +1554,48 @@ const formatCurrency = (amount: number) => {
 10. **Avoid `cn` utility** - Use template literals `${...}` for conditional classNames instead of `cn()` function
 
 ### Development Environment
+
 11. **Windows environment** - Use `cmd /c` for npx commands if PowerShell execution policy blocks
 12. **TypeScript strict** - All files must be TypeScript, no `.js` files in `src/`
 
 ### Code Quality & Maintenance
+
 13. **NO redundant code** - Check for duplicate components, unused imports, empty files before committing
 14. **NO unused variables** - Fix all TypeScript warnings about unused variables
 15. **Update TODO comments** - When implementing features, replace TODO with implementation or remove
 16. **Delete deprecated files** - Remove old files immediately after migration (e.g., AuthContext after NextAuth)
 
 ### Documentation
+
 17. **NO documentation files** - NEVER create new .md, .txt, or guide files to document changes. Only modify this instruction file (`.github/copilot-instructions.md`) when adding new patterns or rules. Do NOT create summary files like CHANGES.md, GUIDE.md, TODO.md, etc.
 18. **Exception**: `guide/` folder for major feature documentation (e.g., `auth_middleware.md`)
 
 ## UI/UX Patterns
 
 ### Product Catalog Layout
+
 **Structure** (`src/pages/products/index.tsx`):
+
 - **Sidebar Filters** (left): Categories, price range, stock status, discount - follows page scroll naturally
 - **Products Area** (right): Scrollable container with `maxHeight: calc(100vh - 16rem)` - independent scroll
 - **View Modes**: Grid (3 columns) and List layouts with toggle
 - **Search & Sort**: Input with Lucide Search icon, Select for sorting
 
 **Key Implementation**:
+
 ```tsx
 <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
   {/* Sidebar - follows page scroll */}
   <aside className="lg:w-64 flex-shrink-0">
     <div className="space-y-6">{/* Filters */}</div>
   </aside>
-  
+
   {/* Products with independent scroll */}
   <main className="flex-1">
-    <div style={{ maxHeight: 'calc(100vh - 16rem)' }} className="overflow-y-auto [&::-webkit-scrollbar]:...">
+    <div
+      style={{ maxHeight: "calc(100vh - 16rem)" }}
+      className="overflow-y-auto [&::-webkit-scrollbar]:..."
+    >
       {/* Product cards */}
     </div>
   </main>
@@ -1445,6 +1603,7 @@ const formatCurrency = (amount: number) => {
 ```
 
 ### Icon Usage Guidelines
+
 - **Prefer Lucide React icons** over emoji for professional appearance
 - **Installed**: lucide-react package
 - **Common icons**: Search, Grid3x3, List, ShoppingCart, Eye, Star, ChevronLeft/Right, RotateCcw, Calculator, Info
@@ -1453,11 +1612,13 @@ const formatCurrency = (amount: number) => {
 - **Avoid emoji icons** (🔍👁️🛒) - they look unprofessional and inconsistent across platforms
 
 ### Unit Converter Component
+
 **Purpose**: Allow customers to purchase building materials in their preferred unit (e.g., buy cement in KG when product is sold per SAK)
 
 **Location**: `src/components/UnitConverter.tsx`
 
 **Features**:
+
 - Real-time unit conversion calculator
 - **"Dari" unit LOCKED** to supplier's unit (tidak bisa diubah customer)
 - **"Ke" unit customizable** by customer (dropdown pilihan)
@@ -1468,6 +1629,7 @@ const formatCurrency = (amount: number) => {
 - **Admin controls which units are available** via checkbox in product form
 
 **How It Works**:
+
 1. Admin creates product → selects category (e.g., "Semen")
 2. Category-specific units appear as checkboxes (e.g., Sak, Kg, Ton, Zak)
 3. Admin checks which units customers can purchase in → saved to `availableUnits` array in database
@@ -1476,13 +1638,14 @@ const formatCurrency = (amount: number) => {
    - **"Ke" field**: Dropdown dengan unit yang dipilih admin (e.g., Kg, Ton)
 
 **Usage Pattern**:
+
 ```tsx
-<UnitConverter 
-  category={product.category}        // Product category (e.g., "Semen")
-  productUnit={product.unit}         // Supplier's primary unit (e.g., "sak") - LOCKED
-  productPrice={product.price}       // Price per primary unit
-  productStock={product.stock}       // Available stock in primary unit
-  availableUnits={product.availableUnits}  // ["sak", "kg", "ton"] from database
+<UnitConverter
+  category={product.category} // Product category (e.g., "Semen")
+  productUnit={product.unit} // Supplier's primary unit (e.g., "sak") - LOCKED
+  productPrice={product.price} // Price per primary unit
+  productStock={product.stock} // Available stock in primary unit
+  availableUnits={product.availableUnits} // ["sak", "kg", "ton"] from database
   onAddToCart={(qty, unit, total) => {
     // qty & unit are in SUPPLIER'S UNIT (e.g., 2 sak, not 100kg)
     // total is calculated price
@@ -1491,9 +1654,10 @@ const formatCurrency = (amount: number) => {
 ```
 
 **Example Flow**:
+
 ```
 Supplier: 1 Sak Semen = Rp 65,000, Stok 150 Sak
-Customer Input: 
+Customer Input:
   - Dari: 2 Sak (LOCKED, tidak bisa diganti)
   - Ke: Ton (pilih dari dropdown)
   - Hasil: 2 Sak = 0.10 Ton
@@ -1503,13 +1667,18 @@ Customer Input:
 ```
 
 **Base Unit System**:
+
 - Each category has a base unit (e.g., Semen → kg, Keramik → pcs)
 - Conversions defined as multiplier to base unit
 - Example: 1 sak = 50kg, 1 zak = 40kg, 1 ton = 1000kg
 
 **Category Units Mapping** (defined in both Admin Products & UnitConverter):
+
 ```typescript
-const categoryUnitsMap: Record<string, Array<{ value: string; label: string }>> = {
+const categoryUnitsMap: Record<
+  string,
+  Array<{ value: string; label: string }>
+> = {
   Semen: [
     { value: "sak", label: "Sak (50kg)" },
     { value: "kg", label: "Kilogram (kg)" },
@@ -1527,13 +1696,14 @@ const categoryUnitsMap: Record<string, Array<{ value: string; label: string }>> 
 ```
 
 **Props Interface**:
+
 ```typescript
 interface UnitConverterProps {
-  category: string;              // Product category
-  productUnit: string;           // Product's primary unit (supplier uses)
-  productPrice: number;          // Price per productUnit
-  productStock: number;          // Stock in productUnit
-  availableUnits?: string[];     // Units allowed for customers (from DB)
+  category: string; // Product category
+  productUnit: string; // Product's primary unit (supplier uses)
+  productPrice: number; // Price per productUnit
+  productStock: number; // Stock in productUnit
+  availableUnits?: string[]; // Units allowed for customers (from DB)
   onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
 }
 ```
@@ -1543,7 +1713,9 @@ interface UnitConverterProps {
 **DO NOT use Form component** - UnitConverter uses simple `useState` for real-time calculation, NOT react-hook-form
 
 ### Form Validation Guidelines
+
 **MUST use Form (react-hook-form + Zod + shadcn Form) for**:
+
 - ✅ Login/Register pages - Email, password validation
 - ✅ Checkout forms - Address, phone number validation
 - ✅ Admin CRUD - Create/Edit product with multiple fields
@@ -1551,12 +1723,14 @@ interface UnitConverterProps {
 - ✅ Profile settings - User information update
 
 **DO NOT use Form for**:
+
 - ❌ Real-time calculators (like UnitConverter) - Use `useState` instead
 - ❌ Search inputs - Simple controlled input with `onChange`
 - ❌ Quantity selectors - Just state with +/- buttons
 - ❌ Filter dropdowns - Direct state management
 
 **Pattern for Simple Inputs**:
+
 ```typescript
 // ✅ Correct: Simple state for calculator/search
 const [value, setValue] = useState("");
@@ -1571,6 +1745,7 @@ const form = useForm({ ... }); // Overkill for real-time input
 ```
 
 ## External Dependencies
+
 - **React Query**: Data fetching (via tRPC integration)
 - **Zod**: Schema validation for tRPC inputs
 - **Radix UI**: Accessible primitives for shadcn components
@@ -1578,12 +1753,14 @@ const form = useForm({ ... }); // Overkill for real-time input
 - **Recharts**: React charting library for data visualization (LineChart, BarChart, etc.)
 
 ## Testing & Debugging
+
 - No test framework configured yet
 - Dev mode: Check `http://localhost:3000`
 - tRPC errors: Check Network tab for `/api/trpc` calls
 - Type errors: Run `npm run build` to check TypeScript compilation
 
 ## Reference Files
+
 - Architecture guide: `GUIDE.md` (quick reference for team)
 - Component config: `components.json` (shadcn settings)
 - Router setup: `src/server/routers/_app.ts` (API definitions)
@@ -1593,9 +1770,11 @@ const form = useForm({ ... }); // Overkill for real-time input
 ## Environment Setup
 
 ### Environment Variables
+
 **File**: `.env.local` (create from `.env.example`)
 
 **Required Variables**:
+
 ```bash
 # MongoDB Connection (choose one)
 # Option 1: Local MongoDB
@@ -1609,6 +1788,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 ```
 
 **Setup Steps**:
+
 1. Copy `.env.example` to `.env.local`
 2. Update `MONGODB_URI` with your MongoDB connection string
 3. Generate secure JWT_SECRET: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
@@ -1617,9 +1797,11 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 ## Code Quality & Maintenance
 
 ### Latest Code Review (November 3, 2025)
+
 **Status**: ✅ Production-ready, fully audited, zero redundancy
 
 **Major Updates Completed**:
+
 - ✅ **Enhanced AdminLayout** with role-based authorization (admin/staff filtering)
 - ✅ **Real Dashboard Statistics** with MongoDB integration via tRPC
 - ✅ **Proper Error Handling** with try-catch and TRPCError throughout tRPC procedures
@@ -1628,12 +1810,14 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 - ✅ **Feature-based Router Organization** (products router with getDashBoardStats)
 
 **Authentication & Authorization**:
+
 - ✅ **NextAuth Integration**: Secure login with JWT sessions (30-day expiry)
 - ✅ **Role-Based Access**: Admin/Staff/User with proper permission filtering
 - ✅ **Route Guards**: `useRequireAuth()` and `useRequireRole()` hooks
 - ✅ **Secure Logout**: Proper session termination with `signOut()`
 
 **Dashboard System**:
+
 - ✅ **Real Data Integration**: MongoDB Product/User collections via tRPC
 - ✅ **Growth Calculations**: Month-over-month percentage tracking
 - ✅ **Low Stock Alerts**: Dynamic stock monitoring with progress bars
@@ -1641,6 +1825,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 - ✅ **Loading States**: Proper spinners and error boundaries
 
 **Code Quality Metrics**:
+
 - Total Files: 140+ TypeScript/JavaScript files
 - TypeScript Errors: 0
 - Security: Production-ready authentication system
@@ -1648,6 +1833,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 - Performance: Optimized MongoDB queries with lean() and select()
 
 **Quality Scores**:
+
 - Architecture: A+ (100/100)
 - Type Safety: A+ (100/100)
 - Security: A+ (100/100)
@@ -1655,6 +1841,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 - Error Handling: A+ (100/100)
 
 **File Structure** (Clean & Organized):
+
 ```
 src/
 ├── components/        ✅ 26 files, no redundancy
@@ -1668,6 +1855,7 @@ src/
 ```
 
 **TODO Comments Analysis**:
+
 - Total: 21 TODOs (all legitimate)
 - Categories: Cart state (Zustand), tRPC mutations, Google Maps
 - Status: All intentional placeholders for future features
@@ -1675,9 +1863,11 @@ src/
 ## Recent Features & Patterns (November 2025)
 
 ### 1. Dynamic Unit Converter with Product Attributes
+
 **Location**: `src/components/UnitConverter.tsx`
 
 **Key Pattern**: Dynamic label generation based on product attributes
+
 ```tsx
 // Props include productAttributes for weight-based labels
 interface UnitConverterProps {
@@ -1702,14 +1892,16 @@ if (category === "Besi" && productAttributes?.weight_kg) {
 ```
 
 **Why This Matters**:
+
 - ❌ Before: All Besi products showed "Batang (7.4kg)" (hardcoded)
 - ✅ After: Besi 6mm shows "Batang (2.66kg)", Besi 10mm shows "Batang (7.4kg)" (dynamic)
 - Reads `weight_kg` from `product.attributes` in database
 - Same pattern for Kawat category with `gulung` weight
 
 **Usage in Product Detail**:
+
 ```tsx
-<UnitConverter 
+<UnitConverter
   category={product.category}
   productUnit={product.unit}
   productPrice={discountPrice}
@@ -1721,15 +1913,17 @@ if (category === "Besi" && productAttributes?.weight_kg) {
 ```
 
 ### 2. Clickable Product Cards (No Eye Button)
+
 **Location**: `src/pages/products/index.tsx`
 
 **Pattern**: Wrap entire card with Link, prevent default on action buttons
+
 ```tsx
 // Grid View
 <Link href={`/products/${product.slug}`} key={product._id.toString()}>
   <Card className="cursor-pointer hover:shadow-lg">
     {/* Card content */}
-    <Button 
+    <Button
       className="w-full"
       onClick={(e) => {
         e.preventDefault(); // Prevent navigation
@@ -1744,19 +1938,23 @@ if (category === "Besi" && productAttributes?.weight_kg) {
 ```
 
 **Key Points**:
+
 - ✅ Entire card is clickable → Navigate to product detail
 - ✅ "Tambah ke Keranjang" button still works (with `e.preventDefault()`)
 - ✅ Better UX: 1 click to view details, not 2 (card + eye button)
 - ❌ Removed: Eye icon button (no longer needed)
 
 **Icons**:
+
 - Removed `Eye` from Lucide imports
 - Card has `cursor-pointer` class for visual feedback
 
 ### 3. Share Button - Copy URL to Clipboard
+
 **Location**: `src/pages/products/[slug].tsx`
 
 **Pattern**: Async clipboard API with toast notifications
+
 ```tsx
 const handleShare = async () => {
   try {
@@ -1775,18 +1973,21 @@ const handleShare = async () => {
 // Button usage
 <Button size="lg" variant="outline" onClick={handleShare}>
   <Share2 className="h-5 w-5" />
-</Button>
+</Button>;
 ```
 
 **Browser Requirements**:
+
 - ✅ Modern browsers (Chrome, Firefox, Edge, Safari)
 - ✅ Requires **HTTPS** or localhost (secure context)
 - ⚠️ Production must use HTTPS for clipboard API
 
 ### 4. URL Query Parameters for Deep Linking
+
 **Location**: `src/pages/products/index.tsx`
 
 **Pattern**: Read URL params on mount, set filter state
+
 ```tsx
 import { useRouter } from "next/router";
 
@@ -1799,17 +2000,17 @@ useEffect(() => {
     if (router.query.category && typeof router.query.category === "string") {
       setSelectedCategory(router.query.category);
     }
-    
+
     // Discount filter
     if (router.query.discount === "true") {
       setHasDiscount(true);
     }
-    
+
     // Search query
     if (router.query.search && typeof router.query.search === "string") {
       setSearchQuery(router.query.search);
     }
-    
+
     // Sort option
     if (router.query.sortBy && typeof router.query.sortBy === "string") {
       setSortBy(router.query.sortBy);
@@ -1819,6 +2020,7 @@ useEffect(() => {
 ```
 
 **Supported URL Patterns**:
+
 ```bash
 # Single filter
 /products?category=Pipa
@@ -1832,6 +2034,7 @@ useEffect(() => {
 ```
 
 **Important**: Category names use **Title Case** (e.g., "Pipa", NOT "pipa")
+
 ```tsx
 // Homepage category links - NO .toLowerCase()
 <Link href={`/products?category=${category.name}`}>
@@ -1840,12 +2043,14 @@ useEffect(() => {
 ```
 
 **Benefits**:
+
 - 🔗 Shareable URLs with pre-applied filters
 - 🔖 Bookmarkable filtered product pages
 - 🎯 Marketing campaign links (e.g., `/products?discount=true` from email)
 - ↩️ Browser back/forward maintains filter state
 
 **Hero Section Integration**:
+
 ```tsx
 // Homepage - "Lihat Promo" button
 <Link href="/products?discount=true">
@@ -1855,17 +2060,20 @@ useEffect(() => {
 ```
 
 ### 5. Product Data Consistency - Unit Field
+
 **Database**: `database/proyekFPW.products.json`
 
 **Critical Rule**: `unit` field MUST match supplier's actual selling unit
 
 **Examples**:
+
 - ✅ Kawat: `unit: "gulung"` (supplier sells per gulung, not per kg)
 - ✅ Besi: `unit: "batang"` (supplier sells per batang, not per kg)
 - ✅ Semen: `unit: "sak"` (supplier sells per sak)
 - ✅ Pipa: `unit: "batang"` (supplier sells per batang)
 
 **Attributes for Weight/Dimensions**:
+
 ```json
 {
   "name": "Besi 10 full SNI",
@@ -1875,13 +2083,14 @@ useEffect(() => {
     "diameter_mm": 10,
     "type": "Ulir",
     "standard": "SNI",
-    "weight_kg": 7.4,      // ← Used for dynamic unit labels
+    "weight_kg": 7.4, // ← Used for dynamic unit labels
     "length_meter": 12
   }
 }
 ```
 
 **Why This Matters**:
+
 - UnitConverter calculations depend on correct `unit` + `price` relationship
 - `price` is per `unit` (e.g., Rp 67,000 per batang, NOT per kg)
 - `stock` is quantity in `unit` (e.g., 150 batang, NOT kg)
@@ -1890,7 +2099,9 @@ useEffect(() => {
 ## Critical Updates & Best Practices
 
 ### Code Quality Checklist (Before Every Commit)
+
 ✅ **Run these checks**:
+
 1. No unused imports (check all `import` statements)
 2. No unused variables (check TypeScript warnings)
 3. No empty files (delete or implement)
@@ -1903,6 +2114,7 @@ useEffect(() => {
 10. **Role-based Access**: Proper authentication guards on admin pages
 
 ### Authentication & Security DO's ✅
+
 1. **Use NextAuth for login** - Never create custom JWT auth
 2. **Use tRPC for registration** - NextAuth doesn't handle registration
 3. **Hash passwords** with bcryptjs (10 rounds minimum)
@@ -1911,6 +2123,7 @@ useEffect(() => {
 6. **Generate JWT_SECRET** with crypto.randomBytes(64)
 
 ### Component Development DO's ✅
+
 1. **Always pass `productAttributes`** to UnitConverter for dynamic labels
 2. **Use Title Case** for category names in URLs ("Pipa", not "pipa")
 3. **Wrap cards with Link** for clickable navigation
@@ -1920,6 +2133,7 @@ useEffect(() => {
 7. **Check shadcn availability** before creating custom UI components
 
 ### Database & Environment DO's ✅
+
 1. **Copy `.env.example` to `.env.local`** for local development
 2. **Never commit `.env.local`** (contains secrets)
 3. **Never mix unit types** in database (unit field must match selling unit)
@@ -1927,6 +2141,7 @@ useEffect(() => {
 5. **Add indexes** for frequently queried fields
 
 ### DON'Ts ❌ (Common Mistakes)
+
 1. **Never hardcode unit weights** in UnitConverter (use `productAttributes`)
 2. **Never use `.toLowerCase()`** on category names for URLs
 3. **Never use Eye icon button** on product cards (cards are clickable)
