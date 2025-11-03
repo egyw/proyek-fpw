@@ -3,6 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useSession, signOut } from "next-auth/react"; // Import signOut
+import { useRequireRole } from "@/hooks/useRequireAuth"; // Role protection hook
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +21,46 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+
+  const {data: session, status } = useSession();
+  
+  const {user, isAuthenticated, isLoading } = useRequireRole(['admin']);
+
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+    if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if(status === "unauthenticated" || !isAuthenticated){
+    router.push('/auth/login');
+    return null;
+  }
+
+  if(!user || !user.role.includes('admin')){
+    router.push('/');
+    return null;
+  }
+  
+  const handleLogout = async() => {
+    try {
+      await signOut({
+        callbackUrl: '/auth/login',
+        redirect: true
+      })
+    }catch (error){
+      console.error('Error Message : ', error);
+      router.push('/')
+    }
+  }
 
   const menuItems = [
     {
@@ -146,12 +188,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <Button variant="ghost" className="flex items-center gap-3 h-auto py-2">
                   <Avatar>
                     <AvatarFallback className="bg-primary text-white font-semibold">
-                      A
+                      {(session?.user?.name || "U")
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-900">Admin User</p>
-                    <p className="text-xs text-gray-500">admin@example.com</p>
+                    <p className="text-sm font-medium text-gray-900">{session?.user?.name}</p>
+                    <p className="text-xs text-gray-500">{session?.user?.email}</p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -167,11 +213,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   Pengaturan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/auth/login" className="cursor-pointer text-red-600">
+                <DropdownMenuItem asChild
+                  onClick={handleLogout}
+                  >
+                  {/* <Link href="/auth/login" className="cursor-pointer text-red-600">
                     <span className="mr-2">🚪</span>
                     Keluar
-                  </Link>
+                  </Link> */}
+                  <span className="cursor-pointer text-red-600">
+                    <span className="mr-2">🚪</span>
+                    Keluar
+                  </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

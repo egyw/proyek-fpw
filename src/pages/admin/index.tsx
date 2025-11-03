@@ -1,14 +1,19 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {trpc} from "@/utils/trpc";
 
 export default function AdminDashboard() {
   // Dummy data - nanti akan diganti dengan tRPC
+
+  const {data: dashboardStats, isLoading: statsLoading} = trpc.products.getDashBoardStats.useQuery();
+  console.log(dashboardStats);
   const stats = [
     {
       title: "Total Produk",
-      value: "1,234",
+      value: dashboardStats?.totalProducts || "0",
       change: "+12%",
+      context: "vs bulan lalu",
       trend: "up",
       icon: "📦",
       color: "bg-blue-50 text-blue-600",
@@ -16,24 +21,26 @@ export default function AdminDashboard() {
     {
       title: "Pesanan Hari Ini",
       value: "89",
-      change: "+23%",
-      trend: "up",
-      icon: "🛒",
-      color: "bg-green-50 text-green-600",
+      // change: "+23%",
+      // trend: "up",
+      // icon: "🛒",
+      // color: "bg-green-50 text-green-600",
     },
     {
       title: "Total Pelanggan",
-      value: "5,678",
-      change: "+8%",
+      value: dashboardStats?.totalCustomer.thisMonth || "0",
+      change: `+${dashboardStats?.totalCustomer.growth || 0}%`,
+      context: "vs bulan lalu",
       trend: "up",
       icon: "👥",
       color: "bg-purple-50 text-purple-600",
     },
     {
       title: "Revenue Bulan Ini",
-      value: "Rp 125jt",
-      change: "+15%",
-      trend: "up",
+      value: dashboardStats?.totalRevenue.formatted || "Rp 0",
+      change: `+${dashboardStats?.totalRevenue.growth || 0}%`,
+      context: "vs bulan lalu",
+      trend: dashboardStats?.totalRevenue.trend  || "up",
       icon: "💰",
       color: "bg-orange-50 text-orange-600",
     },
@@ -74,12 +81,17 @@ export default function AdminDashboard() {
     },
   ];
 
-  const lowStockProducts = [
-    { name: "Semen Tiga Roda 50kg", stock: 12, min: 50, category: "Semen" },
-    { name: "Pipa PVC 3 inch", stock: 8, min: 30, category: "Pipa" },
-    { name: "Cat Dulux 5kg", stock: 15, min: 40, category: "Cat" },
-    { name: "Genteng Metal", stock: 25, min: 100, category: "Atap" },
-  ];
+  const lowStockProducts = dashboardStats?.lowStockProducts || [];
+
+  // const lowStockProducts = [
+  //   { name: "Semen Tiga Roda 50kg", stock: 12, min: 50, category: "Semen" },
+  //   { name: "Pipa PVC 3 inch", stock: 8, min: 30, category: "Pipa" },
+  //   { name: "Cat Dulux 5kg", stock: 15, min: 40, category: "Cat" },
+  //   { name: "Genteng Metal", stock: 25, min: 100, category: "Atap" },
+  // ];
+
+      const now = new Date();
+  console.log(new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
@@ -94,6 +106,19 @@ export default function AdminDashboard() {
       </Badge>
     );
   };
+
+  if(statsLoading){
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-gray-600">Memuat data dashboard...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
@@ -121,7 +146,7 @@ export default function AdminDashboard() {
                   <span className="text-green-600 text-sm font-medium">
                     {stat.change}
                   </span>
-                  <span className="text-gray-500 text-xs">vs bulan lalu</span>
+                  <span className="text-gray-500 text-xs">{stat.context}</span>
                 </div>
               </div>
               <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center text-2xl`}>
@@ -197,12 +222,12 @@ export default function AdminDashboard() {
                   <div
                     className="bg-red-500 h-2 rounded-full"
                     style={{
-                      width: `${(product.stock / product.min) * 100}%`,
+                      width: `${(product.stock / product.minStock) * 100}%`,
                     }}
                   ></div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Min. stok: {product.min} pcs
+                  Min. stok: {product.minStock} pcs
                 </p>
               </div>
             ))}
