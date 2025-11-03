@@ -81,7 +81,13 @@ export default function AdminDashboard() {
     },
   ];
 
-  const lowStockProducts = dashboardStats?.lowStockProducts || [];
+   const lowStockProducts = (dashboardStats?.lowStockProducts as Array<{
+    name: string;
+    stock: number;
+    minStock: number;
+    category: string;
+    unit: string;
+  }>) || [];
 
   // const lowStockProducts = [
   //   { name: "Semen Tiga Roda 50kg", stock: 12, min: 50, category: "Semen" },
