@@ -4,7 +4,7 @@ import connectDB from "@/lib/mongodb";
 import Product, { IProductData } from "@/models/Product";
 import User from "@/models/User";
 
-function formatRupiahShort(value) {
+function formatRupiahShort(value: number): string {
   if (value >= 1_000_000_000) {
     return (value / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + " M";
   } else if (value >= 1_000_000) {
