@@ -3,6 +3,7 @@ import { z } from "zod";
 import connectDB from "@/lib/mongodb";
 import Product, { IProductData } from "@/models/Product";
 import User from "@/models/User";
+import { TRPCError } from "@trpc/server";
 
 function formatRupiahShort(value: number): string {
   if (value >= 1_000_000_000) {
@@ -237,7 +238,7 @@ export const productsRouter = router({
         totalCustomer,
         totalRevenue,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[products.getDashBoardStats] Error:", error);
 
       if (error instanceof Error) {
@@ -258,7 +259,7 @@ export const productsRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch dashboard statistics",
-          cause: error,
+          cause: error instanceof Error ? error : undefined,
         });
       }
     }
