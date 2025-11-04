@@ -3,8 +3,23 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useSession, signOut } from "next-auth/react"; // Import signOut
-import { useRequireRole } from "@/hooks/useRequireAuth"; // Role protection hook
+import { useSession, signOut } from "next-auth/react";
+import { useRequireRole } from "@/hooks/useRequireAuth";
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  ClipboardList,
+  Users,
+  BarChart3,
+  Settings,
+  Store,
+  Bell,
+  User,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 import {
   DropdownMenu,
@@ -24,14 +39,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const {data: session, status } = useSession();
   
-  const {user, isAuthenticated, isLoading } = useRequireRole(['admin']);
-
+  // ✅ CENTRALIZED PROTECTION: Protect ALL admin pages for admin & staff roles
+  const {user, isAuthenticated, isLoading } = useRequireRole(['admin', 'staff']);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    if (isLoading) {
+  // Show loading spinner while checking auth
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
           <p className="text-gray-600">Memuat...</p>
@@ -40,14 +56,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if(status === "unauthenticated" || !isAuthenticated){
-    router.push('/auth/login');
-    return null;
-  }
-
-  if(!user || !user.role.includes('admin')){
-    router.push('/');
-    return null;
+  // If not authenticated or unauthorized, hook will redirect
+  // Show loading spinner to prevent flash of admin content
+  if (status === "unauthenticated" || !isAuthenticated || !user || !['admin', 'staff'].includes(user.role)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    );
   }
   
   const handleLogout = async() => {
@@ -65,43 +84,43 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const menuItems = [
     {
       title: "Dashboard",
-      icon: "📊",
+      icon: LayoutDashboard,
       href: "/admin",
       active: router.pathname === "/admin",
     },
     {
       title: "Produk",
-      icon: "📦",
+      icon: Package,
       href: "/admin/products",
       active: router.pathname.startsWith("/admin/products"),
     },
     {
       title: "Pesanan",
-      icon: "🛒",
+      icon: ShoppingCart,
       href: "/admin/orders",
       active: router.pathname.startsWith("/admin/orders"),
     },
     {
       title: "Inventory",
-      icon: "📋",
+      icon: ClipboardList,
       href: "/admin/inventory",
       active: router.pathname.startsWith("/admin/inventory"),
     },
     {
       title: "Pelanggan",
-      icon: "👥",
+      icon: Users,
       href: "/admin/customers",
       active: router.pathname.startsWith("/admin/customers"),
     },
     {
       title: "Laporan",
-      icon: "📈",
+      icon: BarChart3,
       href: "/admin/reports",
       active: router.pathname.startsWith("/admin/reports"),
     },
     {
       title: "Pengaturan",
-      icon: "⚙️",
+      icon: Settings,
       href: "/admin/settings",
       active: router.pathname.startsWith("/admin/settings"),
     },
@@ -119,12 +138,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
           {sidebarOpen ? (
             <Link href="/admin" className="flex items-center gap-2">
-              <span className="text-xl font-bold text-primary">Admin</span>
-              <span className="text-sm text-gray-500">Panel</span>
+              <Store className="h-6 w-6 text-primary" />
+              <div>
+                <span className="text-lg font-bold text-primary">Admin</span>
+                <span className="text-xs text-gray-500 block">Panel</span>
+              </div>
             </Link>
           ) : (
             <Link href="/admin" className="flex items-center justify-center w-full">
-              <span className="text-2xl">🏪</span>
+              <Store className="h-6 w-6 text-primary" />
             </Link>
           )}
         </div>
@@ -132,23 +154,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
-            {menuItems.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    item.active
-                      ? "bg-primary text-white"
-                      : "text-gray-700 hover:bg-gray-100"
-                  } ${!sidebarOpen ? "justify-center" : ""}`}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  {sidebarOpen && (
-                    <span className="font-medium">{item.title}</span>
-                  )}
-                </Link>
-              </li>
-            ))}
+            {menuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      item.active
+                        ? "bg-primary text-white"
+                        : "text-gray-700 hover:bg-gray-100"
+                    } ${!sidebarOpen ? "justify-center" : ""}`}
+                  >
+                    <IconComponent className="h-5 w-5 shrink-0" />
+                    {sidebarOpen && (
+                      <span className="font-medium">{item.title}</span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
@@ -158,9 +183,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             variant="outline"
             size="sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full"
+            className="w-full flex items-center justify-center gap-2"
           >
-            {sidebarOpen ? "◀ Sembunyikan" : "▶"}
+            {sidebarOpen ? (
+              <>
+                <ChevronLeft className="h-4 w-4" />
+                <span>Sembunyikan</span>
+              </>
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </aside>
@@ -178,7 +210,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-4">
             {/* Notifications */}
             <Button variant="ghost" size="icon" className="relative">
-              <span className="text-xl">🔔</span>
+              <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </Button>
 
@@ -205,25 +237,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <span className="mr-2">👤</span>
+                  <User className="mr-2 h-4 w-4" />
                   Profil
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <span className="mr-2">⚙️</span>
+                  <Settings className="mr-2 h-4 w-4" />
                   Pengaturan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild
+                <DropdownMenuItem
                   onClick={handleLogout}
-                  >
-                  {/* <Link href="/auth/login" className="cursor-pointer text-red-600">
-                    <span className="mr-2">🚪</span>
-                    Keluar
-                  </Link> */}
-                  <span className="cursor-pointer text-red-600">
-                    <span className="mr-2">🚪</span>
-                    Keluar
-                  </span>
+                  className="cursor-pointer text-red-600 focus:text-red-600"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Keluar
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
