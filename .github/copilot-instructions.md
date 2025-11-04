@@ -1218,7 +1218,7 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 
 ### NextAuth Authentication System (COMPLETED)
 
-**Status**: ✅ Production-ready, fully tested, no redundant code
+**Status**: ✅ Production-ready, fully tested, centralized admin protection
 
 **Complete Guide**: See `guide/auth_middleware.md` for detailed documentation
 
@@ -1276,16 +1276,28 @@ export default function CartPage() {
 }
 ```
 
-**3. Protect Admin/Staff Pages (Role-Based)**:
+**3. Protect Admin/Staff Pages (CENTRALIZED - DO NOT use per-page)**:
 
 ```typescript
+// ❌ WRONG: Do NOT add protection to individual admin pages
 import { useRequireRole } from "@/hooks/useRequireAuth";
 
-export default function AdminPage() {
-  const { user, isAuthenticated, isLoading } = useRequireRole(["admin"]);
-  // Redirects to home if user is not admin
+export default function AdminProductsPage() {
+  useRequireRole(['admin', 'staff']); // ❌ Redundant! AdminLayout already protects
+  return <AdminLayout>{/* content */}</AdminLayout>
+}
+
+// ✅ CORRECT: Protection is centralized in AdminLayout
+export default function AdminProductsPage() {
+  // No protection needed - AdminLayout handles it automatically
+  return <AdminLayout>{/* content */}</AdminLayout>
 }
 ```
+
+**Admin Protection Architecture**:
+- **AdminLayout** (`src/components/layouts/AdminLayout.tsx`) = Single protection point
+- All admin pages (`/admin/*`) = Automatically protected by layout
+- Individual pages = NO `useRequireRole` calls needed
 
 **4. Protect Action Buttons (Add to Cart, Checkout)**:
 
@@ -1302,7 +1314,41 @@ import { RequireAuth } from "@/components/RequireAuth";
 </RequireAuth>;
 ```
 
-**5. Logout**:
+**5. Login with Role-Based Redirect**:
+
+```typescript
+import { signIn, getSession } from 'next-auth/react';
+
+const onSubmit = async (data: LoginFormValues) => {
+  const result = await signIn('credentials', {
+    email: data.email,
+    password: data.password,
+    redirect: false,
+  });
+
+  if (result?.error) {
+    toast.error('Login Gagal', { description: result.error });
+    return;
+  }
+
+  // ✅ Use getSession() to fetch fresh session after signIn
+  const session = await getSession();
+
+  // Redirect based on role
+  if (session?.user?.role === 'admin' || session?.user?.role === 'staff') {
+    router.push('/admin'); // Admin/Staff → Dashboard
+  } else {
+    router.push('/'); // Regular user → Homepage
+  }
+};
+```
+
+**Why `getSession()` not `useSession()`?**
+- `useSession()` = React Hook (component-level, reactive, NOT in async functions)
+- `getSession()` = Async function (can be called anywhere, fetch fresh data)
+- After `signIn()`, need fresh session data → Must use `getSession()`
+
+**6. Logout**:
 
 ```typescript
 import { signOut } from "next-auth/react";
@@ -1311,6 +1357,22 @@ const handleLogout = async () => {
   await signOut({ callbackUrl: "/" });
   toast.success("Berhasil logout");
 };
+```
+
+**7. Guest Access (Login Page)**:
+
+```tsx
+import { UserCircle } from 'lucide-react';
+
+{/* Guest button - prominent outline style */}
+<Button 
+  variant="outline" 
+  className="w-full h-11 border-2 border-primary/30 text-primary hover:bg-primary hover:text-white font-semibold"
+  onClick={() => router.push('/')}
+>
+  <UserCircle className="w-5 h-5 mr-2" />
+  Masuk sebagai Tamu
+</Button>
 ```
 
 #### **Custom Session Fields**
@@ -1342,14 +1404,19 @@ session.user = {
 - ✅ Account active status check
 - ✅ LastLogin timestamp tracking
 - ✅ No sensitive data in localStorage
+- ✅ Centralized admin protection (single point in AdminLayout)
+- ✅ No duplicate toast notifications (useRef flag)
+- ✅ No flash of protected content (loading spinner during redirect)
 
 #### **Important Notes**
 
 - **Registration uses tRPC** (NextAuth doesn't provide registration API)
 - **Login uses NextAuth** (production-ready, secure)
-- **tRPC login endpoint removed** (redundant - NextAuth handles it)
+- **Role-based redirect**: Admin/Staff → `/admin`, User → `/`
 - **Session persists** across page refreshes (30 days)
 - **Logout redirects to homepage** (not login page - better UX)
+- **Guest access**: Prominent button to browse without login
+- **Admin protection**: ONLY in AdminLayout, NOT per-page (DRY principle)
 
 ### Admin Customers Management
 
@@ -2140,19 +2207,139 @@ useEffect(() => {
 4. **Use connection caching** for MongoDB (see `lib/mongodb.ts`)
 5. **Add indexes** for frequently queried fields
 
+### Admin Protection Pattern (CRITICAL)
+
+**Centralized Protection Architecture:**
+
+```
+AdminLayout.tsx (SINGLE PROTECTION POINT)
+├── useRequireRole(['admin', 'staff']) ✅ Protection here only
+├── Loading spinner during auth check
+├── Prevent flash with loading during unauthorized redirect
+└── Wraps all admin pages automatically
+
+All admin pages (/admin/*)
+├── NO useRequireRole needed ❌
+├── Just wrap with <AdminLayout> ✅
+└── Automatically protected
+```
+
+**AdminLayout Protection Implementation:**
+
+```typescript
+// src/components/layouts/AdminLayout.tsx
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const { data: session } = useSession();
+  
+  // ✅ CENTRALIZED PROTECTION: Protect ALL admin pages
+  const { user, isAuthenticated, isLoading } = useRequireRole(['admin', 'staff']);
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // If not authenticated or wrong role, show loading (hook will redirect)
+  // This prevents flash of admin content before redirect
+  if (status === "unauthenticated" || !isAuthenticated || !user || !['admin', 'staff'].includes(user.role)) {
+    return <LoadingSpinner />;
+  }
+
+  // Render admin content only if authorized
+  return (
+    <div className="flex h-screen">
+      {/* Sidebar + Content */}
+    </div>
+  );
+}
+```
+
+**Hook Implementation (Prevent Duplicate Toast):**
+
+```typescript
+// src/hooks/useRequireAuth.ts
+export function useRequireRole(allowedRoles: Array<'admin' | 'staff' | 'user'>) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const hasShownToast = useRef(false); // ✅ Prevent duplicate toast
+
+  useEffect(() => {
+    // If not authenticated, redirect to login
+    if (status === 'unauthenticated') {
+      if (!hasShownToast.current) {
+        hasShownToast.current = true;
+        toast.error('Akses Ditolak', {
+          description: 'Silakan login terlebih dahulu.',
+        });
+        router.push('/auth/login');
+      }
+      return;
+    }
+
+    // If authenticated but wrong role, redirect to home
+    if (status === 'authenticated' && session?.user) {
+      if (!allowedRoles.includes(session.user.role)) {
+        if (!hasShownToast.current) {
+          hasShownToast.current = true;
+          toast.error('Akses Ditolak', {
+            description: 'Anda tidak memiliki izin.',
+          });
+          router.push('/');
+        }
+      }
+    }
+    
+    // Reset flag on cleanup
+    return () => {
+      hasShownToast.current = false;
+    };
+  }, [session?.user?.role, status]);
+
+  return { user: session?.user, isAuthenticated, isLoading };
+}
+```
+
+**Individual Admin Page (NO Protection Needed):**
+
+```typescript
+// src/pages/admin/products/index.tsx
+export default function AdminProductsPage() {
+  // ❌ DO NOT add useRequireRole here - redundant!
+  
+  // ✅ Just wrap with AdminLayout - protection automatic
+  return (
+    <AdminLayout>
+      {/* Page content */}
+    </AdminLayout>
+  );
+}
+```
+
+**Critical Points:**
+- ✅ **Single Source of Truth**: Protection only in AdminLayout
+- ✅ **No Duplicate Toast**: useRef flag prevents multiple toasts
+- ✅ **No Flash Content**: Loading spinner shown during redirect
+- ✅ **Handle All States**: Unauthenticated + wrong role + loading
+- ✅ **DRY Principle**: 1 protection point vs 16+ pages
+
 ### DON'Ts ❌ (Common Mistakes)
 
-1. **Never hardcode unit weights** in UnitConverter (use `productAttributes`)
-2. **Never use `.toLowerCase()`** on category names for URLs
-3. **Never use Eye icon button** on product cards (cards are clickable)
-4. **Never assume query params exist** (always check `router.isReady`)
-5. **Never leave unused imports** (causes bundle bloat)
-6. **Never create empty files** (implement or delete immediately)
-7. **Never use HTML primitives** when shadcn components exist
-8. **Never import mongoose in type files** (use `typeof import()`)
-9. **Never leave deprecated files** after migration (delete immediately)
-10. **Never use Date objects directly in MongoDB queries** (always convert to ISO string)
-11. **Never skip try-catch in tRPC procedures** (use TRPCError for proper error handling)
-12. **Never mix field names between models** (e.g., `role` field belongs to User, not Product)
-13. **Never skip error logging** (use `console.error("[procedureName] Error:", error)`)
-14. **Never ignore loading states** (always show spinners for better UX)
+1. **Never add useRequireRole to individual admin pages** (AdminLayout handles it)
+2. **Never hardcode unit weights** in UnitConverter (use `productAttributes`)
+3. **Never use `.toLowerCase()`** on category names for URLs
+4. **Never use Eye icon button** on product cards (cards are clickable)
+5. **Never assume query params exist** (always check `router.isReady`)
+6. **Never leave unused imports** (causes bundle bloat)
+7. **Never create empty files** (implement or delete immediately)
+8. **Never use HTML primitives** when shadcn components exist
+9. **Never import mongoose in type files** (use `typeof import()`)
+10. **Never leave deprecated files** after migration (delete immediately)
+11. **Never use Date objects directly in MongoDB queries** (always convert to ISO string)
+12. **Never skip try-catch in tRPC procedures** (use TRPCError for proper error handling)
+13. **Never mix field names between models** (e.g., `role` field belongs to User, not Product)
+14. **Never skip error logging** (use `console.error("[procedureName] Error:", error)`)
+15. **Never ignore loading states** (always show spinners for better UX)
+16. **Never return null immediately on unauthorized** (show loading to prevent flash)
+17. **Never use useSession() in async functions** (use getSession() instead)

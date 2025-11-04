@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Search, Plus, Eye, Pencil, Trash2, Upload, Package, DollarSign, Archive } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -42,7 +43,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
-import { Plus, Upload } from "lucide-react";
 
 // Category-specific units mapping (units available for each category)
 const categoryUnitsMap: Record<string, Array<{ value: string; label: string }>> = {
@@ -316,10 +316,11 @@ export default function AdminProducts() {
       {/* Filters & Search */}
       <Card className="p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="🔍 Cari produk berdasarkan nama atau kategori..."
-              className="w-full"
+              placeholder="Cari produk berdasarkan nama atau kategori..."
+              className="w-full pl-10"
             />
           </div>
           <div className="flex gap-2">

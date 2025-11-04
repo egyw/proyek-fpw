@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -34,17 +34,40 @@ export function useRequireRole(allowedRoles: Array<'admin' | 'staff' | 'user'>) 
   const router = useRouter();
   const isLoading = status === 'loading';
   const isAuthenticated = status === 'authenticated';
+  const hasShownToast = useRef(false);
 
   useEffect(() => {
+    // If not authenticated, redirect to login
+    if (status === 'unauthenticated') {
+      if (!hasShownToast.current) {
+        hasShownToast.current = true;
+        toast.error('Akses Ditolak', {
+          description: 'Silakan login terlebih dahulu untuk mengakses halaman ini.',
+        });
+        router.push('/auth/login');
+      }
+      return;
+    }
+
+    // If authenticated but wrong role, redirect to home
     if (status === 'authenticated' && session?.user) {
       if (!allowedRoles.includes(session.user.role)) {
-        toast.error('Akses Ditolak', {
-          description: 'Anda tidak memiliki izin untuk mengakses halaman ini.',
-        });
-        router.push('/');
+        if (!hasShownToast.current) {
+          hasShownToast.current = true;
+          toast.error('Akses Ditolak', {
+            description: 'Anda tidak memiliki izin untuk mengakses halaman ini.',
+          });
+          router.push('/');
+        }
       }
     }
-  }, [session, status, router, allowedRoles]);
+    
+    // Reset flag when user changes or leaves page
+    return () => {
+      hasShownToast.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.role, status]);
 
   return { user: session?.user, isAuthenticated, isLoading };
 }

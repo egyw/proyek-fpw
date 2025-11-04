@@ -1,6 +1,7 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Package, Users, DollarSign, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
 import {trpc} from "@/utils/trpc";
 
 export default function AdminDashboard() {
@@ -15,16 +16,16 @@ export default function AdminDashboard() {
       change: "+12%",
       context: "vs bulan lalu",
       trend: "up",
-      icon: "📦",
+      icon: Package,
       color: "bg-blue-50 text-blue-600",
     },
     {
       title: "Pesanan Hari Ini",
       value: "89",
-      // change: "+23%",
-      // trend: "up",
-      // icon: "🛒",
-      // color: "bg-green-50 text-green-600",
+      change: "+23%",
+      trend: "up",
+      icon: ShoppingCart,
+      color: "bg-green-50 text-green-600",
     },
     {
       title: "Total Pelanggan",
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
       change: `+${dashboardStats?.totalCustomer.growth || 0}%`,
       context: "vs bulan lalu",
       trend: "up",
-      icon: "👥",
+      icon: Users,
       color: "bg-purple-50 text-purple-600",
     },
     {
@@ -41,7 +42,7 @@ export default function AdminDashboard() {
       change: `+${dashboardStats?.totalRevenue.growth || 0}%`,
       context: "vs bulan lalu",
       trend: dashboardStats?.totalRevenue.trend  || "up",
-      icon: "💰",
+      icon: DollarSign,
       color: "bg-orange-50 text-orange-600",
     },
   ];
@@ -155,8 +156,8 @@ export default function AdminDashboard() {
                   <span className="text-gray-500 text-xs">{stat.context}</span>
                 </div>
               </div>
-              <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center text-2xl`}>
-                {stat.icon}
+              <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
+                {stat.icon && <stat.icon className="h-6 w-6" />}
               </div>
             </div>
           </Card>
