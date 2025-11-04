@@ -135,7 +135,7 @@ export default function ProductsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
           {/* Sidebar Filters */}
-          <aside className="lg:w-64 flex-shrink-0">
+          <aside className="lg:w-64 shrink-0">
             <div className="space-y-6" id="sidebar-filters">
               {/* Categories */}
               <Card className="p-4">
@@ -427,7 +427,7 @@ export default function ProductsPage() {
                   <Link href={`/products/${product.slug}`} key={product._id.toString()}>
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                       <div className="flex gap-4 p-4">
-                        <div className="relative w-32 h-32 flex-shrink-0">
+                        <div className="relative w-32 h-32 shrink-0">
                           <Image
                             src={product.images[0]}
                             alt={product.name}

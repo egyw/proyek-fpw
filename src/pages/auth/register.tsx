@@ -81,7 +81,7 @@ export default function RegisterPage() {
     registerMutation.mutate(registerData);
   };
   return (
-    <div className="h-screen flex relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
+    <div className="h-screen flex relative overflow-hidden bg-linear-to-br from-primary via-primary/90 to-primary/80">
       {/* Animated Background Patterns */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Geometric shapes */}
@@ -90,13 +90,13 @@ export default function RegisterPage() {
         <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-white/3 rounded-full blur-2xl"></div>
         
         {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-size-[64px_64px]"></div>
         
         {/* Diagonal lines */}
         <div className="absolute inset-0 opacity-5">
-          <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-white to-transparent top-1/4 rotate-12"></div>
-          <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-white to-transparent top-2/4 -rotate-12"></div>
-          <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-white to-transparent top-3/4 rotate-12"></div>
+          <div className="absolute h-px w-full bg-linear-to-r from-transparent via-white to-transparent top-1/4 rotate-12"></div>
+          <div className="absolute h-px w-full bg-linear-to-r from-transparent via-white to-transparent top-2/4 -rotate-12"></div>
+          <div className="absolute h-px w-full bg-linear-to-r from-transparent via-white to-transparent top-3/4 rotate-12"></div>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ export default function RegisterPage() {
           <div className="space-y-4">
             {/* Benefit 1 */}
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <div className="shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
@@ -142,7 +142,7 @@ export default function RegisterPage() {
 
             {/* Benefit 2 */}
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <div className="shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -155,7 +155,7 @@ export default function RegisterPage() {
 
             {/* Benefit 3 */}
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <div className="shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                 </svg>
@@ -168,7 +168,7 @@ export default function RegisterPage() {
 
             {/* Benefit 4 */}
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <div className="shrink-0 w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                   <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />

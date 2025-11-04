@@ -396,7 +396,7 @@ export default function StockMovementsPage() {
       {/* Info */}
       <Card className="p-4 mt-6 bg-blue-50 border-blue-200">
         <div className="flex items-start gap-3">
-          <Package className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Package className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
             <p className="font-medium mb-1">Stock movements tercatat otomatis</p>
             <p>

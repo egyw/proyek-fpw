@@ -352,7 +352,7 @@ export default function ProductDetailPage() {
             {/* Features */}
             <div className="grid grid-cols-1 gap-3 mb-6">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Truck className="h-5 w-5 text-primary flex-shrink-0" />
+                <Truck className="h-5 w-5 text-primary shrink-0" />
                 <div className="text-sm">
                   <p className="font-semibold text-gray-900">
                     Pengiriman Cepat
@@ -361,7 +361,7 @@ export default function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
+                <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
                 <div className="text-sm">
                   <p className="font-semibold text-gray-900">
                     Produk Original
@@ -370,7 +370,7 @@ export default function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <RotateCcw className="h-5 w-5 text-primary flex-shrink-0" />
+                <RotateCcw className="h-5 w-5 text-primary shrink-0" />
                 <div className="text-sm">
                   <p className="font-semibold text-gray-900">Mudah Return</p>
                   <p className="text-gray-600">Return dalam 7 hari</p>

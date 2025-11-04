@@ -80,7 +80,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen relative flex items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
+    <div className="h-screen relative flex items-center justify-center p-4 overflow-hidden bg-linear-to-br from-primary via-primary/90 to-primary/80">
       {/* Animated Background Patterns */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Geometric shapes */}
@@ -89,13 +89,13 @@ export default function LoginPage() {
         <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-white/3 rounded-full blur-2xl"></div>
         
         {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-size-[64px_64px]"></div>
         
         {/* Diagonal lines */}
         <div className="absolute inset-0 opacity-5">
-          <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-white to-transparent top-1/4 rotate-12"></div>
-          <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-white to-transparent top-2/4 -rotate-12"></div>
-          <div className="absolute h-px w-full bg-gradient-to-r from-transparent via-white to-transparent top-3/4 rotate-12"></div>
+          <div className="absolute h-px w-full bg-linear-to-r from-transparent via-white to-transparent top-1/4 rotate-12"></div>
+          <div className="absolute h-px w-full bg-linear-to-r from-transparent via-white to-transparent top-2/4 -rotate-12"></div>
+          <div className="absolute h-px w-full bg-linear-to-r from-transparent via-white to-transparent top-3/4 rotate-12"></div>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export default function LoginPage() {
         
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden backdrop-blur-sm">
           {/* Card Header with Logo */}
-          <div className="bg-gradient-to-br from-primary to-primary/90 px-6 py-6 text-center relative overflow-hidden">
+          <div className="bg-linear-to-br from-primary to-primary/90 px-6 py-6 text-center relative overflow-hidden">
             {/* Header decoration */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]"></div>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.1),transparent_50%)]"></div>

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Eye, Pencil, Trash2, Upload, Package, DollarSign, Archive } from "lucide-react";
+import { Search, Plus, Upload } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -113,7 +113,7 @@ type ProductFormValues = z.infer<typeof productSchema>;
 export default function AdminProducts() {
   const [addDialog, setAddDialog] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  // const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   // Form setup
   const form = useForm<ProductFormValues>({
@@ -137,7 +137,7 @@ export default function AdminProducts() {
 
   // Watch category changes to show relevant units
   const watchedCategory = form.watch("category");
-  const watchedAvailableUnits = form.watch("availableUnits");
+  // const watchedAvailableUnits = form.watch("availableUnits");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -338,7 +338,7 @@ export default function AdminProducts() {
               </SelectContent>
             </Select>
             <Select>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Semua Status" />
               </SelectTrigger>
               <SelectContent>

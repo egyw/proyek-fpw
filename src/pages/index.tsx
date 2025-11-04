@@ -59,7 +59,7 @@ export default function Home() {
         </div>
         
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-r from-primary/60 to-primary/40"></div>
+        <div className="absolute inset-0 z-0 bg-linear-to-r from-primary/60 to-primary/40"></div>
         
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -284,7 +284,7 @@ export default function Home() {
                   alt="Dulux"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -295,7 +295,7 @@ export default function Home() {
                   alt="Nippon Paint"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -306,7 +306,7 @@ export default function Home() {
                   alt="Toto"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -317,7 +317,7 @@ export default function Home() {
                   alt="Platinum"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -328,7 +328,7 @@ export default function Home() {
                   alt="Roman"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -339,7 +339,7 @@ export default function Home() {
                   alt="Semen Gresik"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -350,7 +350,7 @@ export default function Home() {
                   alt="Semen Merdeka"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -361,7 +361,7 @@ export default function Home() {
                   alt="American Standard"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -372,7 +372,7 @@ export default function Home() {
                   alt="Perwira Steel"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
 
@@ -383,7 +383,7 @@ export default function Home() {
                   alt="Juma"
                   width={80}
                   height={50}
-                  className="h-8 md:h-10 w-auto max-w-[80px] md:max-w-[100px] object-contain"
+                  className="h-8 md:h-10 w-auto max-w-20 md:max-w-[100px] object-contain"
                 />
               </div>
             </div>

@@ -287,7 +287,7 @@ export default function CartPage() {
           <Card className="p-6 mb-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 flex-1">
-                <MapPin className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                <MapPin className="h-6 w-6 text-primary shrink-0 mt-1" />
                 <div className="flex-1">
                   <h2 className="text-lg font-bold text-gray-900 mb-2">
                     Alamat Pengiriman
@@ -327,7 +327,7 @@ export default function CartPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                      <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
                       <p className="text-sm text-yellow-800">
                         Anda belum memilih alamat pengiriman. Silakan pilih atau
                         tambah alamat terlebih dahulu.
@@ -613,7 +613,7 @@ export default function CartPage() {
                       {/* Product Image */}
                       <Link
                         href={`/products/${item.slug}`}
-                        className="flex-shrink-0"
+                        className="shrink-0"
                       >
                         <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
                           <Image

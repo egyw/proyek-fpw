@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Users, DollarSign, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
+import { Package, Users, DollarSign, ShoppingCart } from "lucide-react";
 import {trpc} from "@/utils/trpc";
 
 export default function AdminDashboard() {
