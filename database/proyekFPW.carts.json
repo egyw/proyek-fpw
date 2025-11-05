@@ -16,7 +16,7 @@
         "price": 47000,
         "quantity": 2,
         "unit": "batang",
-        "image": "/images/products/pipa-pvc-1.jpg",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719958/Fumato_Pipa_PVC_AW_1_inc_zqocec.png",
         "stock": 200,
         "category": "Pipa"
       },
@@ -62,13 +62,13 @@
         "productId": {
           "$oid": "68b8342bd2788dc4d9e608c9"
         },
-        "name": "Rucika Pipa PVC AW 3/4 inc",
-        "slug": "rucika-pipa-pvc-aw-3-4-inc",
-        "price": 34000,
+        "name": "Fumato Pipa PVC AW 11/4 inc",
+        "slug": "fumato-pipa-pvc-aw-11-4-inc",
+        "price": 70500,
         "quantity": 3,
         "unit": "batang",
-        "image": "/images/products/pipa-pvc-3-4.jpg",
-        "stock": 300,
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719963/Fumato_Pipa_PVC_AW_11-4_inc_howdth.png",
+        "stock": 180,
         "category": "Pipa"
       },
       {
