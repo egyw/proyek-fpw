@@ -439,7 +439,87 @@ if (!["admin", "staff"].includes(ctx.user.role)) {
 - Animated background patterns (same as register)
 - Social login (Google button)
 - 2 fields: email, password
-- "Lupa password?" link
+- Password field with hold-to-show toggle
+- "Lupa password?" link below password input (right-aligned)
+
+**Login Form UX Patterns**:
+
+**Password Toggle (Hold-to-Show)**:
+```tsx
+import { Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+
+const [showPassword, setShowPassword] = useState(false);
+
+// Password field implementation
+<FormField
+  control={form.control}
+  name="password"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Password</FormLabel>
+      <FormControl>
+        <div className="relative">
+          <Input
+            type={showPassword ? "text" : "password"}
+            className="h-11 border-2 focus:border-primary pr-10"
+            {...field}
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            onMouseDown={() => setShowPassword(true)}     // Desktop: Hold to show
+            onMouseUp={() => setShowPassword(false)}       // Desktop: Release to hide
+            onMouseLeave={() => setShowPassword(false)}    // Safety: Auto-hide if cursor leaves
+            onTouchStart={() => setShowPassword(true)}     // Mobile: Touch to show
+            onTouchEnd={() => setShowPassword(false)}      // Mobile: Release to hide
+          >
+            {showPassword ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      </FormControl>
+      <FormMessage />
+      <div className="text-right">
+        <Link
+          href="/auth/forgot-password"
+          className="text-xs text-primary hover:underline"
+        >
+          Lupa password?
+        </Link>
+      </div>
+    </FormItem>
+  )}
+/>
+```
+
+**Key Implementation Details**:
+- **State**: Single boolean `showPassword` controls visibility
+- **Input Type**: Toggles between "password" and "text" based on state
+- **Input Styling**: `pr-10` (padding-right) to make space for icon button
+- **Button Position**: Absolute positioned with `right-3 top-1/2 -translate-y-1/2`
+- **Desktop Events**: 
+  - `onMouseDown` → Show password (hold)
+  - `onMouseUp` → Hide password (release)
+  - `onMouseLeave` → Hide password (safety feature if cursor leaves button area)
+- **Mobile Events**:
+  - `onTouchStart` → Show password (touch)
+  - `onTouchEnd` → Hide password (release)
+- **Icons**: Eye (hidden state) ↔ EyeOff (visible state) from lucide-react
+- **"Lupa password?" Link**:
+  - Placed BELOW password input (not in label row)
+  - Right-aligned with `text-right` wrapper
+  - Styling: `text-xs text-primary hover:underline`
+
+**Why This Pattern**:
+- ✅ Secure: Password only visible while actively holding (not a persistent toggle)
+- ✅ Accessible: Works on both desktop (mouse) and mobile (touch)
+- ✅ Safe: Auto-hides if user's cursor leaves button area
+- ✅ Standard UX: Eye icon is universally recognized pattern
+- ✅ Clean Layout: "Lupa password?" link doesn't clutter label
 
 **Shared Background Pattern**:
 
@@ -2765,6 +2845,8 @@ useEffect(() => {
 5. **Read query params** with type checking (`typeof router.query.x === "string"`)
 6. **Use `router.isReady`** before reading query params
 7. **Check shadcn availability** before creating custom UI components
+8. **Use hold-to-show for password fields** - onMouseDown/Up/Leave + onTouchStart/End
+9. **Place helper links below inputs** - e.g., "Lupa password?" below password field, right-aligned
 
 ### Database & Environment DO's ✅
 
@@ -2911,3 +2993,5 @@ export default function AdminProductsPage() {
 16. **Never return null immediately on unauthorized** (show loading to prevent flash)
 17. **Never use useSession() in async functions** (use getSession() instead)
 18. **Never skip loading/redirect checks in protected pages** (always show spinner during auth check AND redirect to prevent flash)
+19. **Never use persistent password toggle** (use hold-to-show for security)
+20. **Never place helper links in label row** (place below input for cleaner UX)
