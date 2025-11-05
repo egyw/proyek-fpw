@@ -12,13 +12,95 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useRef, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useCartStore } from "@/store/cartStore";
+import { toast } from "sonner";
+import { ShoppingCart } from "lucide-react";
 import Autoplay from "embla-carousel-autoplay";
 
 export default function Home() {
   const plugin = useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
+
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  
+  // Cart store and merge mutation
+  const cartItems = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+  
+  // tRPC utils for invalidating queries
+  const utils = trpc.useContext();
+  
+  const mergeCartMutation = trpc.cart.mergeCart.useMutation({
+    onSuccess: () => {
+      // Invalidate cart query to trigger refetch in all components (including Navbar)
+      utils.cart.getCart.invalidate();
+    },
+  });
+
+  // Check if user just logged in with cart items
+  useEffect(() => {
+    if (isLoggedIn && cartItems.length > 0) {
+      // Check if this is first time after login (use sessionStorage flag)
+      const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+      if (justLoggedIn === 'true') {
+        setShowMergeDialog(true);
+        sessionStorage.removeItem('justLoggedIn'); // Clear flag
+      }
+    }
+  }, [isLoggedIn, cartItems.length]);
+
+  const handleMergeCart = async () => {
+    try {
+      await mergeCartMutation.mutateAsync({
+        guestItems: cartItems.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          slug: item.slug,
+          price: item.price,
+          quantity: item.quantity,
+          unit: item.unit,
+          image: item.image,
+          stock: item.stock,
+          category: item.category,
+        }))
+      });
+      clearCart(); // Clear LocalStorage
+      setShowMergeDialog(false);
+      
+      // Note: Cart query invalidation happens in onSuccess callback
+      // This will auto-refetch cart in Navbar and all other components
+      
+      toast.success('Keranjang Digabungkan!', {
+        description: 'Produk dari keranjang sementara telah disimpan.',
+      });
+    } catch (error) {
+      console.error('Cart merge error:', error);
+      toast.error('Gagal menggabungkan keranjang', {
+        description: 'Terjadi kesalahan, silakan coba lagi.',
+      });
+    }
+  };
+
+  const handleSkipMerge = () => {
+    clearCart();
+    setShowMergeDialog(false);
+    toast.info('Keranjang Sementara Dihapus', {
+      description: 'Produk di keranjang sementara telah dihapus.',
+    });
+  };
 
   // Fetch featured products from backend using tRPC
   const { data: featuredProducts, isLoading } = trpc.products.getFeatured.useQuery();
@@ -45,6 +127,66 @@ export default function Home() {
 
   return (
     <MainLayout>
+      {/* Cart Merge Confirmation Dialog */}
+      <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              Ada Produk di Keranjang
+            </DialogTitle>
+            <DialogDescription>
+              Anda memiliki <strong>{cartItems.length} produk</strong> di keranjang sementara. 
+              Apakah Anda ingin menyimpannya?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900">
+                <strong>💡 Info:</strong> Jika Anda memilih <strong>&quot;Simpan&quot;</strong>, 
+                produk akan digabungkan dengan keranjang Anda yang sudah ada. 
+                Jika memilih <strong>&quot;Hapus&quot;</strong>, produk di keranjang sementara akan dihapus.
+              </p>
+            </div>
+
+            {/* Show cart items preview */}
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">Produk di keranjang sementara:</p>
+              <ul className="space-y-1 max-h-32 overflow-y-auto">
+                {cartItems.slice(0, 5).map((item) => (
+                  <li key={item.productId} className="text-sm text-gray-600 flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>{item.name} ({item.quantity} {item.unit})</span>
+                  </li>
+                ))}
+                {cartItems.length > 5 && (
+                  <li className="text-sm text-gray-500 italic">
+                    ... dan {cartItems.length - 5} produk lainnya
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSkipMerge}
+              className="flex-1"
+            >
+              Hapus
+            </Button>
+            <Button
+              onClick={handleMergeCart}
+              className="flex-1"
+            >
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Hero Section */}
       <section className="relative text-white">
         {/* Background Image */}

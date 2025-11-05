@@ -1600,7 +1600,7 @@ addItem: protectedProcedure.mutation(async ({ ctx, input }) => {
 4. What happens to those 3 items?
 ```
 
-**Login with Merge:**
+**Login with SessionStorage Flag:**
 ```typescript
 // src/pages/auth/login.tsx
 const onSubmit = async (data) => {
@@ -1610,33 +1610,79 @@ const onSubmit = async (data) => {
   // 2. Get session
   const session = await getSession();
   
-  // 3. Check if guest has items in LocalStorage
+  // 3. Set flag if user has cart items (dialog will show in homepage)
   if (cartItems.length > 0) {
-    try {
-      // 4. Merge guest cart to database
-      await mergeCartMutation.mutateAsync({
-        guestItems: cartItems.map(item => ({
-          productId: item.productId,
-          name: item.name,
-          // ... all fields
-        }))
-      });
-      
-      // 5. Clear LocalStorage after merge
-      clearCart();
-      
-      toast.success('Cart Merged!', {
-        description: 'Items dari keranjang Anda telah disimpan.',
-      });
-    } catch (error) {
-      console.error('Cart merge error:', error);
-      // Login still succeeds even if merge fails
-    }
+    sessionStorage.setItem('justLoggedIn', 'true');
   }
   
-  // 6. Redirect based on role
-  router.push(session?.user?.role === 'admin' ? '/admin' : '/');
+  // 4. Redirect based on role
+  handleRedirect(session);
 };
+```
+
+**Merge Dialog in Homepage:**
+```typescript
+// src/pages/index.tsx
+export default function Home() {
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  
+  const cartItems = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const mergeCartMutation = trpc.cart.mergeCart.useMutation();
+
+  // Check if user just logged in with cart items
+  useEffect(() => {
+    if (isLoggedIn && cartItems.length > 0) {
+      const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+      if (justLoggedIn === 'true') {
+        setShowMergeDialog(true);
+        sessionStorage.removeItem('justLoggedIn'); // Clear flag
+      }
+    }
+  }, [isLoggedIn, cartItems.length]);
+
+  // User chooses "Simpan" (Save)
+  const handleMergeCart = async () => {
+    await mergeCartMutation.mutateAsync({ guestItems });
+    clearCart();
+    setShowMergeDialog(false);
+    toast.success('Keranjang Digabungkan!');
+  };
+
+  // User chooses "Hapus" (Discard)
+  const handleSkipMerge = () => {
+    clearCart();
+    setShowMergeDialog(false);
+    toast.info('Keranjang Sementara Dihapus');
+  };
+
+  return (
+    <MainLayout>
+      {/* Dialog shows in homepage, not login page */}
+      <Dialog open={showMergeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ada Produk di Keranjang</DialogTitle>
+            <DialogDescription>
+              Anda memiliki {cartItems.length} produk di keranjang sementara.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Info box + Cart preview */}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={handleSkipMerge}>Hapus</Button>
+            <Button onClick={handleMergeCart}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Rest of homepage content */}
+    </MainLayout>
+  );
+}
 ```
 
 **Backend Merge Logic:**
@@ -1931,115 +1977,13 @@ const handleCheckout = () => {
 #### **Important Implementation Notes**
 
 1. **Always use `useState` + `useEffect` for localStorage reads** (prevent hydration errors)
-2. **Guest cart merge is non-blocking** (login succeeds even if merge fails)
+2. **Guest cart merge with user confirmation** (dialog shown after login)
 3. **Quantities are COMBINED on merge** (not replaced)
-4. **LocalStorage cleared ONLY after successful merge**
+4. **LocalStorage cleared after merge OR skip** (user choice via dialog)
 5. **One cart per user in database** (unique userId constraint)
 6. **All tRPC procedures are protected** (require authentication)
 7. **Zustand persist middleware handles serialization** automatically
-
-#### **Future Improvement - Cart Merge UX**
-
-**Current Behavior** (`src/pages/auth/login.tsx`):
-- ⚠️ **Auto-merge tanpa konfirmasi**: Guest cart langsung di-merge ke database saat login
-- User tidak tahu apa yang terjadi dengan cart mereka
-- Tidak ada pilihan untuk replace atau cancel
-
-**Recommended Better UX**:
-```typescript
-// TODO: Implement CartMergeDialog component
-// Location: src/components/CartMergeDialog.tsx
-
-// Flow:
-// 1. User login berhasil
-// 2. IF guest cart exists:
-//    - Show dialog dengan preview items
-//    - Show user's existing cart (if any)
-//    - Berikan 3 pilihan:
-//      a) "Gabungkan" - Merge quantities (current behavior)
-//      b) "Ganti" - Replace DB cart dengan guest cart
-//      c) "Batal" - Keep DB cart, discard guest cart
-// 3. ELSE: Skip dialog
-
-// Component structure:
-<Dialog open={showMergeDialog}>
-  <DialogContent className="max-w-2xl">
-    <DialogHeader>
-      <DialogTitle>Keranjang Belanja Ditemukan</DialogTitle>
-      <DialogDescription>
-        Anda memiliki {guestItems.length} item di keranjang.
-        Apa yang ingin Anda lakukan?
-      </DialogDescription>
-    </DialogHeader>
-    
-    {/* Guest Cart Preview */}
-    <div className="space-y-2">
-      <h4 className="font-medium">Item di Keranjang Sementara:</h4>
-      <ul className="space-y-1">
-        {guestItems.map(item => (
-          <li key={item.productId}>
-            {item.name} - {item.quantity} {item.unit}
-          </li>
-        ))}
-      </ul>
-    </div>
-    
-    {/* Existing Cart Preview (if any) */}
-    {existingCartItems.length > 0 && (
-      <div className="space-y-2 border-t pt-4">
-        <h4 className="font-medium">Item di Keranjang Lama:</h4>
-        <ul className="space-y-1">
-          {existingCartItems.map(item => (
-            <li key={item.productId}>
-              {item.name} - {item.quantity} {item.unit}
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-    
-    {/* Action Buttons */}
-    <DialogFooter className="gap-2">
-      <Button variant="outline" onClick={handleDiscard}>
-        Buang Keranjang Sementara
-      </Button>
-      <Button variant="outline" onClick={handleReplace}>
-        Ganti dengan Keranjang Sementara
-      </Button>
-      <Button onClick={handleMerge}>
-        Gabungkan Semua Item
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-```
-
-**Implementation Steps**:
-1. Create `CartMergeDialog` component with shadcn Dialog
-2. Add `getCart` query to fetch existing cart before merge
-3. Update login flow:
-   ```typescript
-   // After successful login:
-   if (cartItems.length > 0) {
-     const existingCart = await getCartQuery(); // Fetch from DB
-     setShowMergeDialog(true); // Show dialog
-     // Wait for user choice...
-   }
-   ```
-4. Add 3 mutation handlers:
-   - `handleMerge()` - Current behavior (combine quantities)
-   - `handleReplace()` - Clear DB cart, insert guest items
-   - `handleDiscard()` - Keep DB cart, clear LocalStorage
-
-**Benefits**:
-- ✅ User control over their cart
-- ✅ Transparency (user sees what will happen)
-- ✅ Prevents accidental quantity accumulation
-- ✅ Better UX for returning customers
-
-**Reference**:
-- See TODO comment in `src/pages/auth/login.tsx` (line ~73)
-- Shadcn Dialog: https://ui.shadcn.com/docs/components/dialog
+8. **Merge dialog uses shadcn Dialog** - Shows cart preview with 2 options (Simpan/Hapus)
 
 ### Admin Customers Management
 
@@ -2967,4 +2911,3 @@ export default function AdminProductsPage() {
 16. **Never return null immediately on unauthorized** (show loading to prevent flash)
 17. **Never use useSession() in async functions** (use getSession() instead)
 18. **Never skip loading/redirect checks in protected pages** (always show spinner during auth check AND redirect to prevent flash)
-19. **Never implement auto-merge without user confirmation** (see Cart Merge UX improvement TODO in login.tsx)

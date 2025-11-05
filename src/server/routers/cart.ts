@@ -23,7 +23,10 @@ export const cartRouter = router({
     try {
       await connectDB();
 
-      const cart = await Cart.findOne({ userId: ctx.user.id }).lean() as { items: ICartItem[] } | null;
+      // Convert string userId to ObjectId for MongoDB query
+      const cart = await Cart.findOne({ 
+        userId: new mongoose.Types.ObjectId(ctx.user.id) 
+      }).lean() as { items: ICartItem[] } | null;
 
       if (!cart) {
         return { items: [] };
@@ -59,12 +62,14 @@ export const cartRouter = router({
       try {
         await connectDB();
 
-        let cart = await Cart.findOne({ userId: ctx.user.id });
+        let cart = await Cart.findOne({ 
+          userId: new mongoose.Types.ObjectId(ctx.user.id) 
+        });
 
         if (!cart) {
           // Create new cart
           cart = new Cart({
-            userId: ctx.user.id,
+            userId: new mongoose.Types.ObjectId(ctx.user.id),
             items: [input],
           });
         } else {
@@ -130,7 +135,9 @@ export const cartRouter = router({
       try {
         await connectDB();
 
-        const cart = await Cart.findOne({ userId: ctx.user.id });
+        const cart = await Cart.findOne({ 
+          userId: new mongoose.Types.ObjectId(ctx.user.id) 
+        });
 
         if (!cart) {
           throw new TRPCError({
@@ -188,7 +195,9 @@ export const cartRouter = router({
       try {
         await connectDB();
 
-        const cart = await Cart.findOne({ userId: ctx.user.id });
+        const cart = await Cart.findOne({ 
+          userId: new mongoose.Types.ObjectId(ctx.user.id) 
+        });
 
         if (!cart) {
           throw new TRPCError({
@@ -232,7 +241,9 @@ export const cartRouter = router({
     try {
       await connectDB();
 
-      await Cart.findOneAndUpdate({ userId: ctx.user.id }, { items: [] });
+      await Cart.findOneAndUpdate({ 
+        userId: new mongoose.Types.ObjectId(ctx.user.id) 
+      }, { items: [] });
 
       return { success: true, items: [] };
     } catch (error) {
@@ -256,12 +267,14 @@ export const cartRouter = router({
       try {
         await connectDB();
 
-        let cart = await Cart.findOne({ userId: ctx.user.id });
+        let cart = await Cart.findOne({ 
+          userId: new mongoose.Types.ObjectId(ctx.user.id) 
+        });
 
         if (!cart) {
           // Create new cart with guest items
           cart = new Cart({
-            userId: ctx.user.id,
+            userId: new mongoose.Types.ObjectId(ctx.user.id),
             items: input.guestItems,
           });
         } else {

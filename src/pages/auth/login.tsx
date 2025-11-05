@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { UserCircle } from 'lucide-react';
+import { UserCircle, Eye, EyeOff } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -19,7 +19,6 @@ import { signIn, getSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
-import { trpc } from '@/utils/trpc';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -31,11 +30,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Cart store and merge mutation
+  // Cart store (for checking if user has items)
   const cartItems = useCartStore((state) => state.items);
-  const clearCart = useCartStore((state) => state.clearCart);
-  const mergeCartMutation = trpc.cart.mergeCart.useMutation();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -44,6 +42,17 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  const handleRedirect = (session: unknown) => {
+    setTimeout(() => {
+      const userSession = session as { user?: { role?: string } };
+      if (userSession?.user?.role === 'admin' || userSession?.user?.role === 'staff') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+    }, 500);
+  };
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -70,49 +79,13 @@ export default function LoginPage() {
       // Get fresh session to check role
       const session = await getSession();
 
-      // TODO: FUTURE IMPROVEMENT - Cart Merge UX
-      // Current: Auto-merge guest cart tanpa konfirmasi user
-      // Better: Tampilkan dialog konfirmasi dengan preview items:
-      //   - Show list of guest cart items
-      //   - Let user choose: "Merge" atau "Replace" atau "Cancel"
-      //   - If user has existing cart in DB, show comparison
-      // Implementation: Buat <CartMergeDialog> component dengan shadcn Dialog
-      // Reference: https://ui.shadcn.com/docs/components/dialog
-      
-      // Merge guest cart to database if user has items in LocalStorage
+      // Set flag if user has cart items (dialog will show in homepage)
       if (cartItems.length > 0) {
-        try {
-          await mergeCartMutation.mutateAsync({
-            guestItems: cartItems.map(item => ({
-              productId: item.productId,
-              name: item.name,
-              slug: item.slug,
-              price: item.price,
-              quantity: item.quantity,
-              unit: item.unit,
-              image: item.image,
-              stock: item.stock,
-              category: item.category,
-            }))
-          });
-          clearCart(); // Clear LocalStorage cart after merge
-          toast.success('Cart Merged!', {
-            description: 'Items dari keranjang Anda telah disimpan.',
-          });
-        } catch (error) {
-          console.error('Cart merge error:', error);
-          // Don't block login if merge fails
-        }
+        sessionStorage.setItem('justLoggedIn', 'true');
       }
 
       // Redirect based on role
-      setTimeout(() => {
-        if (session?.user?.role === 'admin' || session?.user?.role === 'staff') {
-          router.push('/admin'); // Redirect to admin dashboard
-        } else {
-          router.push('/'); // Redirect to homepage for regular users
-        }
-      }, 500);
+      handleRedirect(session);
     } catch {
       toast.error('Login Gagal', {
         description: 'Terjadi kesalahan saat login.',
@@ -123,7 +96,7 @@ export default function LoginPage() {
 
   return (
     <div className="h-screen relative flex items-center justify-center p-4 overflow-hidden bg-linear-to-br from-primary via-primary/90 to-primary/80">
-      {/* Animated Background Patterns */}
+        {/* Animated Background Patterns */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Geometric shapes */}
         <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
@@ -203,8 +176,35 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel className="text-sm font-medium">Password</FormLabel>
+                      <FormLabel className="text-sm font-medium">Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Masukkan password"
+                            className="h-11 border-2 focus:border-primary pr-10"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onMouseDown={() => setShowPassword(true)}
+                            onMouseUp={() => setShowPassword(false)}
+                            onMouseLeave={() => setShowPassword(false)}
+                            onTouchStart={() => setShowPassword(true)}
+                            onTouchEnd={() => setShowPassword(false)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-5 w-5" />
+                            ) : (
+                              <Eye className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                      {/* Lupa password - moved below input */}
+                      <div className="text-right">
                         <Link 
                           href="/auth/forgot-password" 
                           className="text-xs text-primary hover:underline"
@@ -212,15 +212,6 @@ export default function LoginPage() {
                           Lupa password?
                         </Link>
                       </div>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Masukkan password"
-                          className="h-11 border-2 focus:border-primary"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCartStore } from "@/store/cartStore";
+import { trpc } from "@/utils/trpc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,15 +22,33 @@ export default function Navbar() {
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
 
+  // Guest cart (Zustand)
+  const guestCartItems = useCartStore((state) => state.items);
+  const getGuestTotalItems = useCartStore((state) => state.getTotalItems);
+
+  // Database cart (tRPC) - only query if logged in
+  const { data: dbCart } = trpc.cart.getCart.useQuery(
+    undefined,
+    { 
+      enabled: isLoggedIn,
+      refetchOnWindowFocus: true, // Refresh when user returns to tab
+    }
+  );
+
   // Fix hydration error: Only read cart count on client-side
   const [cartItemCount, setCartItemCount] = useState(0);
-  const getTotalItems = useCartStore((state) => state.getTotalItems);
-  const items = useCartStore((state) => state.items);
 
   useEffect(() => {
-    // Only run on client-side after mount
-    setCartItemCount(getTotalItems());
-  }, [getTotalItems, items]); // Update when items change
+    // Calculate cart count based on authentication status
+    if (isLoggedIn && dbCart) {
+      // Logged in: use database cart
+      const dbTotalItems = dbCart.items.reduce((sum, item) => sum + item.quantity, 0);
+      setCartItemCount(dbTotalItems);
+    } else {
+      // Guest: use Zustand cart
+      setCartItemCount(getGuestTotalItems());
+    }
+  }, [isLoggedIn, dbCart, getGuestTotalItems, guestCartItems]); // Update when cart changes
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });

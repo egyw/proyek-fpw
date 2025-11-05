@@ -30,6 +30,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/cartStore";
+import { trpc } from "@/utils/trpc";
 import {
   ShoppingCart,
   Trash2,
@@ -103,10 +104,41 @@ export default function CartPage() {
   const { status } = useSession();
   const isLoggedIn = status === "authenticated";
 
-  // Get cart from Zustand store
-  const cartItems = useCartStore((state) => state.items);
-  const updateQuantity = useCartStore((state) => state.updateQuantity);
-  const removeItem = useCartStore((state) => state.removeItem);
+  // Get cart from Zustand store (for guest users)
+  const guestCartItems = useCartStore((state) => state.items);
+  const updateGuestQuantity = useCartStore((state) => state.updateQuantity);
+  const removeGuestItem = useCartStore((state) => state.removeItem);
+
+  // Get cart from database (for logged-in users)
+  const { data: dbCart, isLoading: isLoadingCart, refetch: refetchCart } = trpc.cart.getCart.useQuery(
+    undefined,
+    { enabled: isLoggedIn }
+  );
+  const updateDbQuantity = trpc.cart.updateQuantity.useMutation({
+    onSuccess: () => {
+      refetchCart();
+      toast.success('Jumlah diperbarui');
+    },
+    onError: (error) => {
+      toast.error('Gagal memperbarui jumlah', {
+        description: error.message,
+      });
+    },
+  });
+  const removeDbItem = trpc.cart.removeItem.useMutation({
+    onSuccess: () => {
+      refetchCart();
+      toast.success('Item dihapus');
+    },
+    onError: (error) => {
+      toast.error('Gagal menghapus item', {
+        description: error.message,
+      });
+    },
+  });
+
+  // Use database cart if logged in, otherwise use Zustand
+  const cartItems = isLoggedIn && dbCart ? dbCart.items : guestCartItems;
 
   // Map cart items to match CartItem interface
   const mappedCartItems: CartItem[] = cartItems.map((item) => ({
@@ -127,18 +159,31 @@ export default function CartPage() {
     const item = cartItems.find((i) => i.productId === itemId);
     if (!item) return;
 
-    if (type === "increment" && item.quantity < item.stock) {
-      updateQuantity(itemId, item.quantity + 1);
-    } else if (type === "decrement" && item.quantity > 1) {
-      updateQuantity(itemId, item.quantity - 1);
+    const newQuantity = type === "increment" ? item.quantity + 1 : item.quantity - 1;
+
+    if (type === "increment" && item.quantity >= item.stock) return;
+    if (type === "decrement" && item.quantity <= 1) return;
+
+    if (isLoggedIn) {
+      // Use tRPC mutation for logged-in users
+      updateDbQuantity.mutate({ productId: itemId, quantity: newQuantity });
+    } else {
+      // Use Zustand for guest users
+      updateGuestQuantity(itemId, newQuantity);
     }
   };
 
   const handleRemoveItem = (itemId: string) => {
-    removeItem(itemId);
-    toast.success('Item dihapus', {
-      description: 'Item berhasil dihapus dari keranjang.',
-    });
+    if (isLoggedIn) {
+      // Use tRPC mutation for logged-in users
+      removeDbItem.mutate({ productId: itemId });
+    } else {
+      // Use Zustand for guest users
+      removeGuestItem(itemId);
+      toast.success('Item dihapus', {
+        description: 'Item berhasil dihapus dari keranjang.',
+      });
+    }
   };
 
   const calculateItemTotal = (item: CartItem): number => {
@@ -253,6 +298,20 @@ export default function CartPage() {
     // Proceed to checkout
     router.push('/checkout');
   };
+
+  // Show loading for logged-in users while fetching cart
+  if (isLoggedIn && isLoadingCart) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Memuat keranjang...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
