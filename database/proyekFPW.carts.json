@@ -1,0 +1,244 @@
+[
+  {
+    "_id": {
+      "$oid": "68b8350ad2788dc4d9e608d1"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60876"
+    },
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608c8"
+        },
+        "name": "Fumato Pipa PVC AW 1 inc",
+        "slug": "fumato-pipa-pvc-aw-1-inc",
+        "price": 47000,
+        "quantity": 2,
+        "unit": "batang",
+        "image": "/images/products/pipa-pvc-1.jpg",
+        "stock": 200,
+        "category": "Pipa"
+      },
+      {
+        "productId": {
+          "$oid": "68b8346bd2788dc4d9e608d4"
+        },
+        "name": "Besi 10 full SNI",
+        "slug": "besi-10-full-sni",
+        "price": 67000,
+        "quantity": 5,
+        "unit": "batang",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719834/Besi_10_full_SNI_f2zfpo.png",
+        "stock": 150,
+        "category": "Besi"
+      },
+      {
+        "productId": {
+          "$oid": "68b8347fd2788dc4d9e608d9"
+        },
+        "name": "Semen Merdeka 50 Kg",
+        "slug": "semen-merdeka-50-kg",
+        "price": 53000,
+        "quantity": 10,
+        "unit": "sak",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720033/Semen_Merdeka_ifxboq.png",
+        "stock": 180,
+        "category": "Semen"
+      }
+    ],
+    "createdAt": "2025-10-15T08:30:00Z",
+    "updatedAt": "2025-11-04T14:20:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68b8350ad2788dc4d9e608d2"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60877"
+    },
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608c9"
+        },
+        "name": "Rucika Pipa PVC AW 3/4 inc",
+        "slug": "rucika-pipa-pvc-aw-3-4-inc",
+        "price": 34000,
+        "quantity": 3,
+        "unit": "batang",
+        "image": "/images/products/pipa-pvc-3-4.jpg",
+        "stock": 300,
+        "category": "Pipa"
+      },
+      {
+        "productId": {
+          "$oid": "68b8348bd2788dc4d9e608dd"
+        },
+        "name": "Triplek 4mm Segon",
+        "slug": "triplek-4mm-segon",
+        "price": 52000,
+        "quantity": 4,
+        "unit": "lembar",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720080/Triplek_4mm_Segon_xjjeov.png",
+        "stock": 100,
+        "category": "Triplek"
+      }
+    ],
+    "createdAt": "2025-10-20T10:15:00Z",
+    "updatedAt": "2025-11-03T16:45:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68b8350ad2788dc4d9e608d3"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60878"
+    },
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8346bd2788dc4d9e608d3"
+        },
+        "name": "Besi 8 SNI",
+        "slug": "besi-8-sni",
+        "price": 42500,
+        "quantity": 8,
+        "unit": "batang",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719832/Besi_8_SNI_r0yyyy.png",
+        "stock": 170,
+        "category": "Besi"
+      },
+      {
+        "productId": {
+          "$oid": "68b8347fd2788dc4d9e608d8"
+        },
+        "name": "Semen Bosowa",
+        "slug": "semen-bosowa",
+        "price": 60000,
+        "quantity": 6,
+        "unit": "sak",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720029/Semen_Bosowa_wnqd4b.png",
+        "stock": 200,
+        "category": "Semen"
+      },
+      {
+        "productId": {
+          "$oid": "68b83495d2788dc4d9e608ec"
+        },
+        "name": "Kawat Licin 20 (25 KG)",
+        "slug": "kawat-licin-20-25kg",
+        "price": 406500,
+        "quantity": 1,
+        "unit": "gulung",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719867/Kawat_Licin_20_25_KG_pjj0oa.png",
+        "stock": 45,
+        "category": "Kawat"
+      }
+    ],
+    "createdAt": "2025-10-25T13:20:00Z",
+    "updatedAt": "2025-11-05T09:30:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68b8350ad2788dc4d9e608d4"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60879"
+    },
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8340ed2788dc4d9e608b4"
+        },
+        "name": "Buana Tangki Air Plastik 350 LTR",
+        "slug": "buana-tangki-air-plastik-350-ltr",
+        "price": 500000,
+        "quantity": 1,
+        "unit": "set",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720057/tangki-air-buana-350_nioppg.png",
+        "stock": 80,
+        "category": "Tangki Air"
+      },
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608cc"
+        },
+        "name": "Fumato Pipa PVC MOF 5/8 inc",
+        "slug": "fumato-pipa-pvc-mof-5-8-inc",
+        "price": 11110,
+        "quantity": 10,
+        "unit": "batang",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719968/Fumato_Pipa_PVC_MOF_5-8_inc_bf1dz7.png",
+        "stock": 290,
+        "category": "Pipa"
+      }
+    ],
+    "createdAt": "2025-11-01T07:45:00Z",
+    "updatedAt": "2025-11-04T11:15:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68b8350ad2788dc4d9e608d5"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60875"
+    },
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b834aed2788dc4d9e608ee"
+        },
+        "name": "Paku Beton Putih VPR",
+        "slug": "paku-beton-putih-vpr",
+        "price": 5800,
+        "quantity": 5,
+        "unit": "pcs",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761719941/Paku_Beton_Putih_VPR_lkt4uz.png",
+        "stock": 500,
+        "category": "Paku"
+      },
+      {
+        "productId": {
+          "$oid": "68b8350dd2788dc4d9e608f5"
+        },
+        "name": "Truss Screw 10 x 16 (LION)",
+        "slug": "truss-screw-10x16-lion",
+        "price": 124,
+        "quantity": 20,
+        "unit": "pcs",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720067/Truss_Screw_10_x_16_LION_exczuv.png",
+        "stock": 1000,
+        "category": "Baut"
+      },
+      {
+        "productId": {
+          "$oid": "68b8347fd2788dc4d9e608da"
+        },
+        "name": "Semen Conch 50 KG",
+        "slug": "semen-conch-50-kg",
+        "price": 52000,
+        "quantity": 20,
+        "unit": "sak",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720031/Semen_Conch_sek2o0.png",
+        "stock": 180,
+        "category": "Semen"
+      },
+      {
+        "productId": {
+          "$oid": "68b8348bd2788dc4d9e608dc"
+        },
+        "name": "Triplek 3mm Segon",
+        "slug": "triplek-3mm-segon",
+        "price": 42000,
+        "quantity": 3,
+        "unit": "lembar",
+        "image": "https://res.cloudinary.com/dls3io1p0/image/upload/v1761720078/Triplek_3mm_Segon_lfq8aj.png",
+        "stock": 100,
+        "category": "Triplek"
+      }
+    ],
+    "createdAt": "2025-11-02T15:30:00Z",
+    "updatedAt": "2025-11-05T10:20:00Z"
+  }
+]
