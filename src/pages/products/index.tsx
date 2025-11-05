@@ -25,9 +25,21 @@ import {
 } from "lucide-react";
 import { trpc } from "@/utils/trpc";
 import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { useCartStore } from "@/store/cartStore";
 
 export default function ProductsPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  
+  // Cart store
+  const addItem = useCartStore((state) => state.addItem);
+  
+  // tRPC mutations for logged in users
+  const addToCartMutation = trpc.cart.addItem.useMutation();
+  
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -96,6 +108,44 @@ export default function ProductsPage() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle add to cart - allow both guest and logged in users
+  const handleAddToCart = async (product: typeof products[0]) => {
+    const cartItem = {
+      productId: product._id.toString(),
+      name: product.name,
+      slug: product.slug,
+      price: product.discount && product.discount.percentage > 0
+        ? product.price * (1 - product.discount.percentage / 100)
+        : product.price,
+      quantity: 1,
+      unit: product.unit,
+      image: product.images[0],
+      stock: product.stock,
+      category: product.category,
+    };
+
+    if (!isLoggedIn) {
+      // Guest: Save to Zustand + LocalStorage
+      addItem(cartItem);
+      toast.success('Berhasil!', {
+        description: `${product.name} ditambahkan ke keranjang.`,
+      });
+    } else {
+      // Logged in: Save to Database via tRPC
+      try {
+        await addToCartMutation.mutateAsync(cartItem);
+        toast.success('Berhasil!', {
+          description: `${product.name} ditambahkan ke keranjang.`,
+        });
+      } catch (error) {
+        toast.error('Gagal menambahkan ke keranjang', {
+          description: 'Silakan coba lagi.',
+        });
+        console.error('Add to cart error:', error);
+      }
+    }
   };
 
   // Reset to page 1 when filters change
@@ -412,8 +462,7 @@ export default function ProductsPage() {
                           size="sm"
                           onClick={(e) => {
                             e.preventDefault();
-                            // TODO: Add to cart functionality
-                            console.log('Add to cart:', product.name);
+                            handleAddToCart(product);
                           }}
                         >
                           <ShoppingCart className="h-4 w-4 mr-2" />
@@ -489,8 +538,7 @@ export default function ProductsPage() {
                             size="sm"
                             onClick={(e) => {
                               e.preventDefault();
-                              // TODO: Add to cart functionality
-                              console.log('Add to cart:', product.name);
+                              handleAddToCart(product);
                             }}
                           >
                             <ShoppingCart className="h-4 w-4 mr-2" />

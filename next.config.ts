@@ -10,6 +10,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Allow cross-origin requests in development (e.g., from mobile devices on same network)
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

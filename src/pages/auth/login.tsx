@@ -18,6 +18,8 @@ import {
 import { signIn, getSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { useCartStore } from '@/store/cartStore';
+import { trpc } from '@/utils/trpc';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -29,6 +31,11 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Cart store and merge mutation
+  const cartItems = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const mergeCartMutation = trpc.cart.mergeCart.useMutation();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -62,6 +69,41 @@ export default function LoginPage() {
 
       // Get fresh session to check role
       const session = await getSession();
+
+      // TODO: FUTURE IMPROVEMENT - Cart Merge UX
+      // Current: Auto-merge guest cart tanpa konfirmasi user
+      // Better: Tampilkan dialog konfirmasi dengan preview items:
+      //   - Show list of guest cart items
+      //   - Let user choose: "Merge" atau "Replace" atau "Cancel"
+      //   - If user has existing cart in DB, show comparison
+      // Implementation: Buat <CartMergeDialog> component dengan shadcn Dialog
+      // Reference: https://ui.shadcn.com/docs/components/dialog
+      
+      // Merge guest cart to database if user has items in LocalStorage
+      if (cartItems.length > 0) {
+        try {
+          await mergeCartMutation.mutateAsync({
+            guestItems: cartItems.map(item => ({
+              productId: item.productId,
+              name: item.name,
+              slug: item.slug,
+              price: item.price,
+              quantity: item.quantity,
+              unit: item.unit,
+              image: item.image,
+              stock: item.stock,
+              category: item.category,
+            }))
+          });
+          clearCart(); // Clear LocalStorage cart after merge
+          toast.success('Cart Merged!', {
+            description: 'Items dari keranjang Anda telah disimpan.',
+          });
+        } catch (error) {
+          console.error('Cart merge error:', error);
+          // Don't block login if merge fails
+        }
+      }
 
       // Redirect based on role
       setTimeout(() => {

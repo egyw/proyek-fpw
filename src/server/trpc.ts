@@ -1,15 +1,42 @@
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import type { CreateNextContextOptions } from '@trpc/server/adapters/next';
 
-const t = initTRPC.create();
+// Create context for tRPC (includes session)
+export async function createContext(opts: CreateNextContextOptions) {
+  const session = await getServerSession(opts.req, opts.res, authOptions);
+  return {
+    session,
+    user: session?.user,
+  };
+}
+
+type Context = Awaited<ReturnType<typeof createContext>>;
+
+const t = initTRPC.context<Context>().create();
 
 export const router = t.router;
 export const procedure = t.procedure;
 
 // Public procedures (tidak perlu authentication)
-// Digunakan untuk: register, get products, dll
 export const publicProcedure = t.procedure;
 
-// NOTE: Authentication now handled by NextAuth (see src/pages/api/auth/[...nextauth].ts)
-// For protected tRPC endpoints, add authMiddleware:
-// export const protectedProcedure = t.procedure.use(authMiddleware);
-// Currently all procedures are public (products, auth.register)
+// Protected procedure (requires authentication)
+const isAuthenticated = t.middleware(({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'You must be logged in to access this resource',
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+    },
+  });
+});
+
+export const protectedProcedure = t.procedure.use(isAuthenticated);

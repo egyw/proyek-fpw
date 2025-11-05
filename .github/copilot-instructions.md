@@ -1270,9 +1270,38 @@ const isAuthenticated = status === "authenticated";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function CartPage() {
-  const { isAuthenticated, isLoading, session } = useRequireAuth();
-  if (isLoading) return <div>Loading...</div>;
+  const { isAuthenticated, isLoading } = useRequireAuth();
+  
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Memuat...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Prevent flash of protected content if not authenticated (hook will redirect)
+  if (!isAuthenticated) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Mengalihkan...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   // Page content (only renders if authenticated)
+  return <MainLayout>{/* content */}</MainLayout>;
 }
 ```
 
@@ -1407,6 +1436,8 @@ session.user = {
 - ✅ Centralized admin protection (single point in AdminLayout)
 - ✅ No duplicate toast notifications (useRef flag)
 - ✅ No flash of protected content (loading spinner during redirect)
+- ✅ Protected pages show loading during auth check (cart, checkout, profile)
+- ✅ Two-stage loading: auth check + redirect prevent (no content flash)
 
 #### **Important Notes**
 
@@ -1417,6 +1448,598 @@ session.user = {
 - **Logout redirects to homepage** (not login page - better UX)
 - **Guest access**: Prominent button to browse without login
 - **Admin protection**: ONLY in AdminLayout, NOT per-page (DRY principle)
+
+### Shopping Cart System (COMPLETED)
+
+**Status**: ✅ Production-ready, hybrid storage, fully tested
+
+**Complete Guide**: Cart system with LocalStorage (guest) + Database (logged in) + automatic merge on login
+
+**Architecture Overview**:
+
+#### **Hybrid Storage Strategy**
+
+The cart system uses **2 different storage backends** based on authentication status:
+
+1. **Guest Users** → Zustand + LocalStorage (client-side)
+   - Fast, instant cart updates
+   - No account required
+   - Persists across browser sessions
+   - Cleared on browser data clear
+
+2. **Logged In Users** → MongoDB (server-side via tRPC)
+   - Permanent storage
+   - Cross-device sync
+   - Tied to user account
+   - Never lost unless manually deleted
+
+3. **Login Transition** → Automatic Merge
+   - Guest cart items automatically saved to database
+   - Quantities combined if product already exists
+   - LocalStorage cleared after successful merge
+   - Seamless UX (no data loss)
+
+#### **Key Files**
+
+```
+src/
+├── store/
+│   └── cartStore.ts                 # Zustand store with persist middleware
+├── models/
+│   └── Cart.ts                      # MongoDB schema (one cart per user)
+├── server/routers/
+│   ├── cart.ts                      # 6 tRPC procedures (CRUD + merge)
+│   └── _app.ts                      # Router integration
+├── components/layouts/
+│   └── Navbar.tsx                   # Cart badge with hydration fix
+├── pages/
+│   ├── cart.tsx                     # Cart page (guest-friendly)
+│   ├── products/index.tsx           # Add to cart integration
+│   └── auth/login.tsx               # Cart merge on login
+```
+
+#### **Flow 1: Guest User (Before Login)**
+
+**Add to Cart:**
+```typescript
+// src/pages/products/index.tsx
+const handleAddToCart = async (product) => {
+  const cartItem = {
+    productId: product._id.toString(),
+    name: product.name,
+    price: discountedPrice,
+    quantity: 1,
+    unit: product.unit,
+    image: product.images[0],
+    stock: product.stock,
+    category: product.category,
+  };
+
+  if (!isLoggedIn) {
+    // Guest: Save to Zustand + LocalStorage
+    addItem(cartItem);
+    toast.success('Berhasil!');
+  }
+};
+```
+
+**What Happens:**
+1. User clicks "Tambah ke Keranjang"
+2. `addItem()` from Zustand store called
+3. Zustand saves to state + LocalStorage (key: `cart-storage`)
+4. Navbar badge updates automatically (real-time)
+5. Cart persists even after closing browser
+
+**View Cart:**
+```typescript
+// src/pages/cart.tsx
+const cartItems = useCartStore((state) => state.items);
+const updateQuantity = useCartStore((state) => state.updateQuantity);
+const removeItem = useCartStore((state) => state.removeItem);
+```
+
+- Cart page reads items from Zustand
+- All operations (update qty, remove) go to LocalStorage
+- No authentication required
+
+#### **Flow 2: Logged In User (After Login)**
+
+**Add to Cart:**
+```typescript
+// src/pages/products/index.tsx
+if (isLoggedIn) {
+  // Logged in: Save to Database via tRPC
+  await addToCartMutation.mutateAsync(cartItem);
+  toast.success('Berhasil!');
+}
+```
+
+**Backend Logic:**
+```typescript
+// src/server/routers/cart.ts
+addItem: protectedProcedure.mutation(async ({ ctx, input }) => {
+  let cart = await Cart.findOne({ userId: ctx.user.id });
+  
+  if (!cart) {
+    // Create new cart
+    cart = new Cart({ userId: ctx.user.id, items: [input] });
+  } else {
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.productId.toString() === input.productId
+    );
+    
+    if (existingItemIndex > -1) {
+      // Product exists: increase quantity
+      cart.items[existingItemIndex].quantity += input.quantity;
+    } else {
+      // New product: add to cart
+      cart.items.push(input);
+    }
+  }
+  
+  await cart.save(); // Save to MongoDB
+  return { success: true, items: cart.items };
+});
+```
+
+**What Happens:**
+1. User clicks "Tambah ke Keranjang"
+2. tRPC mutation `cart.addItem` called
+3. Backend checks if user has existing cart in DB
+4. Merges or creates new cart entry
+5. Saves to MongoDB with userId reference
+6. Cart accessible from any device after login
+
+#### **Flow 3: Login Merge (The Magic Moment)**
+
+**Scenario:**
+```
+1. User browses as guest
+2. Adds 3 items to cart (LocalStorage)
+3. User logs in
+4. What happens to those 3 items?
+```
+
+**Login with Merge:**
+```typescript
+// src/pages/auth/login.tsx
+const onSubmit = async (data) => {
+  // 1. Login via NextAuth
+  const result = await signIn('credentials', { ...data });
+  
+  // 2. Get session
+  const session = await getSession();
+  
+  // 3. Check if guest has items in LocalStorage
+  if (cartItems.length > 0) {
+    try {
+      // 4. Merge guest cart to database
+      await mergeCartMutation.mutateAsync({
+        guestItems: cartItems.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          // ... all fields
+        }))
+      });
+      
+      // 5. Clear LocalStorage after merge
+      clearCart();
+      
+      toast.success('Cart Merged!', {
+        description: 'Items dari keranjang Anda telah disimpan.',
+      });
+    } catch (error) {
+      console.error('Cart merge error:', error);
+      // Login still succeeds even if merge fails
+    }
+  }
+  
+  // 6. Redirect based on role
+  router.push(session?.user?.role === 'admin' ? '/admin' : '/');
+};
+```
+
+**Backend Merge Logic:**
+```typescript
+// src/server/routers/cart.ts
+mergeCart: protectedProcedure.mutation(async ({ ctx, input }) => {
+  let cart = await Cart.findOne({ userId: ctx.user.id });
+  
+  if (!cart) {
+    // User has no cart in DB: create with guest items
+    cart = new Cart({
+      userId: ctx.user.id,
+      items: input.guestItems
+    });
+  } else {
+    // User has existing cart: merge items
+    input.guestItems.forEach((guestItem) => {
+      const existingItemIndex = cart.items.findIndex(
+        (item) => item.productId.toString() === guestItem.productId
+      );
+      
+      if (existingItemIndex > -1) {
+        // Product exists: COMBINE quantities
+        cart.items[existingItemIndex].quantity += guestItem.quantity;
+      } else {
+        // New product: add to cart
+        cart.items.push(guestItem);
+      }
+    });
+  }
+  
+  await cart.save();
+  return { success: true, items: cart.items };
+});
+```
+
+**Merge Scenarios:**
+
+**Example 1: New User**
+```
+Guest LocalStorage:
+  - Product A (qty: 2)
+  - Product B (qty: 1)
+
+Database Cart: (empty)
+
+After Merge →
+Database Cart:
+  - Product A (qty: 2)
+  - Product B (qty: 1)
+
+LocalStorage: (cleared)
+```
+
+**Example 2: Returning User**
+```
+Guest LocalStorage:
+  - Product A (qty: 2)
+  - Product C (qty: 1)
+
+Database Cart (before login):
+  - Product A (qty: 3)
+  - Product B (qty: 1)
+
+After Merge →
+Database Cart:
+  - Product A (qty: 5)  ← 3 + 2 = 5 (combined!)
+  - Product B (qty: 1)  ← existing
+  - Product C (qty: 1)  ← new from guest
+
+LocalStorage: (cleared)
+```
+
+#### **Zustand Store Structure**
+
+```typescript
+// src/store/cartStore.ts
+export interface CartItem {
+  productId: string;
+  name: string;
+  slug: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  image: string;
+  stock: number;
+  category: string;
+}
+
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      
+      // Smart merge: combine if product exists
+      addItem: (item) => {
+        const existingItem = get().items.find(
+          i => i.productId === item.productId
+        );
+        if (existingItem) {
+          return {
+            items: get().items.map(i =>
+              i.productId === item.productId
+                ? { ...i, quantity: i.quantity + item.quantity }
+                : i
+            )
+          };
+        }
+        return { items: [...get().items, item] };
+      },
+      
+      removeItem: (productId) => ({
+        items: get().items.filter(i => i.productId !== productId)
+      }),
+      
+      updateQuantity: (productId, quantity) => {
+        if (quantity <= 0) {
+          return { items: get().items.filter(i => i.productId !== productId) };
+        }
+        return {
+          items: get().items.map(i =>
+            i.productId === productId ? { ...i, quantity } : i
+          )
+        };
+      },
+      
+      clearCart: () => ({ items: [] }),
+      
+      getTotalItems: () =>
+        get().items.reduce((total, item) => total + item.quantity, 0),
+      
+      getTotalPrice: () =>
+        get().items.reduce((total, item) => 
+          total + (item.price * item.quantity), 0
+        ),
+    }),
+    { name: 'cart-storage' } // LocalStorage key
+  )
+);
+```
+
+#### **MongoDB Cart Schema**
+
+```typescript
+// src/models/Cart.ts
+export interface ICartItem {
+  productId: mongoose.Types.ObjectId;
+  name: string;
+  slug: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  image: string;
+  stock: number;
+  category: string;
+}
+
+export interface ICart extends Document {
+  userId: mongoose.Types.ObjectId;
+  items: ICartItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const CartSchema = new Schema({
+  userId: {
+    type: ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true // One cart per user
+  },
+  items: [CartItemSchema]
+}, { timestamps: true });
+
+// Index for fast lookups
+CartSchema.index({ userId: 1 });
+```
+
+#### **tRPC Cart Router**
+
+6 protected procedures (all require authentication):
+
+1. **getCart** - Fetch user's cart from database
+2. **addItem** - Add item or increase quantity
+3. **updateQuantity** - Update existing item quantity
+4. **removeItem** - Delete item from cart
+5. **clearCart** - Empty entire cart
+6. **mergeCart** - Merge guest LocalStorage cart on login
+
+```typescript
+// src/server/routers/cart.ts
+export const cartRouter = router({
+  getCart: protectedProcedure.query(async ({ ctx }) => {
+    const cart = await Cart.findOne({ userId: ctx.user.id }).lean();
+    return { items: cart?.items || [] };
+  }),
+  
+  addItem: protectedProcedure
+    .input(cartItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Create or update cart logic
+    }),
+  
+  // ... 4 other procedures
+  
+  mergeCart: protectedProcedure
+    .input(z.object({ guestItems: z.array(cartItemSchema) }))
+    .mutation(async ({ ctx, input }) => {
+      // Merge guest cart logic
+    }),
+});
+```
+
+#### **Hydration Error Fix (Critical)**
+
+**Problem:**
+```typescript
+// ❌ WRONG: Causes React Hydration Error
+const cartItemCount = getTotalItems(); // Reads localStorage immediately
+```
+
+**Why Error?**
+- Server-Side Render: `cartItemCount = 0` (no localStorage in Node.js)
+- Client-Side Render: `cartItemCount = 5` (from localStorage)
+- **Mismatch!** → Hydration error
+
+**Solution:**
+```typescript
+// ✅ CORRECT: Delayed read until client mount
+// src/components/layouts/Navbar.tsx
+const [cartItemCount, setCartItemCount] = useState(0); // Server: 0
+const getTotalItems = useCartStore((state) => state.getTotalItems);
+const items = useCartStore((state) => state.items);
+
+useEffect(() => {
+  // Only runs on client after component mounted
+  setCartItemCount(getTotalItems()); // Client: update to real value
+}, [getTotalItems, items]); // Update when items change
+```
+
+**Flow:**
+1. Server renders: Badge shows `0` (matches client initial state)
+2. Component mounts in browser
+3. `useEffect` runs → reads from localStorage
+4. State updates: Badge shows actual count
+5. **No mismatch, no error!**
+
+#### **Cart Protection Strategy**
+
+**Guest-Friendly Approach:**
+- ✅ Add to cart: NO protection (allow guest)
+- ✅ View cart page: NO protection (allow guest)
+- ✅ Update quantity: NO protection (allow guest)
+- ✅ Remove item: NO protection (allow guest)
+- ❌ Checkout button: PROTECTED (requires login)
+
+```typescript
+// src/pages/cart.tsx
+const handleCheckout = () => {
+  if (!isLoggedIn) {
+    toast.error('Login Diperlukan', {
+      description: 'Silakan login untuk melanjutkan checkout.',
+    });
+    router.push('/auth/login');
+    return;
+  }
+  router.push('/checkout');
+};
+```
+
+#### **Benefits of This System**
+
+**For Guest Users:**
+- ✅ Friction-free shopping (no forced registration)
+- ✅ Cart persists across browser sessions
+- ✅ Can browse and add items freely
+- ✅ Items automatically saved on login
+
+**For Logged In Users:**
+- ✅ Permanent cart storage in database
+- ✅ Cross-device synchronization
+- ✅ Cart history for analytics
+- ✅ Never lose cart items
+
+**For Developers:**
+- ✅ Type-safe with TypeScript + Zod
+- ✅ Real-time updates with Zustand
+- ✅ Clear separation of concerns
+- ✅ Easy to debug and maintain
+- ✅ No hydration errors
+
+#### **Important Implementation Notes**
+
+1. **Always use `useState` + `useEffect` for localStorage reads** (prevent hydration errors)
+2. **Guest cart merge is non-blocking** (login succeeds even if merge fails)
+3. **Quantities are COMBINED on merge** (not replaced)
+4. **LocalStorage cleared ONLY after successful merge**
+5. **One cart per user in database** (unique userId constraint)
+6. **All tRPC procedures are protected** (require authentication)
+7. **Zustand persist middleware handles serialization** automatically
+
+#### **Future Improvement - Cart Merge UX**
+
+**Current Behavior** (`src/pages/auth/login.tsx`):
+- ⚠️ **Auto-merge tanpa konfirmasi**: Guest cart langsung di-merge ke database saat login
+- User tidak tahu apa yang terjadi dengan cart mereka
+- Tidak ada pilihan untuk replace atau cancel
+
+**Recommended Better UX**:
+```typescript
+// TODO: Implement CartMergeDialog component
+// Location: src/components/CartMergeDialog.tsx
+
+// Flow:
+// 1. User login berhasil
+// 2. IF guest cart exists:
+//    - Show dialog dengan preview items
+//    - Show user's existing cart (if any)
+//    - Berikan 3 pilihan:
+//      a) "Gabungkan" - Merge quantities (current behavior)
+//      b) "Ganti" - Replace DB cart dengan guest cart
+//      c) "Batal" - Keep DB cart, discard guest cart
+// 3. ELSE: Skip dialog
+
+// Component structure:
+<Dialog open={showMergeDialog}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Keranjang Belanja Ditemukan</DialogTitle>
+      <DialogDescription>
+        Anda memiliki {guestItems.length} item di keranjang.
+        Apa yang ingin Anda lakukan?
+      </DialogDescription>
+    </DialogHeader>
+    
+    {/* Guest Cart Preview */}
+    <div className="space-y-2">
+      <h4 className="font-medium">Item di Keranjang Sementara:</h4>
+      <ul className="space-y-1">
+        {guestItems.map(item => (
+          <li key={item.productId}>
+            {item.name} - {item.quantity} {item.unit}
+          </li>
+        ))}
+      </ul>
+    </div>
+    
+    {/* Existing Cart Preview (if any) */}
+    {existingCartItems.length > 0 && (
+      <div className="space-y-2 border-t pt-4">
+        <h4 className="font-medium">Item di Keranjang Lama:</h4>
+        <ul className="space-y-1">
+          {existingCartItems.map(item => (
+            <li key={item.productId}>
+              {item.name} - {item.quantity} {item.unit}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    
+    {/* Action Buttons */}
+    <DialogFooter className="gap-2">
+      <Button variant="outline" onClick={handleDiscard}>
+        Buang Keranjang Sementara
+      </Button>
+      <Button variant="outline" onClick={handleReplace}>
+        Ganti dengan Keranjang Sementara
+      </Button>
+      <Button onClick={handleMerge}>
+        Gabungkan Semua Item
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Implementation Steps**:
+1. Create `CartMergeDialog` component with shadcn Dialog
+2. Add `getCart` query to fetch existing cart before merge
+3. Update login flow:
+   ```typescript
+   // After successful login:
+   if (cartItems.length > 0) {
+     const existingCart = await getCartQuery(); // Fetch from DB
+     setShowMergeDialog(true); // Show dialog
+     // Wait for user choice...
+   }
+   ```
+4. Add 3 mutation handlers:
+   - `handleMerge()` - Current behavior (combine quantities)
+   - `handleReplace()` - Clear DB cart, insert guest items
+   - `handleDiscard()` - Keep DB cart, clear LocalStorage
+
+**Benefits**:
+- ✅ User control over their cart
+- ✅ Transparency (user sees what will happen)
+- ✅ Prevents accidental quantity accumulation
+- ✅ Better UX for returning customers
+
+**Reference**:
+- See TODO comment in `src/pages/auth/login.tsx` (line ~73)
+- Shadcn Dialog: https://ui.shadcn.com/docs/components/dialog
 
 ### Admin Customers Management
 
@@ -2343,3 +2966,5 @@ export default function AdminProductsPage() {
 15. **Never ignore loading states** (always show spinners for better UX)
 16. **Never return null immediately on unauthorized** (show loading to prevent flash)
 17. **Never use useSession() in async functions** (use getSession() instead)
+18. **Never skip loading/redirect checks in protected pages** (always show spinner during auth check AND redirect to prevent flash)
+19. **Never implement auto-merge without user confirmation** (see Cart Merge UX improvement TODO in login.tsx)

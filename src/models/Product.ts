@@ -174,7 +174,7 @@ const ProductSchema = new Schema<IProduct>(
 );
 
 // Indexes untuk performa query
-ProductSchema.index({ slug: 1 });
+// Note: slug already has unique index from schema definition (unique: true)
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ isActive: 1, isFeatured: 1 });
 ProductSchema.index({ name: 'text', description: 'text' }); // Text search

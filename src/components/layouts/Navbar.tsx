@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCartStore } from "@/store/cartStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,14 +15,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ShoppingCart, User, Package, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
 
-  // TODO: Replace with cart context (Zustand)
-  // Expected: const { items } = useCart();
-  const cartItemCount = 3; // Dummy data - should come from cart context
+  // Fix hydration error: Only read cart count on client-side
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const getTotalItems = useCartStore((state) => state.getTotalItems);
+  const items = useCartStore((state) => state.items);
+
+  useEffect(() => {
+    // Only run on client-side after mount
+    setCartItemCount(getTotalItems());
+  }, [getTotalItems, items]); // Update when items change
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });
@@ -50,7 +58,7 @@ export default function Navbar() {
               Produk
             </Link>
             
-            {/* Cart Icon with Badge */}
+            {/* Cart Icon with Badge - Show for all users (guest + logged in) */}
             <Link href="/cart" className="relative">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />

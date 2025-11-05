@@ -12,7 +12,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   Form,
   FormControl,
@@ -27,6 +26,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/router";
+import { toast } from "sonner";
+import { useCartStore } from "@/store/cartStore";
 import {
   ShoppingCart,
   Trash2,
@@ -96,71 +99,46 @@ const addressSchema = z.object({
 type AddressFormValues = z.infer<typeof addressSchema>;
 
 export default function CartPage() {
-  // Protect this page - require authentication
-  useRequireAuth();
+  const router = useRouter();
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
 
-  // TODO: Replace with cart context/state management
-  // Expected: useCart() hook from CartContext
-  // Functions: addItem, removeItem, updateQuantity, clearCart
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "cart-1",
-      productId: "68b8340ed2788dc4d9e608b1",
-      name: "Semen Gresik 50kg",
-      slug: "semen-gresik-50kg",
-      image: "/images/dummy_image.jpg",
-      price: 65000,
-      originalUnit: "SAK",
-      selectedUnit: "SAK",
-      quantity: 5,
-      stock: 150,
-      category: "Semen",
-    },
-    {
-      id: "cart-2",
-      productId: "68b8340ed2788dc4d9e608b3",
-      name: "Besi Beton 10mm Panjang 12m",
-      slug: "besi-beton-10mm-panjang-12m",
-      image: "/images/dummy_image.jpg",
-      price: 85000,
-      originalUnit: "BATANG",
-      selectedUnit: "BATANG",
-      quantity: 10,
-      stock: 200,
-      category: "Besi",
-    },
-    {
-      id: "cart-3",
-      productId: "68b8340ed2788dc4d9e608b2",
-      name: "Cat Tembok Avian 5kg Putih",
-      slug: "cat-tembok-avian-5kg-putih",
-      image: "/images/dummy_image.jpg",
-      price: 180000,
-      originalUnit: "KALENG",
-      selectedUnit: "KALENG",
-      quantity: 2,
-      stock: 75,
-      category: "Cat",
-    },
-  ]);
+  // Get cart from Zustand store
+  const cartItems = useCartStore((state) => state.items);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+
+  // Map cart items to match CartItem interface
+  const mappedCartItems: CartItem[] = cartItems.map((item) => ({
+    id: item.productId,
+    productId: item.productId,
+    name: item.name,
+    slug: item.slug,
+    image: item.image,
+    price: item.price,
+    originalUnit: item.unit,
+    selectedUnit: item.unit,
+    quantity: item.quantity,
+    stock: item.stock,
+    category: item.category,
+  }));
 
   const handleQuantityChange = (itemId: string, type: "increment" | "decrement") => {
-    setCartItems((prevItems) =>
-      prevItems.map((item) => {
-        if (item.id === itemId) {
-          if (type === "increment" && item.quantity < item.stock) {
-            return { ...item, quantity: item.quantity + 1 };
-          } else if (type === "decrement" && item.quantity > 1) {
-            return { ...item, quantity: item.quantity - 1 };
-          }
-        }
-        return item;
-      })
-    );
+    const item = cartItems.find((i) => i.productId === itemId);
+    if (!item) return;
+
+    if (type === "increment" && item.quantity < item.stock) {
+      updateQuantity(itemId, item.quantity + 1);
+    } else if (type === "decrement" && item.quantity > 1) {
+      updateQuantity(itemId, item.quantity - 1);
+    }
   };
 
   const handleRemoveItem = (itemId: string) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    removeItem(itemId);
+    toast.success('Item dihapus', {
+      description: 'Item berhasil dihapus dari keranjang.',
+    });
   };
 
   const calculateItemTotal = (item: CartItem): number => {
@@ -168,7 +146,7 @@ export default function CartPage() {
   };
 
   const calculateSubtotal = (): number => {
-    return cartItems.reduce((total, item) => total + calculateItemTotal(item), 0);
+    return mappedCartItems.reduce((total, item) => total + calculateItemTotal(item), 0);
   };
 
   // TODO: Replace with user data from authentication/database
@@ -260,7 +238,21 @@ export default function CartPage() {
   const grandTotal = calculateSubtotal() + shippingCost;
 
   // Validation: Cannot checkout without address
-  const canCheckout = selectedAddress !== null && cartItems.length > 0;
+  const canCheckout = selectedAddress !== null && mappedCartItems.length > 0;
+
+  // Handle checkout - check authentication
+  const handleCheckout = () => {
+    if (!isLoggedIn) {
+      toast.error('Login Diperlukan', {
+        description: 'Silakan login terlebih dahulu untuk melanjutkan checkout.',
+      });
+      router.push('/auth/login');
+      return;
+    }
+    
+    // Proceed to checkout
+    router.push('/checkout');
+  };
 
   return (
     <MainLayout>
@@ -275,7 +267,7 @@ export default function CartPage() {
                   Keranjang Belanja
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  {cartItems.length} item dalam keranjang
+                  {mappedCartItems.length} item dalam keranjang
                 </p>
               </div>
             </div>
@@ -580,7 +572,7 @@ export default function CartPage() {
             </div>
           </Card>
 
-          {cartItems.length === 0 ? (
+          {mappedCartItems.length === 0 ? (
             /* Empty Cart State */
             <Card className="p-12 text-center">
               <div className="flex flex-col items-center gap-4">
@@ -607,7 +599,7 @@ export default function CartPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Cart Items */}
               <div className="lg:col-span-2 space-y-4">
-                {cartItems.map((item) => (
+                {mappedCartItems.map((item) => (
                   <Card key={item.id} className="p-4">
                     <div className="flex gap-4">
                       {/* Product Image */}
@@ -728,7 +720,7 @@ export default function CartPage() {
 
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between text-gray-700">
-                      <span>Subtotal ({cartItems.length} item)</span>
+                      <span>Subtotal ({mappedCartItems.length} item)</span>
                       <span className="font-semibold">
                         Rp {calculateSubtotal().toLocaleString("id-ID")}
                       </span>
@@ -753,14 +745,17 @@ export default function CartPage() {
                     </span>
                   </div>
 
-                  <Link href="/checkout">
-                    <Button size="lg" className="w-full" disabled={!canCheckout}>
-                      Lanjut ke Pembayaran
-                      <ArrowRight className="h-5 w-5 ml-2" />
-                    </Button>
-                  </Link>
+                  <Button 
+                    size="lg" 
+                    className="w-full" 
+                    disabled={!canCheckout}
+                    onClick={handleCheckout}
+                  >
+                    Lanjut ke Pembayaran
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </Button>
 
-                  {!selectedAddress && cartItems.length > 0 && (
+                  {!selectedAddress && mappedCartItems.length > 0 && (
                     <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <p className="text-xs text-yellow-800 text-center">
                         <AlertCircle className="h-4 w-4 inline mr-1" />
