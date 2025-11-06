@@ -334,15 +334,16 @@ export default function CartPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Shipping Address Section */}
-          <Card className="p-6 mb-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3 flex-1">
-                <MapPin className="h-6 w-6 text-primary shrink-0 mt-1" />
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-gray-900 mb-2">
-                    Alamat Pengiriman
-                  </h2>
+          {/* Shipping Address Section - Only for logged-in users */}
+          {isLoggedIn && (
+            <Card className="p-6 mb-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  <MapPin className="h-6 w-6 text-primary shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">
+                      Alamat Pengiriman
+                    </h2>
                   {selectedAddress ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -630,6 +631,7 @@ export default function CartPage() {
               </Dialog>
             </div>
           </Card>
+          )}
 
           {mappedCartItems.length === 0 ? (
             /* Empty Cart State */

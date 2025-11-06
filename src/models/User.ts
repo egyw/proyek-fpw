@@ -1,5 +1,20 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+// Interface untuk Address
+export interface IAddress {
+  id: string;
+  label: string; // e.g., "Rumah", "Kantor", "Gudang"
+  recipientName: string;
+  phoneNumber: string;
+  fullAddress: string;
+  district: string; // Kecamatan
+  city: string;
+  province: string;
+  postalCode: string;
+  notes?: string;
+  isDefault: boolean;
+}
+
 // Interface untuk TypeScript
 export interface IUser extends Document {
   username: string;
@@ -8,12 +23,7 @@ export interface IUser extends Document {
   role: 'admin' | 'staff' | 'user';
   fullName: string;
   phone: string;
-  address: {
-    street: string;
-    city: string;
-    province: string;
-    postalCode: string;
-  };
+  addresses: IAddress[]; // Changed from single object to array
   isActive: boolean;
   lastLogin: Date;
   createdAt: Date;
@@ -61,25 +71,63 @@ const UserSchema = new Schema<IUser>(
       required: [true, 'Nomor telepon harus diisi'],
       match: [/^[0-9]{10,15}$/, 'Format nomor telepon tidak valid (10-15 digit)'],
     },
-    address: {
-      street: {
-        type: String,
-        default: '',
+    addresses: [
+      {
+        id: {
+          type: String,
+          required: true,
+        },
+        label: {
+          type: String,
+          required: [true, 'Label alamat harus diisi'],
+          trim: true,
+        },
+        recipientName: {
+          type: String,
+          required: [true, 'Nama penerima harus diisi'],
+          trim: true,
+        },
+        phoneNumber: {
+          type: String,
+          required: [true, 'Nomor telepon penerima harus diisi'],
+          match: [/^[0-9]{10,15}$/, 'Format nomor telepon tidak valid (10-15 digit)'],
+        },
+        fullAddress: {
+          type: String,
+          required: [true, 'Alamat lengkap harus diisi'],
+          trim: true,
+        },
+        district: {
+          type: String,
+          required: [true, 'Kecamatan harus diisi'],
+          trim: true,
+        },
+        city: {
+          type: String,
+          required: [true, 'Kota harus diisi'],
+          trim: true,
+        },
+        province: {
+          type: String,
+          required: [true, 'Provinsi harus diisi'],
+          trim: true,
+        },
+        postalCode: {
+          type: String,
+          required: [true, 'Kode pos harus diisi'],
+          match: [/^[0-9]{5}$/, 'Kode pos harus 5 digit'],
+        },
+        notes: {
+          type: String,
+          default: '',
+          trim: true,
+        },
+        isDefault: {
+          type: Boolean,
+          default: false,
+        },
       },
-      city: {
-        type: String,
-        default: '',
-      },
-      province: {
-        type: String,
-        default: '',
-      },
-      postalCode: {
-        type: String,
-        default: '',
-        match: [/^[0-9]{5}$|^$/, 'Kode pos harus 5 digit'],
-      },
-    },
+    ],
     isActive: {
       type: Boolean,
       default: true,

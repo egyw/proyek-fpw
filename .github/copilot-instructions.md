@@ -326,13 +326,20 @@ interface User {
   fullName: string; // Full name of user
   phone: string; // Phone number (format: 08xxxxxxxxxx)
 
-  // Address
-  address: {
-    street: string; // Street address
+  // Addresses - Array for multiple shipping addresses
+  addresses: Array<{
+    id: string; // Unique address ID
+    label: string; // Label: "Rumah", "Kantor", "Gudang", etc
+    recipientName: string; // Recipient name
+    phoneNumber: string; // Recipient phone number
+    fullAddress: string; // Full street address
+    district: string; // Kecamatan
     city: string; // City name
     province: string; // Province name
     postalCode: string; // Postal code (5 digits)
-  };
+    notes?: string; // Optional notes (e.g., house color, landmark)
+    isDefault: boolean; // Default shipping address flag
+  }>;
 
   // Status & Tracking
   isActive: boolean; // Account status (true = active, false = suspended)
@@ -355,14 +362,23 @@ interface User {
   "email": "eggy@example.com",
   "password": "$2y$10$kML9sLUh7KXE6Xb8rl3zv.OaGM0lO8WarQj58TFXjUL0MNyo4RRMq",
   "role": "admin",
-  "fullName": "Eggy Wijaya",
+  "fullName": "eggy eggyan",
   "phone": "081234567890",
-  "address": {
-    "street": "Jl. Admin No. 1",
-    "city": "Jakarta",
-    "province": "DKI Jakarta",
-    "postalCode": "12345"
-  },
+  "addresses": [
+    {
+      "id": "addr-68b82d09d2788dc4d9e60875-1",
+      "label": "Rumah",
+      "recipientName": "eggy eggyan",
+      "phoneNumber": "081234567890",
+      "fullAddress": "Jl. Admin No. 1",
+      "district": "Menteng",
+      "city": "Jakarta",
+      "province": "DKI Jakarta",
+      "postalCode": "12345",
+      "notes": "",
+      "isDefault": true
+    }
+  ],
   "createdAt": "2025-09-03T10:00:00Z",
   "updatedAt": "2025-11-01T08:30:00Z",
   "isActive": true,
@@ -373,8 +389,10 @@ interface User {
 **Important notes:**
 
 - **Database location**: `database/proyekFPW.users.json` (5 users, ready for MongoDB import)
-- **Field order in DB**: \_id, username, email, password, role, fullName, phone, address, createdAt, updatedAt, isActive, lastLogin
-- **All fields are REQUIRED**
+- **Field order in DB**: \_id, username, email, password, role, fullName, phone, addresses, createdAt, updatedAt, isActive, lastLogin
+- **All fields are REQUIRED** except `addresses.notes` (optional)
+- **Addresses**: Array of address objects (users can have multiple shipping addresses)
+- **Address ID Format**: `addr-{userId}-{incrementalNumber}` for uniqueness
 - **Roles**:
   - `admin` - Full access to all features (user management, products, orders, reports, settings)
   - `staff` - Limited access (products, orders, inventory - NO user management)
@@ -382,7 +400,7 @@ interface User {
 - **Password**: Always hashed with bcrypt (`$2y$10$...`), never store plain text
 - **Phone format**: Indonesian phone numbers (081234567890)
 - **Role permissions**: Logic handled in backend tRPC procedures and frontend route guards (NOT in database)
-- **Sample data**: 1 admin, 1 staff, 3 customers (users)
+- **Sample data**: 1 admin, 1 staff, 3 customers (users) - each with 1 default address
 
 **Role-based access pattern:**
 
@@ -1494,12 +1512,19 @@ session.user = {
   username: string;
   role: 'admin' | 'staff' | 'user';
   phone: string;
-  address: {
-    street: string;
+  addresses: Array<{         // Array of shipping addresses
+    id: string;
+    label: string;
+    recipientName: string;
+    phoneNumber: string;
+    fullAddress: string;
+    district: string;
     city: string;
     province: string;
     postalCode: string;
-  };
+    notes?: string;
+    isDefault: boolean;
+  }>;
   isActive: boolean;
 }
 ```
