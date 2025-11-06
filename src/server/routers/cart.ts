@@ -10,7 +10,7 @@ const cartItemSchema = z.object({
   name: z.string(),
   slug: z.string(),
   price: z.number().min(0),
-  quantity: z.number().min(1),
+  quantity: z.number().min(0.001), // Allow decimals for unit conversion (e.g., 0.5 sak from 25kg)
   unit: z.string(),
   image: z.string(),
   stock: z.number(),
@@ -73,16 +73,18 @@ export const cartRouter = router({
             items: [input],
           });
         } else {
-          // Check if item already exists
+          // Check if item with same productId AND unit already exists
           const existingItemIndex = cart.items.findIndex(
-            (item: ICartItem) => item.productId.toString() === input.productId
+            (item: ICartItem) => 
+              item.productId.toString() === input.productId &&
+              item.unit === input.unit // Same product + same unit = merge
           );
 
           if (existingItemIndex > -1) {
-            // Item exists, update quantity
+            // Item with same product and unit exists, update quantity
             cart.items[existingItemIndex].quantity += input.quantity;
           } else {
-            // New item, add to cart
+            // New item (different product or different unit), add to cart
             cart.items.push({
               productId: new mongoose.Types.ObjectId(input.productId),
               name: input.name,
@@ -128,6 +130,7 @@ export const cartRouter = router({
     .input(
       z.object({
         productId: z.string(),
+        unit: z.string(), // Add unit to identify specific item
         quantity: z.number().min(0),
       })
     )
@@ -149,12 +152,14 @@ export const cartRouter = router({
         if (input.quantity === 0) {
           // Remove item if quantity is 0
           cart.items = cart.items.filter(
-            (item: ICartItem) => item.productId.toString() !== input.productId
+            (item: ICartItem) => 
+              !(item.productId.toString() === input.productId && item.unit === input.unit)
           );
         } else {
-          // Update quantity
+          // Update quantity - match both productId AND unit
           const item = cart.items.find(
-            (item: ICartItem) => item.productId.toString() === input.productId
+            (item: ICartItem) => 
+              item.productId.toString() === input.productId && item.unit === input.unit
           );
 
           if (item) {
@@ -190,7 +195,10 @@ export const cartRouter = router({
 
   // Remove item from cart (protected)
   removeItem: protectedProcedure
-    .input(z.object({ productId: z.string() }))
+    .input(z.object({ 
+      productId: z.string(),
+      unit: z.string(), // Add unit to identify specific item
+    }))
     .mutation(async ({ ctx, input }) => {
       try {
         await connectDB();
@@ -206,8 +214,10 @@ export const cartRouter = router({
           });
         }
 
+        // Remove item matching both productId AND unit
         cart.items = cart.items.filter(
-          (item: ICartItem) => item.productId.toString() !== input.productId
+          (item: ICartItem) => 
+            !(item.productId.toString() === input.productId && item.unit === input.unit)
         );
 
         await cart.save();

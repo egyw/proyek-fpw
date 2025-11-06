@@ -16,8 +16,8 @@ export interface CartItem {
 interface CartStore {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string, unit: string) => void;
+  updateQuantity: (productId: string, unit: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -30,44 +30,51 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (item) =>
         set((state) => {
+          // Check if item with same productId AND unit already exists
           const existingItem = state.items.find(
-            (i) => i.productId === item.productId
+            (i) => i.productId === item.productId && i.unit === item.unit
           );
 
           if (existingItem) {
-            // Item already exists, increase quantity
+            // Same product with same unit exists, increase quantity
             return {
               items: state.items.map((i) =>
-                i.productId === item.productId
+                i.productId === item.productId && i.unit === item.unit
                   ? { ...i, quantity: i.quantity + item.quantity }
                   : i
               ),
             };
           }
 
-          // New item, add to cart
+          // New item (different product or different unit), add to cart
           return {
             items: [...state.items, item],
           };
         }),
 
-      removeItem: (productId) =>
+      removeItem: (productId, unit) =>
         set((state) => ({
-          items: state.items.filter((i) => i.productId !== productId),
+          items: state.items.filter(
+            (i) => !(i.productId === productId && i.unit === unit)
+          ),
         })),
 
-      updateQuantity: (productId, quantity) =>
+      updateQuantity: (productId, unit, quantity) =>
         set((state) => {
           if (quantity <= 0) {
             // Remove item if quantity is 0 or negative
             return {
-              items: state.items.filter((i) => i.productId !== productId),
+              items: state.items.filter(
+                (i) => !(i.productId === productId && i.unit === unit)
+              ),
             };
           }
 
           return {
             items: state.items.map((i) =>
-              i.productId === productId ? { ...i, quantity } : i
+              i.productId === productId && i.unit === unit 
+                ? { ...i, quantity } 
+                : i
             ),
           };
         }),

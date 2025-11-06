@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   Star,
@@ -21,14 +22,41 @@ import {
 } from "lucide-react";
 import UnitConverter from "@/components/UnitConverter";
 import { trpc } from "@/utils/trpc";
+import { useCartStore } from "@/store/cartStore";
 
 export default function ProductDetailPage() {
   const router = useRouter();
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  // Cart store for guest users
+  const addToGuestCart = useCartStore((state) => state.addItem);
+
   // Get slug from URL
   const slug = router.query.slug as string;
+
+  // tRPC utils for cache invalidation
+  const utils = trpc.useContext();
+
+  // tRPC mutation for adding to cart (logged-in users)
+  const addToCartMutation = trpc.cart.addItem.useMutation({
+    onSuccess: (data, variables) => {
+      // Invalidate cart query to trigger re-fetch and update badge
+      utils.cart.getCart.invalidate();
+      
+      toast.success("Berhasil!", {
+        description: `${variables.name} (${variables.quantity} ${variables.unit.toUpperCase()}) ditambahkan ke keranjang.`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Gagal menambahkan ke keranjang", {
+        description: error.message,
+      });
+    },
+  });
 
   // Handle share - copy URL to clipboard
   const handleShare = async () => {
@@ -41,6 +69,46 @@ export default function ProductDetailPage() {
     } catch {
       toast.error("Gagal menyalin link", {
         description: "Terjadi kesalahan saat menyalin link",
+      });
+    }
+  };
+
+  // Handle add to cart
+  const handleAddToCart = async (
+    quantity: number,
+    unit: string,
+    price: number
+  ) => {
+    if (!product) return;
+
+    // Check stock availability
+    if (quantity > product.stock) {
+      toast.error("Stok Tidak Cukup", {
+        description: `Stok tersedia hanya ${product.stock} ${product.unit}`,
+      });
+      return;
+    }
+
+    const cartItem = {
+      productId: product._id.toString(),
+      name: product.name,
+      slug: product.slug,
+      image: product.images[0],
+      price: price,
+      quantity: quantity,
+      unit: unit,
+      stock: product.stock,
+      category: product.category,
+    };
+
+    if (isLoggedIn) {
+      // Logged-in: Save to database via tRPC
+      await addToCartMutation.mutateAsync(cartItem);
+    } else {
+      // Guest: Save to LocalStorage via Zustand
+      addToGuestCart(cartItem);
+      toast.success("Berhasil!", {
+        description: `${cartItem.name} (${cartItem.quantity} ${cartItem.unit.toUpperCase()}) ditambahkan ke keranjang.`,
       });
     }
   };
@@ -332,6 +400,7 @@ export default function ProductDetailPage() {
                 size="lg"
                 className="flex-1 h-12"
                 disabled={product.stock === 0}
+                onClick={() => handleAddToCart(quantity, product.unit, discountPrice)}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Tambah ke Keranjang
@@ -396,16 +465,13 @@ export default function ProductDetailPage() {
               productStock={product.stock}
               availableUnits={product.availableUnits || [product.unit]}
               productAttributes={product.attributes as Record<string, string | number>}
-              onAddToCart={(quantity, unit, totalPrice) => {
-                // TODO: Implement cart functionality
-                console.log(`Adding to cart: ${quantity} ${unit} = Rp ${totalPrice}`);
-                toast.success("Berhasil ditambahkan ke keranjang!", {
-                  description: `${quantity} ${unit} - Total: Rp ${totalPrice.toLocaleString("id-ID")}`,
-                  action: {
-                    label: "Lihat Keranjang",
-                    onClick: () => window.location.href = "/cart",
-                  },
-                });
+              onAddToCart={(quantityInUserUnit, userSelectedUnit, totalPrice) => {
+                // UnitConverter now sends user's selected unit and quantity
+                // e.g., user input "0.25 meter", receives (0.25, "meter", 2323)
+                // NOT converted to supplier unit (batang)
+                // Calculate price per user's unit for cart item
+                const pricePerUnit = totalPrice / quantityInUserUnit;
+                handleAddToCart(quantityInUserUnit, userSelectedUnit, pricePerUnit);
               }}
             />
           </div>

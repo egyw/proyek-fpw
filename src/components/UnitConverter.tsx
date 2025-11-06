@@ -242,8 +242,10 @@ export default function UnitConverter({
 
   const handleAddToCart = () => {
     if (onAddToCart && !isOutOfStock && toValueNum > 0) {
-      // Pass quantity in supplier unit to cart handler
-      onAddToCart(quantityInProductUnit, fromUnit, totalPrice);
+      // Pass quantity and unit that user selected (NOT converted to supplier unit)
+      // This allows cart to store items separately based on unit
+      // e.g., user buys "0.25 meter" not "1 batang"
+      onAddToCart(toValueNum, toUnit, totalPrice);
     }
   };
 

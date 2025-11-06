@@ -21,16 +21,15 @@ import {
 } from "lucide-react";
 
 interface CartItem {
-  id: string;
+  id: string; // Composite key: productId + unit
   productId: string;
   name: string;
   slug: string;
   image: string;
-  price: number; // Price per original unit
-  originalUnit: string; // Product's original unit (SAK, PCS, etc)
-  selectedUnit: string; // User's selected unit (KG, M2, etc)
-  quantity: number; // Quantity in selected unit
-  stock: number; // Available stock in original unit
+  price: number;
+  unit: string; // User's selected unit (matches what they added)
+  quantity: number;
+  stock: number;
   category: string;
 }
 
@@ -77,21 +76,22 @@ export default function CartPage() {
 
   // Map cart items to match CartItem interface
   const mappedCartItems: CartItem[] = cartItems.map((item) => ({
-    id: item.productId,
+    id: `${item.productId}-${item.unit}`, // Composite key for unique identification
     productId: item.productId,
     name: item.name,
     slug: item.slug,
     image: item.image,
     price: item.price,
-    originalUnit: item.unit,
-    selectedUnit: item.unit,
+    unit: item.unit,
     quantity: item.quantity,
     stock: item.stock,
     category: item.category,
   }));
 
   const handleQuantityChange = (itemId: string, type: "increment" | "decrement") => {
-    const item = cartItems.find((i) => i.productId === itemId);
+    // Parse composite ID
+    const [productId, unit] = itemId.split('-');
+    const item = cartItems.find((i) => i.productId === productId && i.unit === unit);
     if (!item) return;
 
     const newQuantity = type === "increment" ? item.quantity + 1 : item.quantity - 1;
@@ -101,20 +101,23 @@ export default function CartPage() {
 
     if (isLoggedIn) {
       // Use tRPC mutation for logged-in users
-      updateDbQuantity.mutate({ productId: itemId, quantity: newQuantity });
+      updateDbQuantity.mutate({ productId, unit, quantity: newQuantity });
     } else {
       // Use Zustand for guest users
-      updateGuestQuantity(itemId, newQuantity);
+      updateGuestQuantity(productId, unit, newQuantity);
     }
   };
 
   const handleRemoveItem = (itemId: string) => {
+    // Parse composite ID
+    const [productId, unit] = itemId.split('-');
+    
     if (isLoggedIn) {
       // Use tRPC mutation for logged-in users
-      removeDbItem.mutate({ productId: itemId });
+      removeDbItem.mutate({ productId, unit });
     } else {
       // Use Zustand for guest users
-      removeGuestItem(itemId);
+      removeGuestItem(productId, unit);
       toast.success('Item dihapus', {
         description: 'Item berhasil dihapus dari keranjang.',
       });
@@ -246,13 +249,8 @@ export default function CartPage() {
                             </Badge>
                             <p className="text-sm text-gray-600">
                               Harga: Rp{" "}
-                              {item.price.toLocaleString("id-ID")}/{item.originalUnit}
+                              {item.price.toLocaleString("id-ID")}/{item.unit.toUpperCase()}
                             </p>
-                            {item.selectedUnit !== item.originalUnit && (
-                              <p className="text-xs text-primary mt-1">
-                                Unit pilihan: {item.selectedUnit}
-                              </p>
-                            )}
                           </div>
 
                           {/* Remove Button */}
@@ -303,7 +301,7 @@ export default function CartPage() {
                               </Button>
                             </div>
                             <span className="text-sm text-gray-600">
-                              {item.selectedUnit}
+                              {item.unit.toUpperCase()}
                             </span>
                           </div>
 
