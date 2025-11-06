@@ -3,30 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
@@ -40,10 +18,6 @@ import {
   ArrowRight,
   ShoppingBag,
   Package,
-  MapPin,
-  Edit,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 
 interface CartItem {
@@ -59,59 +33,6 @@ interface CartItem {
   stock: number; // Available stock in original unit
   category: string;
 }
-
-interface Address {
-  id: string;
-  label: string; // e.g., "Rumah", "Kantor", "Gudang"
-  recipientName: string;
-  phoneNumber: string;
-  fullAddress: string;
-  district: string; // Kecamatan
-  city: string;
-  province: string;
-  postalCode: string;
-  notes?: string;
-  isDefault: boolean;
-  // For future Google Maps integration
-  latitude?: number;
-  longitude?: number;
-}
-
-// Zod schema for address validation
-const addressSchema = z.object({
-  label: z.string().min(1, "Label alamat harus diisi"),
-  recipientName: z.string().min(3, "Nama penerima minimal 3 karakter"),
-  phoneNumber: z
-    .string()
-    .min(10, "Nomor telepon minimal 10 digit")
-    .max(15, "Nomor telepon maksimal 15 digit")
-    .regex(/^[0-9]+$/, "Nomor telepon hanya boleh angka"),
-  fullAddress: z.string().min(10, "Alamat lengkap minimal 10 karakter"),
-  district: z.string().min(3, "Kecamatan harus diisi"),
-  city: z.string().min(3, "Kota harus diisi"),
-  province: z.string().min(3, "Provinsi harus diisi"),
-  postalCode: z
-    .string()
-    .min(5, "Kode pos harus 5 digit")
-    .max(5, "Kode pos harus 5 digit")
-    .regex(/^[0-9]{5}$/, "Kode pos harus 5 digit angka"),
-  notes: z.string().optional(),
-});
-
-type AddressFormValues = z.infer<typeof addressSchema>;
-
-// Dynamic import for AddressMapPicker to avoid SSR issues with Leaflet
-const DynamicAddressMapPicker = dynamic(
-  () => import("@/components/AddressMapPicker"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-80 bg-gray-100 rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">Memuat peta...</p>
-      </div>
-    ),
-  }
-);
 
 export default function CartPage() {
   const router = useRouter();
@@ -153,27 +74,6 @@ export default function CartPage() {
 
   // Use database cart if logged in, otherwise use Zustand
   const cartItems = isLoggedIn && dbCart ? dbCart.items : guestCartItems;
-
-  // Get user addresses from database
-  const { data: userAddresses, refetch: refetchAddresses } = trpc.user.getAddresses.useQuery(
-    undefined,
-    { enabled: isLoggedIn }
-  );
-
-  // Add address mutation
-  const addAddressMutation = trpc.user.addAddress.useMutation({
-    onSuccess: () => {
-      refetchAddresses();
-      toast.success('Alamat Berhasil Ditambahkan', {
-        description: 'Alamat pengiriman baru telah disimpan ke database.',
-      });
-    },
-    onError: (error) => {
-      toast.error('Gagal Menambahkan Alamat', {
-        description: error.message,
-      });
-    },
-  });
 
   // Map cart items to match CartItem interface
   const mappedCartItems: CartItem[] = cartItems.map((item) => ({
@@ -232,115 +132,8 @@ export default function CartPage() {
   const shippingCost = 50000; // Flat shipping cost
   const grandTotal = calculateSubtotal() + shippingCost;
 
-  // ✅ No dummy address for guest - shipping section will be hidden
-  // Logged in users get addresses from database (empty array if none)
-  const addresses = useMemo(() => {
-    return isLoggedIn ? (userAddresses?.addresses || []) : [];
-  }, [isLoggedIn, userAddresses?.addresses]);
-
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-
-  // Set default address when addresses load
-  useEffect(() => {
-    if (addresses && addresses.length > 0 && !selectedAddress) {
-      const defaultAddr = addresses.find((addr) => addr.isDefault) || addresses[0];
-      setSelectedAddress(defaultAddr);
-    }
-  }, [addresses, selectedAddress]);
-
-  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
-  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
-  const [mapLocation, setMapLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-
-  // Address form with react-hook-form + Zod
-  const addressForm = useForm<AddressFormValues>({
-    resolver: zodResolver(addressSchema),
-    defaultValues: {
-      label: "",
-      recipientName: "",
-      phoneNumber: "",
-      fullAddress: "",
-      district: "",
-      city: "",
-      province: "",
-      postalCode: "",
-      notes: "",
-    },
-  });
-
-  const handleSelectAddress = (address: Address) => {
-    setSelectedAddress(address);
-    setIsAddressDialogOpen(false);
-  };
-
-  const handleAddNewAddress = async (data: AddressFormValues) => {
-    if (!isLoggedIn) {
-      toast.error('Login Diperlukan', {
-        description: 'Silakan login untuk menyimpan alamat.',
-      });
-      return;
-    }
-
-    try {
-      // Save to database via tRPC
-      const result = await addAddressMutation.mutateAsync({
-        label: data.label,
-        recipientName: data.recipientName,
-        phoneNumber: data.phoneNumber,
-        fullAddress: data.fullAddress,
-        district: data.district,
-        city: data.city,
-        province: data.province,
-        postalCode: data.postalCode,
-        notes: data.notes,
-        latitude: mapLocation?.lat,
-        longitude: mapLocation?.lng,
-      });
-
-      // Set as selected address
-      setSelectedAddress(result.address);
-      setIsAddingNewAddress(false);
-      setIsAddressDialogOpen(false);
-
-      // Reset form and map location
-      addressForm.reset();
-      setMapLocation(null);
-    } catch (error) {
-      // Error already handled by mutation onError
-      console.error('Failed to add address:', error);
-    }
-  };
-
-  // Handle location selection from map
-  const handleLocationSelect = (
-    location: { lat: number; lng: number },
-    address: {
-      fullAddress: string;
-      district: string;
-      city: string;
-      province: string;
-      postalCode: string;
-    }
-  ) => {
-    setMapLocation(location);
-
-    // Auto-fill form fields from map selection
-    addressForm.setValue("fullAddress", address.fullAddress);
-    addressForm.setValue("district", address.district);
-    addressForm.setValue("city", address.city);
-    addressForm.setValue("province", address.province);
-    addressForm.setValue("postalCode", address.postalCode);
-
-    toast.success("Lokasi Dipilih", {
-      description: "Alamat berhasil diambil dari peta. Silakan periksa dan lengkapi data.",
-    });
-  };
-
-  // Validation: Cannot checkout without address
-  const canCheckout = selectedAddress !== null && mappedCartItems.length > 0;
+  // Validation: Cart must have items
+  const canCheckout = mappedCartItems.length > 0;
 
   // Handle checkout - check authentication
   const handleCheckout = () => {
@@ -352,7 +145,7 @@ export default function CartPage() {
       return;
     }
     
-    // Proceed to checkout
+    // Proceed to checkout (address selection will be in checkout page)
     router.push('/checkout');
   };
 
@@ -375,9 +168,9 @@ export default function CartPage() {
       <div className="bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center gap-3">
-              <ShoppingCart className="h-8 w-8 text-primary" />
+              <ShoppingCart className="h-10 w-10 text-primary" />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
                   Keranjang Belanja
@@ -391,339 +184,6 @@ export default function CartPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Shipping Address Section - Only for logged-in users */}
-          {isLoggedIn && (
-            <Card className="p-6 mb-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <MapPin className="h-6 w-6 text-primary shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <h2 className="text-lg font-bold text-gray-900 mb-2">
-                      Alamat Pengiriman
-                    </h2>
-                  {selectedAddress ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-semibold">
-                          {selectedAddress.label}
-                        </Badge>
-                        {selectedAddress.isDefault && (
-                          <Badge className="bg-primary text-white">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Default
-                          </Badge>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {selectedAddress.recipientName}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {selectedAddress.phoneNumber}
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {selectedAddress.fullAddress}
-                        <br />
-                        {selectedAddress.district}, {selectedAddress.city},{" "}
-                        {selectedAddress.province} {selectedAddress.postalCode}
-                      </p>
-                      {selectedAddress.notes && (
-                        <p className="text-xs text-gray-500 italic">
-                          Catatan: {selectedAddress.notes}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
-                      <p className="text-sm text-yellow-800">
-                        Anda belum memilih alamat pengiriman. Silakan pilih atau
-                        tambah alamat terlebih dahulu.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Change Address Button */}
-              <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    {selectedAddress ? "Ganti Alamat" : "Pilih Alamat"}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isAddingNewAddress ? "Tambah Alamat Baru" : "Pilih Alamat Pengiriman"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {isAddingNewAddress
-                        ? "Isi form di bawah untuk menambah alamat pengiriman baru"
-                        : "Pilih alamat pengiriman atau tambah alamat baru"}
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  {!isAddingNewAddress ? (
-                    <div className="space-y-4 mt-4">
-                      {/* Empty State for Users with No Addresses */}
-                      {addresses.length === 0 ? (
-                        <div className="text-center py-8 space-y-4">
-                          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <MapPin className="h-8 w-8 text-primary" />
-                          </div>
-                          <div className="space-y-2">
-                            <h3 className="font-semibold text-gray-900">Belum Ada Alamat</h3>
-                            <p className="text-sm text-gray-600 max-w-md mx-auto">
-                              Anda belum memiliki alamat pengiriman tersimpan. Tambahkan alamat pertama Anda untuk melanjutkan checkout.
-                            </p>
-                          </div>
-                          <Button
-                            className="mt-4"
-                            onClick={() => setIsAddingNewAddress(true)}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Tambah Alamat Pertama
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Address List */}
-                          {addresses.map((address) => (
-                            <Card
-                              key={address.id}
-                              className={`p-4 cursor-pointer transition-all ${
-                                selectedAddress?.id === address.id
-                                  ? "border-2 border-primary bg-primary/5"
-                                  : "hover:border-gray-400"
-                              }`}
-                              onClick={() => handleSelectAddress(address)}
-                            >
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline" className="font-semibold">
-                                  {address.label}
-                                </Badge>
-                                {address.isDefault && (
-                                  <Badge className="bg-primary text-white text-xs">
-                                    Default
-                                  </Badge>
-                                )}
-                                {selectedAddress?.id === address.id && (
-                                  <CheckCircle2 className="h-5 w-5 text-primary ml-auto" />
-                                )}
-                              </div>
-                              <p className="font-semibold text-gray-900">
-                                {address.recipientName}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {address.phoneNumber}
-                              </p>
-                              <p className="text-sm text-gray-700 mt-1">
-                                {address.fullAddress}
-                                <br />
-                                {address.district}, {address.city}, {address.province}{" "}
-                                {address.postalCode}
-                              </p>
-                            </Card>
-                          ))}
-
-                          {/* Add New Address Button */}
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setIsAddingNewAddress(true)}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Tambah Alamat Baru
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    /* New Address Form with react-hook-form + Zod */
-                    <Form {...addressForm}>
-                      <form
-                        onSubmit={addressForm.handleSubmit(handleAddNewAddress)}
-                        className="space-y-6 mt-4"
-                      >
-                        {/* Map Picker Section */}
-                        <div className="space-y-2">
-                          <DynamicAddressMapPicker
-                            onLocationSelect={handleLocationSelect}
-                            initialLocation={mapLocation || undefined}
-                          />
-                        </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={addressForm.control}
-                            name="label"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Label Alamat *</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="Rumah, Kantor, Gudang"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={addressForm.control}
-                            name="recipientName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Nama Penerima *</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Nama lengkap" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={addressForm.control}
-                          name="phoneNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nomor Telepon *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="08xxxxxxxxxx" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={addressForm.control}
-                          name="fullAddress"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Alamat Lengkap *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Jl. Nama Jalan No. XX, RT/RW"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                              <p className="text-xs text-gray-500">
-                                💡 Alamat sudah terisi otomatis dari peta. Anda bisa
-                                mengeditnya jika diperlukan.
-                              </p>
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <FormField
-                            control={addressForm.control}
-                            name="district"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Kecamatan *</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Kecamatan" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={addressForm.control}
-                            name="city"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Kota *</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Kota" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={addressForm.control}
-                            name="province"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Provinsi *</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Provinsi" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={addressForm.control}
-                          name="postalCode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Kode Pos *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="12345" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={addressForm.control}
-                          name="notes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Catatan (Opsional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Patokan atau ciri-ciri rumah"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="flex gap-3 pt-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => {
-                              setIsAddingNewAddress(false);
-                              addressForm.reset();
-                              setMapLocation(null);
-                            }}
-                          >
-                            Batal
-                          </Button>
-                          <Button type="submit" className="flex-1">
-                            Simpan Alamat
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  )}
-                </DialogContent>
-              </Dialog>
-            </div>
-          </Card>
-          )}
-
           {mappedCartItems.length === 0 ? (
             /* Empty Cart State */
             <Card className="p-12 text-center">
@@ -903,18 +363,9 @@ export default function CartPage() {
                     disabled={!canCheckout}
                     onClick={handleCheckout}
                   >
-                    Lanjut ke Pembayaran
+                    Lanjut ke Checkout
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
-
-                  {!selectedAddress && mappedCartItems.length > 0 && (
-                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-xs text-yellow-800 text-center">
-                        <AlertCircle className="h-4 w-4 inline mr-1" />
-                        Pilih alamat pengiriman untuk melanjutkan checkout
-                      </p>
-                    </div>
-                  )}
 
                   <Link href="/products">
                     <Button
@@ -929,8 +380,8 @@ export default function CartPage() {
                   {/* Info Box */}
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-900">
-                      <strong>💡 Info:</strong> Ongkos kirim dihitung berdasarkan
-                      jarak pengiriman. Biaya final akan dikonfirmasi saat checkout.
+                      <strong>💡 Info:</strong> Alamat pengiriman dan metode pembayaran 
+                      akan dipilih di halaman checkout.
                     </p>
                   </div>
                 </Card>

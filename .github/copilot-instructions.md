@@ -1328,6 +1328,59 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 - **Login**: NextAuth `signIn()` → CredentialsProvider → JWT → HTTP-only cookies
 - **Session**: 30-day JWT stored in HTTP-only cookies (secure, no localStorage)
 - **Protection**: 3-level (page, action, role-based)
+- **Data Strategy**: Static user info in session, dynamic data (addresses, cart, orders) via tRPC queries
+
+#### **Session Data Flow (3-Step Process)**
+
+```
+Step 1: authorize() → Query MongoDB, verify password, return user object
+Step 2: jwt() → Store user data in JWT token (HTTP-only cookie, 30 days)
+Step 3: session() → Populate session.user from JWT token (available in useSession())
+```
+
+**Important**: Session data comes from JWT token, NOT from database on every request. This means:
+- ✅ Fast access (no DB query per request)
+- ✅ Works even if DB is down
+- ❌ Data can be stale if user info changes in DB
+- ❌ Requires re-login to refresh session data
+
+#### **What to Store in Session vs Backend**
+
+**✅ Store in Session (JWT Token)** - Rarely changes:
+```typescript
+session.user = {
+  id: string;                // MongoDB _id
+  name: string;              // fullName from database
+  email: string;
+  username: string;
+  role: 'admin' | 'staff' | 'user';
+  phone: string;
+  isActive: boolean;
+}
+```
+
+**❌ DO NOT Store in Session** - Frequently changes:
+- `addresses` - User can add/edit/delete addresses → Use tRPC query instead
+- `cart` - Real-time cart items → Use Zustand + tRPC
+- `orders` - User order history → Use tRPC query
+- `notifications` - Real-time data → Use tRPC query
+
+**Why NOT addresses in session?**
+1. **Size**: JWT cookie limit 4KB, 5 addresses = ~1.5KB (40% of limit)
+2. **Freshness**: Session not auto-updated when user adds/edits address
+3. **Security**: Exposes all addresses in client-side cookie
+4. **CRUD**: Complex to sync session after mutations
+5. **Performance**: Loaded on every page even if not needed
+
+**Correct Pattern for Addresses**:
+```typescript
+// ✅ Query addresses only where needed (cart, checkout, profile)
+const { data: addresses } = trpc.user.getAddresses.useQuery();
+
+// After mutation, refetch for fresh data
+await addAddressMutation.mutateAsync({ ... });
+await refetch(); // ✅ Simple, always fresh
+```
 
 #### **Key Files**
 
@@ -1344,9 +1397,10 @@ src/
 │   ├── RequireAuth.tsx              # Action-level protection
 │   └── layouts/Navbar.tsx           # User menu with logout
 ├── server/routers/
-│   └── auth.ts                      # tRPC register endpoint only
+│   ├── auth.ts                      # tRPC register endpoint only
+│   └── user.ts                      # tRPC addresses CRUD (getAddresses, addAddress, etc.)
 └── types/
-    └── next-auth.d.ts               # Custom session fields
+    └── next-auth.d.ts               # Custom session fields (NO addresses!)
 ```
 
 #### **Usage Patterns**
@@ -1357,12 +1411,31 @@ src/
 import { useSession } from "next-auth/react";
 
 const { data: session, status } = useSession();
-const user = session?.user; // { id, name, email, username, role, phone, address, isActive }
+const user = session?.user; // { id, name, email, username, role, phone, isActive }
 const isLoading = status === "loading";
 const isAuthenticated = status === "authenticated";
 ```
 
-**2. Protect Page (Redirect if Not Logged In)**:
+**2. Get User Addresses (Only Where Needed)**:
+
+```typescript
+// ✅ CORRECT: Query via tRPC in cart, checkout, profile pages
+import { trpc } from "@/utils/trpc";
+
+const { data: addresses, isLoading, refetch } = trpc.user.getAddresses.useQuery();
+
+// After add/update/delete address
+await addAddressMutation.mutateAsync({ ... });
+await refetch(); // Fetch fresh data
+```
+
+**❌ WRONG Pattern**:
+```typescript
+// Don't try to get addresses from session
+const addresses = session?.user?.addresses; // ❌ Not in session!
+```
+
+**3. Protect Page (Redirect if Not Logged In)**:
 
 ```typescript
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -1504,6 +1577,9 @@ import { UserCircle } from 'lucide-react';
 
 #### **Custom Session Fields**
 
+```
+
+**Structure** (Minimal, static data only):
 ```typescript
 session.user = {
   id: string;                // MongoDB _id
@@ -1512,22 +1588,14 @@ session.user = {
   username: string;
   role: 'admin' | 'staff' | 'user';
   phone: string;
-  addresses: Array<{         // Array of shipping addresses
-    id: string;
-    label: string;
-    recipientName: string;
-    phoneNumber: string;
-    fullAddress: string;
-    district: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    notes?: string;
-    isDefault: boolean;
-  }>;
   isActive: boolean;
 }
 ```
+
+**NOT included** (query via tRPC instead):
+- ❌ `addresses` - Query with `trpc.user.getAddresses.useQuery()`
+- ❌ `cart` - Zustand store + `trpc.cart.getCart.useQuery()`
+- ❌ `orders` - Query with `trpc.orders.getUserOrders.useQuery()`
 
 #### **Security Features**
 
@@ -2998,6 +3066,116 @@ export default function AdminProductsPage() {
 - ✅ **Handle All States**: Unauthenticated + wrong role + loading
 - ✅ **DRY Principle**: 1 protection point vs 16+ pages
 
+### Session vs Backend Data Management (CRITICAL)
+
+**Philosophy**: Session stores **static user identity**, backend queries **dynamic user data**.
+
+#### **✅ Store in Session (JWT Token)**
+
+Data yang **jarang berubah** dan **dibutuhkan di banyak halaman**:
+
+```typescript
+session.user = {
+  id: string;                // User identity
+  email: string;
+  name: string;              // Display name
+  username: string;
+  role: 'admin' | 'staff' | 'user';  // Authorization
+  phone: string;
+  isActive: boolean;         // Account status
+}
+```
+
+**Benefits**:
+- ✅ No DB query per request (fast)
+- ✅ Available immediately after login
+- ✅ Works even if DB is down
+- ✅ JWT token size < 500 bytes (efficient)
+
+#### **❌ DO NOT Store in Session**
+
+Data yang **sering berubah** atau **hanya dibutuhkan di beberapa halaman**:
+
+```typescript
+// ❌ WRONG: Don't store these in session
+session.user = {
+  addresses: [...],          // User can add/edit/delete → Use tRPC
+  cart: [...],              // Real-time shopping cart → Use Zustand + tRPC
+  orders: [...],            // Order history → Use tRPC query
+  notifications: [...],     // Real-time updates → Use tRPC query
+  wishlist: [...],          // Can change anytime → Use tRPC query
+}
+```
+
+**Problems with storing dynamic data in session**:
+1. **Stale Data** - Session not auto-updated when DB changes
+2. **Size Bloat** - JWT cookie limit 4KB (5 addresses = 1.5KB = 40%)
+3. **Security** - Exposes private data in client cookie
+4. **Complex Sync** - Hard to update session after mutations
+5. **Wasted Bandwidth** - Loaded on every page even if not needed
+
+#### **Correct Patterns**
+
+**Pattern 1: Query Where Needed**
+```typescript
+// ✅ CORRECT: Only load addresses in cart, checkout, profile
+// src/pages/cart.tsx
+const { data: addresses, refetch } = trpc.user.getAddresses.useQuery();
+
+// After mutation
+await addAddressMutation.mutateAsync({ ... });
+await refetch(); // Simple, always fresh
+```
+
+**Pattern 2: Optimistic Updates**
+```typescript
+// ✅ CORRECT: Update UI immediately, sync with backend
+const utils = trpc.useContext();
+
+await addAddressMutation.mutateAsync(newAddress, {
+  onSuccess: () => {
+    utils.user.getAddresses.invalidate(); // Refetch from backend
+  }
+});
+```
+
+**Pattern 3: Local + Remote State**
+```typescript
+// ✅ CORRECT: Zustand for UI state, tRPC for persistence
+// Guest cart: Zustand + LocalStorage
+// Logged in cart: Zustand + tRPC + MongoDB
+const cartItems = useCartStore(state => state.items);
+const { data: dbCart } = trpc.cart.getCart.useQuery(
+  undefined, 
+  { enabled: isLoggedIn }
+);
+```
+
+#### **When to Use What**
+
+| Data Type | Storage | When to Use |
+|-----------|---------|-------------|
+| User ID, email, role | Session (JWT) | Always - needed for auth |
+| Addresses | Backend (tRPC) | Cart, checkout, profile pages |
+| Cart items | Zustand + Backend | Cart page, navbar badge |
+| Orders | Backend (tRPC) | Orders page, order detail |
+| Product data | Backend (tRPC) | Products page, search results |
+| Dashboard stats | Backend (tRPC) | Admin dashboard only |
+
+#### **Migration Checklist**
+
+If you have dynamic data in session (like addresses), remove it:
+
+1. ✅ Remove from `authorize()` return in `[...nextauth].ts`
+2. ✅ Remove from `jwt()` callback
+3. ✅ Remove from `session()` callback
+4. ✅ Remove from type definitions in `next-auth.d.ts`
+5. ✅ Create tRPC query: `trpc.user.getAddresses.useQuery()`
+6. ✅ Update components to use tRPC query instead of session
+7. ✅ Add refetch after mutations for fresh data
+
+**Result**: JWT token size reduced ~70%, data always fresh, better UX! 🚀
+
 ### DON'Ts ❌ (Common Mistakes)
 
 1. **Never add useRequireRole to individual admin pages** (AdminLayout handles it)
@@ -3020,3 +3198,5 @@ export default function AdminProductsPage() {
 18. **Never skip loading/redirect checks in protected pages** (always show spinner during auth check AND redirect to prevent flash)
 19. **Never use persistent password toggle** (use hold-to-show for security)
 20. **Never place helper links in label row** (place below input for cleaner UX)
+21. **Never store dynamic data in session** (addresses, cart, orders → use tRPC queries)
+22. **Never let JWT token exceed 2KB** (keep session lean with only identity data)
