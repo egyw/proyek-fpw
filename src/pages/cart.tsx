@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/form";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
@@ -99,6 +100,19 @@ const addressSchema = z.object({
 
 type AddressFormValues = z.infer<typeof addressSchema>;
 
+// Dynamic import for AddressMapPicker to avoid SSR issues with Leaflet
+const DynamicAddressMapPicker = dynamic(
+  () => import("@/components/AddressMapPicker"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-80 bg-gray-100 rounded-lg flex items-center justify-center">
+        <p className="text-gray-500">Memuat peta...</p>
+      </div>
+    ),
+  }
+);
+
 export default function CartPage() {
   const router = useRouter();
   const { status } = useSession();
@@ -139,6 +153,27 @@ export default function CartPage() {
 
   // Use database cart if logged in, otherwise use Zustand
   const cartItems = isLoggedIn && dbCart ? dbCart.items : guestCartItems;
+
+  // Get user addresses from database
+  const { data: userAddresses, refetch: refetchAddresses } = trpc.user.getAddresses.useQuery(
+    undefined,
+    { enabled: isLoggedIn }
+  );
+
+  // Add address mutation
+  const addAddressMutation = trpc.user.addAddress.useMutation({
+    onSuccess: () => {
+      refetchAddresses();
+      toast.success('Alamat Berhasil Ditambahkan', {
+        description: 'Alamat pengiriman baru telah disimpan ke database.',
+      });
+    },
+    onError: (error) => {
+      toast.error('Gagal Menambahkan Alamat', {
+        description: error.message,
+      });
+    },
+  });
 
   // Map cart items to match CartItem interface
   const mappedCartItems: CartItem[] = cartItems.map((item) => ({
@@ -194,43 +229,31 @@ export default function CartPage() {
     return mappedCartItems.reduce((total, item) => total + calculateItemTotal(item), 0);
   };
 
-  // TODO: Replace with user data from authentication/database
-  // Expected API: trpc.user.getAddresses.useQuery()
-  // Output: Address[]
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: "addr-1",
-      label: "Rumah",
-      recipientName: "John Doe",
-      phoneNumber: "081234567890",
-      fullAddress: "Jl. Merdeka No. 123, RT 01/RW 05",
-      district: "Lowokwaru",
-      city: "Malang",
-      province: "Jawa Timur",
-      postalCode: "65141",
-      notes: "Rumah cat hijau, pagar putih",
-      isDefault: true,
-    },
-    {
-      id: "addr-2",
-      label: "Kantor",
-      recipientName: "John Doe",
-      phoneNumber: "081234567890",
-      fullAddress: "Jl. Soekarno Hatta No. 456, Gedung B Lantai 3",
-      district: "Blimbing",
-      city: "Malang",
-      province: "Jawa Timur",
-      postalCode: "65126",
-      isDefault: false,
-    },
-  ]);
+  const shippingCost = 50000; // Flat shipping cost
+  const grandTotal = calculateSubtotal() + shippingCost;
 
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(
-    addresses.find((addr) => addr.isDefault) || null
-  );
+  // ✅ No dummy address for guest - shipping section will be hidden
+  // Logged in users get addresses from database (empty array if none)
+  const addresses = useMemo(() => {
+    return isLoggedIn ? (userAddresses?.addresses || []) : [];
+  }, [isLoggedIn, userAddresses?.addresses]);
+
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+
+  // Set default address when addresses load
+  useEffect(() => {
+    if (addresses && addresses.length > 0 && !selectedAddress) {
+      const defaultAddr = addresses.find((addr) => addr.isDefault) || addresses[0];
+      setSelectedAddress(defaultAddr);
+    }
+  }, [addresses, selectedAddress]);
 
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [mapLocation, setMapLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   // Address form with react-hook-form + Zod
   const addressForm = useForm<AddressFormValues>({
@@ -253,34 +276,68 @@ export default function CartPage() {
     setIsAddressDialogOpen(false);
   };
 
-  const handleAddNewAddress = (data: AddressFormValues) => {
-    // TODO: Implement save to database
-    // Expected API: trpc.user.addAddress.useMutation()
-    const address: Address = {
-      id: `addr-${Date.now()}`,
-      label: data.label,
-      recipientName: data.recipientName,
-      phoneNumber: data.phoneNumber,
-      fullAddress: data.fullAddress,
-      district: data.district,
-      city: data.city,
-      province: data.province,
-      postalCode: data.postalCode,
-      notes: data.notes || "",
-      isDefault: addresses.length === 0,
-    };
+  const handleAddNewAddress = async (data: AddressFormValues) => {
+    if (!isLoggedIn) {
+      toast.error('Login Diperlukan', {
+        description: 'Silakan login untuk menyimpan alamat.',
+      });
+      return;
+    }
 
-    setAddresses([...addresses, address]);
-    setSelectedAddress(address);
-    setIsAddingNewAddress(false);
-    setIsAddressDialogOpen(false);
+    try {
+      // Save to database via tRPC
+      const result = await addAddressMutation.mutateAsync({
+        label: data.label,
+        recipientName: data.recipientName,
+        phoneNumber: data.phoneNumber,
+        fullAddress: data.fullAddress,
+        district: data.district,
+        city: data.city,
+        province: data.province,
+        postalCode: data.postalCode,
+        notes: data.notes,
+        latitude: mapLocation?.lat,
+        longitude: mapLocation?.lng,
+      });
 
-    // Reset form
-    addressForm.reset();
+      // Set as selected address
+      setSelectedAddress(result.address);
+      setIsAddingNewAddress(false);
+      setIsAddressDialogOpen(false);
+
+      // Reset form and map location
+      addressForm.reset();
+      setMapLocation(null);
+    } catch (error) {
+      // Error already handled by mutation onError
+      console.error('Failed to add address:', error);
+    }
   };
 
-  const shippingCost = 50000; // Flat shipping cost
-  const grandTotal = calculateSubtotal() + shippingCost;
+  // Handle location selection from map
+  const handleLocationSelect = (
+    location: { lat: number; lng: number },
+    address: {
+      fullAddress: string;
+      district: string;
+      city: string;
+      province: string;
+      postalCode: string;
+    }
+  ) => {
+    setMapLocation(location);
+
+    // Auto-fill form fields from map selection
+    addressForm.setValue("fullAddress", address.fullAddress);
+    addressForm.setValue("district", address.district);
+    addressForm.setValue("city", address.city);
+    addressForm.setValue("province", address.province);
+    addressForm.setValue("postalCode", address.postalCode);
+
+    toast.success("Lokasi Dipilih", {
+      description: "Alamat berhasil diambil dari peta. Silakan periksa dan lengkapi data.",
+    });
+  };
 
   // Validation: Cannot checkout without address
   const canCheckout = selectedAddress !== null && mappedCartItems.length > 0;
@@ -411,62 +468,96 @@ export default function CartPage() {
 
                   {!isAddingNewAddress ? (
                     <div className="space-y-4 mt-4">
-                      {/* Address List */}
-                      {addresses.map((address) => (
-                        <Card
-                          key={address.id}
-                          className={`p-4 cursor-pointer transition-all ${
-                            selectedAddress?.id === address.id
-                              ? "border-2 border-primary bg-primary/5"
-                              : "hover:border-gray-400"
-                          }`}
-                          onClick={() => handleSelectAddress(address)}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="font-semibold">
-                              {address.label}
-                            </Badge>
-                            {address.isDefault && (
-                              <Badge className="bg-primary text-white text-xs">
-                                Default
-                              </Badge>
-                            )}
-                            {selectedAddress?.id === address.id && (
-                              <CheckCircle2 className="h-5 w-5 text-primary ml-auto" />
-                            )}
+                      {/* Empty State for Users with No Addresses */}
+                      {addresses.length === 0 ? (
+                        <div className="text-center py-8 space-y-4">
+                          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                            <MapPin className="h-8 w-8 text-primary" />
                           </div>
-                          <p className="font-semibold text-gray-900">
-                            {address.recipientName}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {address.phoneNumber}
-                          </p>
-                          <p className="text-sm text-gray-700 mt-1">
-                            {address.fullAddress}
-                            <br />
-                            {address.district}, {address.city}, {address.province}{" "}
-                            {address.postalCode}
-                          </p>
-                        </Card>
-                      ))}
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-gray-900">Belum Ada Alamat</h3>
+                            <p className="text-sm text-gray-600 max-w-md mx-auto">
+                              Anda belum memiliki alamat pengiriman tersimpan. Tambahkan alamat pertama Anda untuk melanjutkan checkout.
+                            </p>
+                          </div>
+                          <Button
+                            className="mt-4"
+                            onClick={() => setIsAddingNewAddress(true)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Tambah Alamat Pertama
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Address List */}
+                          {addresses.map((address) => (
+                            <Card
+                              key={address.id}
+                              className={`p-4 cursor-pointer transition-all ${
+                                selectedAddress?.id === address.id
+                                  ? "border-2 border-primary bg-primary/5"
+                                  : "hover:border-gray-400"
+                              }`}
+                              onClick={() => handleSelectAddress(address)}
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="font-semibold">
+                                  {address.label}
+                                </Badge>
+                                {address.isDefault && (
+                                  <Badge className="bg-primary text-white text-xs">
+                                    Default
+                                  </Badge>
+                                )}
+                                {selectedAddress?.id === address.id && (
+                                  <CheckCircle2 className="h-5 w-5 text-primary ml-auto" />
+                                )}
+                              </div>
+                              <p className="font-semibold text-gray-900">
+                                {address.recipientName}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {address.phoneNumber}
+                              </p>
+                              <p className="text-sm text-gray-700 mt-1">
+                                {address.fullAddress}
+                                <br />
+                                {address.district}, {address.city}, {address.province}{" "}
+                                {address.postalCode}
+                              </p>
+                            </Card>
+                          ))}
 
-                      {/* Add New Address Button */}
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setIsAddingNewAddress(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah Alamat Baru
-                      </Button>
+                          {/* Add New Address Button */}
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setIsAddingNewAddress(true)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Tambah Alamat Baru
+                          </Button>
+                        </>
+                      )}
                     </div>
                   ) : (
                     /* New Address Form with react-hook-form + Zod */
                     <Form {...addressForm}>
                       <form
                         onSubmit={addressForm.handleSubmit(handleAddNewAddress)}
-                        className="space-y-4 mt-4"
+                        className="space-y-6 mt-4"
                       >
+                        {/* Map Picker Section */}
+                        <div className="space-y-2">
+                          <DynamicAddressMapPicker
+                            onLocationSelect={handleLocationSelect}
+                            initialLocation={mapLocation || undefined}
+                          />
+                        </div>
+
+                        <Separator />
+
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={addressForm.control}
@@ -526,11 +617,10 @@ export default function CartPage() {
                                 />
                               </FormControl>
                               <FormMessage />
-                              {/* TODO: Google Maps API Integration */}
-                              {/* <Button variant="outline" size="sm" className="mt-2">
-                                <MapPin className="h-4 w-4 mr-2" />
-                                Pilih dari Peta (Google Maps)
-                              </Button> */}
+                              <p className="text-xs text-gray-500">
+                                💡 Alamat sudah terisi otomatis dari peta. Anda bisa
+                                mengeditnya jika diperlukan.
+                              </p>
                             </FormItem>
                           )}
                         />
@@ -616,6 +706,7 @@ export default function CartPage() {
                             onClick={() => {
                               setIsAddingNewAddress(false);
                               addressForm.reset();
+                              setMapLocation(null);
                             }}
                           >
                             Batal

@@ -13,6 +13,8 @@ export interface IAddress {
   postalCode: string;
   notes?: string;
   isDefault: boolean;
+  latitude?: number; // For map integration
+  longitude?: number; // For map integration
 }
 
 // Interface untuk TypeScript
@@ -125,6 +127,14 @@ const UserSchema = new Schema<IUser>(
         isDefault: {
           type: Boolean,
           default: false,
+        },
+        latitude: {
+          type: Number,
+          required: false,
+        },
+        longitude: {
+          type: Number,
+          required: false,
         },
       },
     ],
