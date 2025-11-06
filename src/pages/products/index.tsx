@@ -31,7 +31,7 @@ import { useCartStore } from "@/store/cartStore";
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession(); // ✅ Removed unused 'session' variable
   const isLoggedIn = status === "authenticated";
   
   // Cart store
