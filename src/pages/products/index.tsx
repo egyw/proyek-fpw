@@ -37,8 +37,16 @@ export default function ProductsPage() {
   // Cart store
   const addItem = useCartStore((state) => state.addItem);
   
+  // tRPC utils for cache invalidation
+  const utils = trpc.useContext();
+  
   // tRPC mutations for logged in users
-  const addToCartMutation = trpc.cart.addItem.useMutation();
+  const addToCartMutation = trpc.cart.addItem.useMutation({
+    onSuccess: () => {
+      // Invalidate cart query to trigger re-fetch and update badge
+      utils.cart.getCart.invalidate();
+    },
+  });
   
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string>("");

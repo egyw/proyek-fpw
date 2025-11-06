@@ -290,15 +290,18 @@ export const cartRouter = router({
         } else {
           // Merge guest items with existing cart
           input.guestItems.forEach((guestItem) => {
+            // Check if item with same productId AND unit exists
             const existingItemIndex = cart!.items.findIndex(
-              (item: ICartItem) => item.productId.toString() === guestItem.productId
+              (item: ICartItem) => 
+                item.productId.toString() === guestItem.productId &&
+                item.unit === guestItem.unit // Same product + same unit = merge
             );
 
             if (existingItemIndex > -1) {
-              // Item exists, increase quantity
+              // Item with same product and unit exists, increase quantity
               cart!.items[existingItemIndex].quantity += guestItem.quantity;
             } else {
-              // New item, add to cart
+              // New item (different product or different unit), add to cart
               cart!.items.push({
                 productId: new mongoose.Types.ObjectId(guestItem.productId),
                 name: guestItem.name,

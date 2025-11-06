@@ -24,7 +24,6 @@ export default function Navbar() {
 
   // Guest cart (Zustand)
   const guestCartItems = useCartStore((state) => state.items);
-  const getGuestTotalItems = useCartStore((state) => state.getTotalItems);
 
   // Database cart (tRPC) - only query if logged in
   const { data: dbCart } = trpc.cart.getCart.useQuery(
@@ -45,10 +44,11 @@ export default function Navbar() {
       const dbTotalItems = dbCart.items.reduce((sum, item) => sum + item.quantity, 0);
       setCartItemCount(dbTotalItems);
     } else {
-      // Guest: use Zustand cart
-      setCartItemCount(getGuestTotalItems());
+      // Guest: use Zustand cart - compute directly from items
+      const guestTotalItems = guestCartItems.reduce((sum, item) => sum + item.quantity, 0);
+      setCartItemCount(guestTotalItems);
     }
-  }, [isLoggedIn, dbCart, getGuestTotalItems, guestCartItems]); // Update when cart changes
+  }, [isLoggedIn, dbCart, guestCartItems]); // Simplified: only depend on items array
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });

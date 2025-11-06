@@ -2158,6 +2158,526 @@ const handleCheckout = () => {
 7. **Zustand persist middleware handles serialization** automatically
 8. **Merge dialog uses shadcn Dialog** - Shows cart preview with 2 options (Simpan/Hapus)
 
+#### Unit Separation Feature (November 2025)
+
+**Status**: ✅ Production-ready, fully implemented across entire cart stack
+
+**Complete Guide**: Cart items are separated by unit - same product purchased in different units appear as distinct cart items.
+
+**Why This Feature Exists**:
+
+Building materials can be purchased in multiple units (e.g., cement in SAK, KG, or TON). When a customer adds:
+- 2 Semen Gresik in SAK
+- 50 Semen Gresik in KG
+
+These should appear as **2 separate cart items**, NOT merged into one item. This is because:
+1. **Different Purchase Context** - Customer deliberately chose different units for different needs
+2. **Price Transparency** - Each item shows clear price per unit purchased
+3. **Flexibility** - Customer can adjust/remove items by unit independently
+4. **UX Clarity** - Cart displays exactly what customer added, no hidden conversions
+
+**Architecture: Composite Key System**
+
+Instead of identifying cart items by `productId` alone, the system uses a **composite key**:
+
+```typescript
+// Cart Item Identifier
+const itemId = `${productId}-${unit}`;
+
+// Example:
+// Product ID: 68b8342bd2788dc4d9e608c8 (Semen Gresik)
+// Customer adds:
+//   - Item 1: "68b8342bd2788dc4d9e608c8-sak" → 2 sak @ Rp 65,000
+//   - Item 2: "68b8342bd2788dc4d9e608c8-kg" → 50 kg @ Rp 1,300
+```
+
+**Key Changes Across Cart Stack**:
+
+**1. CartItem Interface** (Updated):
+
+```typescript
+// src/store/cartStore.ts & src/models/Cart.ts
+export interface CartItem {
+  productId: string;      // MongoDB ObjectId as string
+  name: string;
+  slug: string;
+  price: number;          // Price per unit (NOT converted)
+  quantity: number;       // Quantity in user's selected unit (supports decimals)
+  unit: string;           // ⭐ User's selected unit (e.g., "kg", "sak", "meter")
+  image: string;
+  stock: number;
+  category: string;
+}
+
+// ⚠️ IMPORTANT: `unit` field is what user selected, NOT supplier's unit
+// ⚠️ IMPORTANT: `price` is per user's unit (calculated by UnitConverter)
+// ⚠️ IMPORTANT: `quantity` can be decimal (e.g., 0.25 for 1/4 meter)
+```
+
+**2. UnitConverter Integration** (Critical):
+
+```tsx
+// src/components/UnitConverter.tsx
+// Callback signature MUST send user's selected unit
+<UnitConverter
+  category={product.category}
+  productUnit={product.unit}              // Supplier's unit (locked)
+  productPrice={product.price}
+  productStock={product.stock}
+  availableUnits={product.availableUnits}
+  productAttributes={product.attributes}
+  onAddToCart={(quantity, unit, totalPrice) => {
+    // ⭐ quantity = in USER'S SELECTED UNIT (e.g., 50 kg)
+    // ⭐ unit = USER'S SELECTED UNIT (e.g., "kg")
+    // ⭐ totalPrice = calculated price for this quantity
+    
+    // ❌ WRONG: Don't convert to supplier's unit here
+    // ✅ CORRECT: Pass exactly what user selected
+    handleAddToCart(quantity, unit, totalPrice);
+  }}
+/>
+```
+
+**3. Zustand Store Operations** (Updated Signatures):
+
+```typescript
+// src/store/cartStore.ts
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      
+      // ⭐ addItem: Checks productId + unit before merging
+      addItem: (item) => {
+        const existingItem = get().items.find(
+          i => i.productId === item.productId && i.unit === item.unit
+        );
+        if (existingItem) {
+          // Same product + same unit → Merge quantities
+          return {
+            items: get().items.map(i =>
+              i.productId === item.productId && i.unit === item.unit
+                ? { ...i, quantity: i.quantity + item.quantity }
+                : i
+            )
+          };
+        }
+        // Different product OR different unit → Add as new item
+        return { items: [...get().items, item] };
+      },
+      
+      // ⭐ removeItem: Requires BOTH productId AND unit
+      removeItem: (productId, unit) => ({
+        items: get().items.filter(
+          i => !(i.productId === productId && i.unit === unit)
+        )
+      }),
+      
+      // ⭐ updateQuantity: Requires BOTH productId AND unit
+      updateQuantity: (productId, unit, quantity) => {
+        if (quantity <= 0) {
+          return { 
+            items: get().items.filter(
+              i => !(i.productId === productId && i.unit === unit)
+            ) 
+          };
+        }
+        return {
+          items: get().items.map(i =>
+            i.productId === productId && i.unit === unit 
+              ? { ...i, quantity } 
+              : i
+          )
+        };
+      },
+      
+      clearCart: () => ({ items: [] }),
+      getTotalItems: () =>
+        get().items.reduce((total, item) => total + item.quantity, 0),
+      getTotalPrice: () =>
+        get().items.reduce((total, item) => 
+          total + (item.price * item.quantity), 0
+        ),
+    }),
+    { name: 'cart-storage' }
+  )
+);
+```
+
+**4. tRPC Backend Procedures** (Updated Schema & Logic):
+
+```typescript
+// src/server/routers/cart.ts
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+
+// ⭐ CartItem schema with unit field
+const cartItemSchema = z.object({
+  productId: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  price: z.number().positive(),
+  quantity: z.number().min(0.001), // ⭐ Allow decimals (e.g., 0.25 meter)
+  unit: z.string(),                 // ⭐ User's selected unit
+  image: z.string(),
+  stock: z.number(),
+  category: z.string(),
+});
+
+export const cartRouter = router({
+  // ⭐ addItem: Find by productId + unit
+  addItem: protectedProcedure
+    .input(cartItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        let cart = await Cart.findOne({ userId: ctx.user.id });
+        
+        if (!cart) {
+          cart = new Cart({ userId: ctx.user.id, items: [input] });
+        } else {
+          const existingItemIndex = cart.items.findIndex(
+            (item) => 
+              item.productId.toString() === input.productId && 
+              item.unit === input.unit // ⭐ Check unit too
+          );
+          
+          if (existingItemIndex > -1) {
+            // Same product + same unit → Merge
+            cart.items[existingItemIndex].quantity += input.quantity;
+          } else {
+            // Different product OR different unit → Add new
+            cart.items.push(input);
+          }
+        }
+        
+        await cart.save();
+        return { success: true, items: cart.items };
+      } catch (error) {
+        console.error("[addItem] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add item to cart",
+          cause: error,
+        });
+      }
+    }),
+  
+  // ⭐ updateQuantity: Input includes unit
+  updateQuantity: protectedProcedure
+    .input(z.object({
+      productId: z.string(),
+      unit: z.string(),     // ⭐ Unit parameter required
+      quantity: z.number().min(0.001),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const cart = await Cart.findOne({ userId: ctx.user.id });
+        if (!cart) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cart not found" });
+        }
+        
+        const itemIndex = cart.items.findIndex(
+          (item) => 
+            item.productId.toString() === input.productId && 
+            item.unit === input.unit // ⭐ Check unit
+        );
+        
+        if (itemIndex === -1) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Item not found" });
+        }
+        
+        cart.items[itemIndex].quantity = input.quantity;
+        await cart.save();
+        
+        return { success: true, items: cart.items };
+      } catch (error) {
+        console.error("[updateQuantity] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update quantity",
+          cause: error,
+        });
+      }
+    }),
+  
+  // ⭐ removeItem: Input includes unit
+  removeItem: protectedProcedure
+    .input(z.object({
+      productId: z.string(),
+      unit: z.string(),     // ⭐ Unit parameter required
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const cart = await Cart.findOne({ userId: ctx.user.id });
+        if (!cart) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cart not found" });
+        }
+        
+        cart.items = cart.items.filter(
+          (item) => 
+            !(item.productId.toString() === input.productId && 
+              item.unit === input.unit) // ⭐ Check both
+        );
+        
+        await cart.save();
+        return { success: true, items: cart.items };
+      } catch (error) {
+        console.error("[removeItem] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to remove item",
+          cause: error,
+        });
+      }
+    }),
+  
+  // ⭐ mergeCart: Check productId + unit (CRITICAL for guest login)
+  mergeCart: protectedProcedure
+    .input(z.object({ 
+      guestItems: z.array(cartItemSchema) 
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        let cart = await Cart.findOne({ userId: ctx.user.id });
+        
+        if (!cart) {
+          cart = new Cart({
+            userId: ctx.user.id,
+            items: input.guestItems
+          });
+        } else {
+          input.guestItems.forEach((guestItem) => {
+            const existingItemIndex = cart.items.findIndex(
+              (item) => 
+                item.productId.toString() === guestItem.productId && 
+                item.unit === guestItem.unit // ⭐ MUST check unit
+            );
+            
+            if (existingItemIndex > -1) {
+              // Same product + same unit → Combine quantities
+              cart.items[existingItemIndex].quantity += guestItem.quantity;
+            } else {
+              // Different product OR different unit → Add as new
+              cart.items.push(guestItem);
+            }
+          });
+        }
+        
+        await cart.save();
+        return { success: true, items: cart.items };
+      } catch (error) {
+        console.error("[mergeCart] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to merge cart",
+          cause: error,
+        });
+      }
+    }),
+});
+```
+
+**5. Cart Page Implementation** (Composite ID Parsing):
+
+```tsx
+// src/pages/cart.tsx
+import { useCartStore } from "@/store/cartStore";
+
+export default function CartPage() {
+  // Guest cart
+  const guestCartItems = useCartStore((state) => state.items);
+  const removeGuestItem = useCartStore((state) => state.removeItem);
+  const updateGuestQuantity = useCartStore((state) => state.updateQuantity);
+  
+  // Logged-in cart
+  const { data: dbCart } = trpc.cart.getCart.useQuery();
+  const removeDbItemMutation = trpc.cart.removeItem.useMutation();
+  const updateDbQuantityMutation = trpc.cart.updateQuantity.useMutation();
+  
+  const cartItems = isLoggedIn ? (dbCart?.items || []) : guestCartItems;
+  
+  return (
+    <div>
+      {cartItems.map((item) => {
+        // ⭐ Create composite ID for React key
+        const itemId = `${item.productId}-${item.unit}`;
+        
+        return (
+          <div key={itemId}>
+            <h3>{item.name}</h3>
+            <p>Unit: {item.unit.toUpperCase()}</p>
+            <p>Harga: {formatCurrency(item.price)} / {item.unit}</p>
+            
+            {/* Update quantity */}
+            <Button
+              onClick={() => {
+                if (isLoggedIn) {
+                  updateDbQuantityMutation.mutate({
+                    productId: item.productId,
+                    unit: item.unit,  // ⭐ Send unit parameter
+                    quantity: item.quantity + 1,
+                  });
+                } else {
+                  updateGuestQuantity(
+                    item.productId, 
+                    item.unit,        // ⭐ Send unit parameter
+                    item.quantity + 1
+                  );
+                }
+              }}
+            >
+              +
+            </Button>
+            
+            {/* Remove item */}
+            <Button
+              onClick={() => {
+                if (isLoggedIn) {
+                  removeDbItemMutation.mutate({
+                    productId: item.productId,
+                    unit: item.unit,  // ⭐ Send unit parameter
+                  });
+                } else {
+                  removeGuestItem(
+                    item.productId, 
+                    item.unit         // ⭐ Send unit parameter
+                  );
+                }
+              }}
+            >
+              Hapus
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+```
+
+**6. Product Detail Add to Cart** (Send User's Selected Unit):
+
+```tsx
+// src/pages/products/[slug].tsx
+const handleAddToCart = async (quantity: number, unit: string, totalPrice: number) => {
+  const cartItem: CartItem = {
+    productId: product._id.$oid,
+    name: product.name,
+    slug: product.slug,
+    price: totalPrice / quantity,  // Price per user's unit
+    quantity: quantity,            // Quantity in user's unit
+    unit: unit,                    // ⭐ User's selected unit (NOT supplier unit)
+    image: product.images[0],
+    stock: product.stock,
+    category: product.category,
+  };
+
+  if (isLoggedIn) {
+    await addToCartMutation.mutateAsync(cartItem);
+    await utils.cart.getCart.invalidate(); // ⭐ Update badge
+  } else {
+    addItem(cartItem);
+  }
+
+  toast.success(`${product.name} (${quantity} ${unit.toUpperCase()}) ditambahkan ke keranjang`);
+};
+
+// UnitConverter usage
+<UnitConverter
+  category={product.category}
+  productUnit={product.unit}
+  productPrice={discountPrice}
+  productStock={product.stock}
+  availableUnits={product.availableUnits}
+  productAttributes={product.attributes as Record<string, string | number>}
+  onAddToCart={handleAddToCart}  // ⭐ Receives (quantity, userSelectedUnit, totalPrice)
+/>
+```
+
+**Merge Scenarios (Guest Login)**:
+
+**Example 1: Same Product, Different Units**
+```
+Guest LocalStorage:
+  - Semen Gresik (2 sak) → ID: "68b...8c8-sak"
+  - Semen Gresik (50 kg) → ID: "68b...8c8-kg"
+
+Database Cart (before login): (empty)
+
+After Merge →
+Database Cart:
+  - Semen Gresik (2 sak) → Separate item
+  - Semen Gresik (50 kg) → Separate item
+
+LocalStorage: (cleared)
+```
+
+**Example 2: Same Product + Unit, Existing Cart**
+```
+Guest LocalStorage:
+  - Semen Gresik (2 sak)
+
+Database Cart (before login):
+  - Semen Gresik (3 sak)
+  - Besi 10mm (5 batang)
+
+After Merge →
+Database Cart:
+  - Semen Gresik (5 sak)  ← 3 + 2 = 5 (quantities combined!)
+  - Besi 10mm (5 batang)  ← unchanged
+
+LocalStorage: (cleared)
+```
+
+**Example 3: Same Product, Different Units, Existing Cart**
+```
+Guest LocalStorage:
+  - Semen Gresik (50 kg)
+
+Database Cart (before login):
+  - Semen Gresik (3 sak)
+  - Besi 10mm (5 batang)
+
+After Merge →
+Database Cart:
+  - Semen Gresik (3 sak)   ← unchanged (different unit)
+  - Besi 10mm (5 batang)   ← unchanged
+  - Semen Gresik (50 kg)   ← NEW item (different unit)
+
+LocalStorage: (cleared)
+```
+
+**Critical Implementation Notes**:
+
+1. **ALWAYS use composite key** - Check both `productId` AND `unit` in all operations
+2. **UnitConverter MUST send user's selected unit** - NOT converted to supplier unit
+3. **Decimal quantities supported** - Schema min: 0.001 (e.g., 0.25 meter)
+4. **Merge logic checks unit** - Same product with different units = separate items
+5. **Price is per user's unit** - NOT per supplier's unit (UnitConverter calculates)
+6. **Cart badge invalidation** - Call `utils.cart.getCart.invalidate()` after mutations
+7. **Composite ID for React keys** - `${productId}-${unit}` prevents key conflicts
+8. **Toast notifications show unit** - `${name} (${qty} ${UNIT}) ditambahkan`
+
+**Benefits of Unit Separation**:
+
+- ✅ **Clear Purchase Intent** - Cart reflects exactly what customer added
+- ✅ **Independent Management** - Adjust/remove items by unit separately
+- ✅ **Price Transparency** - Each item shows price per unit purchased
+- ✅ **Flexible Shopping** - Buy same product in multiple units for different needs
+- ✅ **Accurate Inventory** - Stock tracking per supplier's unit remains consistent
+- ✅ **Better UX** - No hidden conversions, what you see is what you get
+
+**Testing Checklist**:
+
+✅ Add same product with different units → Should appear as 2 items
+✅ Add same product with same unit twice → Should merge quantities
+✅ Guest login with same product, different units → Should NOT merge
+✅ Guest login with same product, same unit → SHOULD merge quantities
+✅ Update quantity of item → Only affects that specific unit
+✅ Remove item → Only removes that specific unit
+✅ Cart badge updates after add to cart → Should reflect total items
+✅ Decimal quantities work → UnitConverter allows 0.25, 1.5, etc.
+
 ### Admin Customers Management
 
 **Location**: `src/pages/admin/customers/index.tsx`
@@ -2615,6 +3135,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 - ✅ **MongoDB Date Queries** fixed with ISO string conversion for accurate filtering
 - ✅ **Customer Growth Tracking** with month-over-month comparison calculations
 - ✅ **Feature-based Router Organization** (products router with getDashBoardStats)
+- ✅ **Unit Separation System** (November 2025) - Cart items separated by unit for better UX
 
 **Authentication & Authorization**:
 
@@ -3200,3 +3721,7 @@ If you have dynamic data in session (like addresses), remove it:
 20. **Never place helper links in label row** (place below input for cleaner UX)
 21. **Never store dynamic data in session** (addresses, cart, orders → use tRPC queries)
 22. **Never let JWT token exceed 2KB** (keep session lean with only identity data)
+23. **Never identify cart items by productId alone** (MUST use composite key: productId + unit)
+24. **Never merge cart items with different units** (same product, different units = separate items)
+25. **Never convert UnitConverter output to supplier unit** (send user's selected unit as-is)
+26. **Never forget unit parameter in cart operations** (removeItem, updateQuantity require both productId AND unit)
