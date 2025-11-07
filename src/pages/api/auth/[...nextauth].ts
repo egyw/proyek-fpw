@@ -49,7 +49,6 @@ export const authOptions: NextAuthOptions = {
           username: user.username,
           role: user.role,
           phone: user.phone,
-          addresses: user.addresses, // ✅ Changed from 'address' to 'addresses'
           isActive: user.isActive,
         };
       },
@@ -63,7 +62,6 @@ export const authOptions: NextAuthOptions = {
         token.username = user.username;
         token.role = user.role;
         token.phone = user.phone;
-        token.addresses = user.addresses; // ✅ Changed from 'address' to 'addresses'
         token.isActive = user.isActive;
       }
       return token;
@@ -75,21 +73,6 @@ export const authOptions: NextAuthOptions = {
         session.user.username = token.username as string;
         session.user.role = token.role as 'admin' | 'staff' | 'user';
         session.user.phone = token.phone as string;
-        session.user.addresses = token.addresses as Array<{
-          id: string;
-          label: string;
-          recipientName: string;
-          phoneNumber: string;
-          fullAddress: string;
-          district: string;
-          city: string;
-          province: string;
-          postalCode: string;
-          notes?: string;
-          isDefault: boolean;
-          latitude?: number;
-          longitude?: number;
-        }>;
         session.user.isActive = token.isActive as boolean;
       }
       return session;
