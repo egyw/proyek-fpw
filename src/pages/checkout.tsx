@@ -43,6 +43,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+// Import Midtrans Payment Button
+import MidtransPaymentButton from "@/components/MidtransPaymentButton";
+
 // Dynamic import for AddressMapPicker to avoid SSR issues with Leaflet
 const DynamicAddressMapPicker = dynamic(
   () => import("@/components/AddressMapPicker"),
@@ -227,6 +230,11 @@ export default function CheckoutPage() {
     lng: number;
   } | null>(null);
 
+  // ⭐ Midtrans payment state
+  const [orderCreated, setOrderCreated] = useState(false);
+  const [snapToken, setSnapToken] = useState<string | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
   // Address form with react-hook-form + Zod
   const addressForm = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -352,7 +360,7 @@ export default function CheckoutPage() {
     }
   };
 
-  // Handle place order
+  // Handle place order (Create order and get Snap token)
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast.error('Alamat Belum Dipilih', {
@@ -378,7 +386,7 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      // Create order
+      // ⭐ Create order with Midtrans integration
       const result = await createOrderMutation.mutateAsync({
         items: items.map((item) => ({
           productId: item.productId,
@@ -400,32 +408,34 @@ export default function CheckoutPage() {
           postalCode: selectedAddress.postalCode,
           notes: selectedAddress.notes,
         },
-        // TODO: Add shipping field to Order model and tRPC schema
-        // shipping: {
-        //   courier: selectedShipping.courier,
-        //   courierName: selectedShipping.courierName,
-        //   service: selectedShipping.service,
-        //   cost: selectedShipping.cost,
-        //   estimatedDays: selectedShipping.etd,
-        // },
         subtotal,
         shippingCost,
         total,
-        paymentMethod: 'midtrans', // Will use Midtrans
+        paymentMethod: 'midtrans', // ⭐ Midtrans payment
       });
 
-      // Clear local cart for guest (if any)
-      if (cartItems.length > 0) {
-        clearCart();
+      // ⭐ Save Snap token and order ID for payment
+      if (result.snapToken) {
+        setSnapToken(result.snapToken);
+        setCurrentOrderId(result.orderId);
+        setOrderCreated(true);
+
+        toast.success('Pesanan Berhasil Dibuat!', {
+          description: `Order ID: ${result.orderId}. Lanjutkan ke pembayaran.`,
+        });
+      } else {
+        // Fallback if no Snap token (COD or other payment method)
+        toast.success('Pesanan Berhasil Dibuat!', {
+          description: `Order ID: ${result.orderId}`,
+        });
+        
+        // Clear cart
+        if (cartItems.length > 0) {
+          clearCart();
+        }
+        
+        router.push(`/orders/${result.orderId}`);
       }
-
-      toast.success('Pesanan Berhasil Dibuat!', {
-        description: `Order ID: ${result.orderId}`,
-      });
-
-      // TODO: Redirect to payment page (Midtrans Snap)
-      // For now, redirect to order detail
-      router.push(`/orders/${result.orderId}`);
     } catch (error) {
       console.error('Place order error:', error);
       toast.error('Gagal Membuat Pesanan', {
@@ -434,6 +444,54 @@ export default function CheckoutPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // ⭐ Handle payment success
+  const handlePaymentSuccess = () => {
+    toast.success('Pembayaran Berhasil!', {
+      description: 'Pesanan Anda telah dibayar. Kami akan segera memprosesnya.',
+    });
+
+    // Clear cart
+    if (cartItems.length > 0) {
+      clearCart();
+    }
+
+    // Redirect to order detail with success status
+    if (currentOrderId) {
+      router.push(`/orders/${currentOrderId}?status=success`);
+    }
+  };
+
+  // ⭐ Handle payment pending
+  const handlePaymentPending = () => {
+    toast.info('Pembayaran Tertunda', {
+      description: 'Menunggu konfirmasi pembayaran. Periksa status pesanan Anda.',
+    });
+
+    // Clear cart
+    if (cartItems.length > 0) {
+      clearCart();
+    }
+
+    // Redirect to order detail with pending status
+    if (currentOrderId) {
+      router.push(`/orders/${currentOrderId}?status=pending`);
+    }
+  };
+
+  // ⭐ Handle payment error
+  const handlePaymentError = () => {
+    toast.error('Pembayaran Gagal', {
+      description: 'Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi.',
+    });
+  };
+
+  // ⭐ Handle payment closed
+  const handlePaymentClose = () => {
+    toast.info('Pembayaran Dibatalkan', {
+      description: 'Anda dapat melanjutkan pembayaran kapan saja dari halaman pesanan.',
+    });
   };
 
   // Show loading while checking auth
@@ -964,43 +1022,64 @@ export default function CheckoutPage() {
               </div>
 
               {/* Payment Method Preview */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      Metode Pembayaran
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Midtrans Payment Gateway
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* ⭐ Conditional Rendering: Create Order OR Pay with Midtrans */}
+              {!orderCreated ? (
+                <>
+                  {/* Create Order Button */}
+                  <Button
+                    className="w-full h-12 text-lg"
+                    onClick={handlePlaceOrder}
+                    disabled={!selectedAddress || !selectedShipping || isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Membuat Pesanan...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5 mr-2" />
+                        Buat Pesanan
+                      </>
+                    )}
+                  </Button>
 
-              {/* Place Order Button */}
-              <Button
-                className="w-full h-12 text-lg"
-                onClick={handlePlaceOrder}
-                disabled={!selectedAddress || !selectedShipping || isProcessing}
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    Bayar Sekarang
-                  </>
-                )}
-              </Button>
+                  {!selectedShipping && selectedAddress && (
+                    <p className="text-xs text-yellow-600 text-center mt-2">
+                      Pilih metode pengiriman untuk melanjutkan
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* ⭐ Midtrans Payment Button */}
+                  {snapToken && currentOrderId && (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                        <p className="text-sm font-semibold text-green-800">
+                          Pesanan Berhasil Dibuat
+                        </p>
+                        <p className="text-xs text-green-700 mt-1">
+                          Order ID: {currentOrderId}
+                        </p>
+                      </div>
 
-              {!selectedShipping && selectedAddress && (
-                <p className="text-xs text-yellow-600 text-center mt-2">
-                  Pilih metode pengiriman untuk melanjutkan
-                </p>
+                      <MidtransPaymentButton
+                        snapToken={snapToken}
+                        orderId={currentOrderId}
+                        onSuccess={handlePaymentSuccess}
+                        onPending={handlePaymentPending}
+                        onError={handlePaymentError}
+                        onClose={handlePaymentClose}
+                      />
+
+                      <p className="text-xs text-gray-500 text-center">
+                        Klik tombol di atas untuk melanjutkan ke pembayaran
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
 
               <p className="text-xs text-gray-500 text-center mt-4">
