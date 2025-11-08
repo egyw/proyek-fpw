@@ -7,21 +7,6 @@ declare module 'next-auth' {
     username: string;
     role: 'admin' | 'staff' | 'user';
     phone: string;
-    addresses: Array<{
-      id: string;
-      label: string;
-      recipientName: string;
-      phoneNumber: string;
-      fullAddress: string;
-      district: string;
-      city: string;
-      province: string;
-      postalCode: string;
-      notes?: string;
-      isDefault: boolean;
-      latitude?: number;
-      longitude?: number;
-    }>;
     isActive: boolean;
   }
 
@@ -33,21 +18,6 @@ declare module 'next-auth' {
       username: string;
       role: 'admin' | 'staff' | 'user';
       phone: string;
-      addresses: Array<{
-        id: string;
-        label: string;
-        recipientName: string;
-        phoneNumber: string;
-        fullAddress: string;
-        district: string;
-        city: string;
-        province: string;
-        postalCode: string;
-        notes?: string;
-        isDefault: boolean;
-        latitude?: number;
-        longitude?: number;
-      }>;
       isActive: boolean;
     };
   }
@@ -59,21 +29,6 @@ declare module 'next-auth/jwt' {
     username: string;
     role: 'admin' | 'staff' | 'user';
     phone: string;
-    addresses: Array<{
-      id: string;
-      label: string;
-      recipientName: string;
-      phoneNumber: string;
-      fullAddress: string;
-      district: string;
-      city: string;
-      province: string;
-      postalCode: string;
-      notes?: string;
-      isDefault: boolean;
-      latitude?: number;
-      longitude?: number;
-    }>;
     isActive: boolean;
   }
 }
