@@ -1,0 +1,38 @@
+[
+  {
+    "_id": {
+      "$oid": "68b83500d2788dc4d9e60900"
+    },
+    "storeName": "Toko Pelita Bangunan",
+    "storeCity": "Makassar",
+    "storeCityId": "309",
+    "storeProvince": "Sulawesi Selatan",
+    "storeProvinceId": "30",
+    "storeAddress": {
+      "street": "Jl. Bumi Tamalanrea Permai, Paccerakkang",
+      "district": "Biringkanaya",
+      "city": "Makassar",
+      "province": "Sulawesi Selatan",
+      "postalCode": "90562"
+    },
+    "contact": {
+      "phone": "08124117114",
+      "email": "-",
+      "whatsapp": "-"
+    },
+    "businessHours": {
+      "weekdays": "08:00 - 17:00",
+      "saturday": "08:00 - 17:00",
+      "sunday": "08:00 - 17:00"
+    },
+    "shippingSettings": {
+      "rajaOngkirPlan": "free",
+      "freeShippingMinimum": 1000000,
+      "maxWeight": 30000,
+      "processingTime": "1-2 hari kerja"
+    },
+    "createdAt": "2025-11-01T00:00:00Z",
+    "updatedAt": "2025-11-08T00:00:00Z",
+    "isActive": true
+  }
+]

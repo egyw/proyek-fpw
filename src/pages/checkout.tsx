@@ -31,6 +31,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { calculateCartTotalWeight } from "@/lib/shippingHelpers";
 import {
   ShoppingBag,
   MapPin,
@@ -55,6 +56,22 @@ const DynamicAddressMapPicker = dynamic(
   }
 );
 
+// Dynamic import for ShippingCalculator
+const DynamicShippingCalculator = dynamic(
+  () => import("@/components/ShippingCalculator"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="animate-pulse space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-20 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    ),
+  }
+);
+
 interface Address {
   id: string;
   label: string;
@@ -69,6 +86,15 @@ interface Address {
   isDefault: boolean;
 }
 
+interface ShippingOption {
+  courier: string;
+  courierName: string;
+  service: string;
+  description: string;
+  cost: number;
+  etd: string;
+}
+
 // Zod schema for address form validation
 const addressSchema = z.object({
   label: z.string().min(1, "Label alamat harus diisi"),
@@ -81,11 +107,77 @@ const addressSchema = z.object({
   district: z.string().min(1, "Kecamatan harus diisi"),
   city: z.string().min(1, "Kota harus diisi"),
   province: z.string().min(1, "Provinsi harus diisi"),
-  postalCode: z.string().min(5, "Kode pos harus 5 digit").max(5),
+  postalCode: z.string().min(5, "Kode pos minimal 5 digit"),
   notes: z.string().optional(),
 });
 
 type AddressFormValues = z.infer<typeof addressSchema>;
+
+// Helper function: Map city name to RajaOngkir city ID (to skip API search)
+// TODO: Ideally, store city ID in user address when they select city
+function getCityIdFromName(cityName: string): string | undefined {
+  // Common Indonesian cities mapping (RajaOngkir city IDs)
+  const cityIdMap: Record<string, string> = {
+    // DKI Jakarta
+    'Jakarta': '151', // Jakarta Pusat
+    'Jakarta Pusat': '151',
+    'Jakarta Utara': '152',
+    'Jakarta Barat': '153',
+    'Jakarta Selatan': '154',
+    'Jakarta Timur': '155',
+    
+    // Jawa Barat
+    'Bandung': '23',
+    'Bekasi': '24',
+    'Bogor': '25',
+    'Depok': '78',
+    'Cimahi': '65',
+    
+    // Jawa Tengah
+    'Semarang': '444',
+    'Surakarta': '455',
+    'Solo': '455',
+    'Tegal': '464',
+    'Magelang': '309',
+    
+    // DI Yogyakarta
+    'Yogyakarta': '501',
+    'Sleman': '419',
+    'Bantul': '22',
+    
+    // Jawa Timur
+    'Surabaya': '444',
+    'Malang': '311',
+    'Sidoarjo': '410',
+    'Gresik': '155',
+    
+    // Bali
+    'Denpasar': '75',
+    'Badung': '17',
+    'Gianyar': '119',
+    
+    // Sumatera
+    'Medan': '324',
+    'Palembang': '349',
+    'Pekanbaru': '362',
+    'Batam': '23',
+    'Padang': '348',
+    
+    // Kalimantan
+    'Balikpapan': '20',
+    'Samarinda': '410',
+    'Banjarmasin': '22',
+    'Pontianak': '374',
+    
+    // Sulawesi
+    'Makassar': '310',
+    'Manado': '312',
+    
+    // Add more cities as needed...
+  };
+  
+  return cityIdMap[cityName];
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -126,6 +218,7 @@ export default function CheckoutPage() {
   });
 
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
@@ -153,6 +246,9 @@ export default function CheckoutPage() {
   // Determine cart items (from tRPC if logged in, from Zustand if guest)
   const items = isAuthenticated ? (cartData?.items || []) : cartItems;
 
+  // ⭐ Calculate total weight for shipping
+  const totalWeight = calculateCartTotalWeight(items);
+
   // Set default address when addresses load
   useEffect(() => {
     if (userAddresses?.addresses && userAddresses.addresses.length > 0 && !selectedAddress) {
@@ -166,9 +262,14 @@ export default function CheckoutPage() {
     return items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const shippingCost = 50000; // Flat shipping cost
   const subtotal = calculateSubtotal();
+  const shippingCost = selectedShipping?.cost || 0; // Dynamic shipping cost from RajaOngkir
   const total = subtotal + shippingCost;
+
+  // Handle select shipping
+  const handleSelectShipping = (option: ShippingOption) => {
+    setSelectedShipping(option);
+  };
 
   // Handle select address
   const handleSelectAddress = (address: Address) => {
@@ -244,6 +345,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!selectedShipping) {
+      toast.error('Pengiriman Belum Dipilih', {
+        description: 'Silakan pilih metode pengiriman terlebih dahulu.',
+      });
+      return;
+    }
+
     if (items.length === 0) {
       toast.error('Keranjang Kosong', {
         description: 'Tidak ada produk di keranjang.',
@@ -276,6 +384,14 @@ export default function CheckoutPage() {
           postalCode: selectedAddress.postalCode,
           notes: selectedAddress.notes,
         },
+        // TODO: Add shipping field to Order model and tRPC schema
+        // shipping: {
+        //   courier: selectedShipping.courier,
+        //   courierName: selectedShipping.courierName,
+        //   service: selectedShipping.service,
+        //   cost: selectedShipping.cost,
+        //   estimatedDays: selectedShipping.etd,
+        // },
         subtotal,
         shippingCost,
         total,
@@ -718,27 +834,33 @@ export default function CheckoutPage() {
               </div>
             </Card>
 
-            {/* Shipping Method */}
+            {/* Shipping Method - Dynamic with RajaOngkir */}
             <Card className="p-6">
               <div className="flex items-start gap-3">
                 <Truck className="h-6 w-6 text-primary shrink-0 mt-1" />
                 <div className="flex-1">
-                  <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  <h2 className="text-lg font-bold text-gray-900 mb-4">
                     Metode Pengiriman
                   </h2>
-                  <div className="flex items-center justify-between p-4 border-2 border-primary bg-primary/5 rounded-lg">
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        Pengiriman Standar
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Estimasi 3-5 hari kerja
+                  
+                  {selectedAddress ? (
+                    <DynamicShippingCalculator
+                      destinationCity={selectedAddress.city}
+                      destinationCityId={getCityIdFromName(selectedAddress.city)} // Pass city ID to skip search
+                      destinationCountry="Indonesia" // Add country field to Address if needed for international
+                      cartWeight={totalWeight}
+                      rajaOngkirPlan="free" // Change to "all" if user has paid plan
+                      onSelectShipping={handleSelectShipping}
+                      selectedShipping={selectedShipping || undefined}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+                      <p className="text-sm text-yellow-800">
+                        Pilih alamat pengiriman untuk melihat opsi pengiriman.
                       </p>
                     </div>
-                    <p className="font-bold text-primary">
-                      Rp {shippingCost.toLocaleString('id-ID')}
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -803,7 +925,18 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Biaya Pengiriman</span>
-                  <span>Rp {shippingCost.toLocaleString('id-ID')}</span>
+                  {selectedShipping ? (
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        Rp {shippingCost.toLocaleString('id-ID')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {selectedShipping.courierName} - {selectedShipping.service}
+                      </p>
+                    </div>
+                  ) : (
+                    <span className="text-sm italic">Pilih pengiriman</span>
+                  )}
                 </div>
               </div>
 
@@ -833,7 +966,7 @@ export default function CheckoutPage() {
               <Button
                 className="w-full h-12 text-lg"
                 onClick={handlePlaceOrder}
-                disabled={!selectedAddress || isProcessing}
+                disabled={!selectedAddress || !selectedShipping || isProcessing}
               >
                 {isProcessing ? (
                   <>
@@ -847,6 +980,12 @@ export default function CheckoutPage() {
                   </>
                 )}
               </Button>
+
+              {!selectedShipping && selectedAddress && (
+                <p className="text-xs text-yellow-600 text-center mt-2">
+                  Pilih metode pengiriman untuk melanjutkan
+                </p>
+              )}
 
               <p className="text-xs text-gray-500 text-center mt-4">
                 Dengan melanjutkan, Anda menyetujui{' '}

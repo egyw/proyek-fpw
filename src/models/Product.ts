@@ -180,6 +180,6 @@ ProductSchema.index({ isActive: 1, isFeatured: 1 });
 ProductSchema.index({ name: 'text', description: 'text' }); // Text search
 
 // Export Model
-const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema, 'products');
 
 export default Product;

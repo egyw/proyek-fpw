@@ -131,4 +131,4 @@ OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 
-export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
+export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema, 'orders');

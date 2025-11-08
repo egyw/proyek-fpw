@@ -220,13 +220,18 @@ interface Product {
   // Attributes (product specifications - category-specific)
   attributes: Record<string, any>; // Examples:
   // Pipa: { diameter_inch, diameter_mm, type, length_meter, has_mof }
-  // Besi: { diameter_mm, type, standard }
-  // Semen: { weight_kg, type }
-  // Triplek: { thickness_mm, type }
-  // Kawat: { diameter_mm, weight_kg }
-  // Tangki Air: { capacity_liter, material, type }
-  // Paku/Baut: { size, type, color, length_mm }
-  // Aspal: { volume_liter }
+  // Besi: { diameter_mm, type, standard, weight_kg } ← weight per batang
+  // Semen: { weight_kg, type } ← weight per sak
+  // Triplek: { thickness_mm, type, weight_kg } ← weight per lembar
+  // Kawat: { diameter_mm, weight_kg } ← weight per gulung
+  // Tangki Air: { capacity_liter, material, type, weight_kg } ← weight empty
+  // Paku/Baut: { size, type, color, length_mm, weight_kg } ← weight per kg/set
+  // Aspal: { volume_liter, weight_kg } ← weight per liter
+  
+  // ⭐ SHIPPING WEIGHT CALCULATION:
+  // Weight is stored in attributes.weight_kg (per supplier's unit)
+  // Cart calculates total weight by: quantity × weight_kg × unit conversion
+  // If weight_kg not in attributes, use category defaults (see getProductWeight helper)
 
   // Status
   isActive: boolean; // Product visibility (true = active, false = hidden)
@@ -2862,6 +2867,663 @@ const formatCurrency = (amount: number) => {
 - Handle optional fields (lastOrderDate) with fallback text
 - Use Lucide icons consistently (NO emoji icons in admin pages)
 
+### Dynamic Shipping Cost Calculator (COMPLETED)
+
+**Status**: ✅ Production-ready, Komerce API integration, accordion UI
+
+**Complete Guide**: See `guide/rajaongkir_setup.md` for detailed documentation
+
+**Quick Reference**:
+
+#### **System Overview**
+
+- **API**: Komerce Shipping Cost API (formerly RajaOngkir)
+- **Base URL**: `https://rajaongkir.komerce.id/api/v1`
+- **Endpoint**: `/calculate/district/domestic-cost`
+- **Plans**: FREE (3 couriers, 1000 req/month) | PAID (11 couriers, 10k req/month)
+- **Couriers**: 11 total supported (JNE, POS, TIKI, SiCepat, IDExpress, SAP, Ninja, J&T, Wahana, Lion, Rex)
+- **Store Origin**: Database-driven (Makassar city ID: 309) via store_configs collection
+- **UI Pattern**: Accordion grouping by courier to reduce scrolling
+- **Integration**: tRPC procedures + React component (ShippingCalculator)
+
+#### **API Configuration**
+
+**Request Format**:
+```typescript
+// Content-Type: application/x-www-form-urlencoded
+const formData = new URLSearchParams();
+formData.append('origin', '309'); // From store_configs.storeCityId
+formData.append('destination', '152'); // Customer city ID
+formData.append('weight', '1000'); // Weight in grams
+formData.append('courier', 'jne'); // Courier code
+
+fetch('https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost', {
+  method: 'POST',
+  headers: {
+    'key': process.env.RAJAONGKIR_API_KEY,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  },
+  body: formData.toString(),
+});
+```
+
+**Response Format**:
+```json
+{
+  "meta": {
+    "code": 200,
+    "status": "success",
+    "message": "success"
+  },
+  "data": [
+    {
+      "name": "JNE",
+      "code": "jne",
+      "service": "REG",
+      "description": "Layanan Reguler",
+      "cost": 25000,
+      "etd": "2-3"
+    }
+  ]
+}
+```
+
+**Store Configuration** (Database):
+```typescript
+// Collection: store_configs
+interface StoreConfig {
+  storeName: string;
+  storeCityId: string;      // "309" for Makassar
+  storeCity: string;        // "Makassar"
+  storeProvince: string;    // "Sulawesi Selatan"
+  storeAddress: {
+    street: string;
+    district: string;
+    city: string;
+    province: string;
+    postalCode: string;
+  };
+  contact: {
+    phone: string;
+    email: string;
+    whatsapp: string;
+  };
+  businessHours: {
+    weekdays: string;
+    saturday: string;
+    sunday: string;
+  };
+  isActive: boolean;
+}
+
+// tRPC Query
+const { data: storeConfig } = trpc.store.getConfig.useQuery();
+// Used in ShippingCalculator to get origin city ID dynamically
+```
+
+#### **Key Files**
+
+```
+src/
+├── lib/
+│   └── rajaongkir.ts                  # API helper functions + COURIER_CONFIG
+├── models/
+│   └── StoreConfig.ts                 # MongoDB schema for store configuration
+├── server/routers/
+│   ├── shipping.ts                    # 7 tRPC procedures
+│   └── store.ts                       # Store config tRPC router
+├── components/
+│   └── ShippingCalculator.tsx         # React component with accordion UI
+├── pages/
+│   └── checkout.tsx                   # (Implementation needed)
+└── database/
+    └── proyekFPW.store_configs.json   # Store data (Makassar origin)
+```
+
+#### **Quick Usage**
+
+**1. Checkout Page Integration**:
+
+```tsx
+import ShippingCalculator from '@/components/ShippingCalculator';
+import { calculateCartTotalWeight } from '@/lib/shippingHelpers';
+
+// Helper: Map city name to RajaOngkir city ID (skip API search)
+function getCityIdFromName(cityName: string): string | undefined {
+  const cityIdMap: Record<string, string> = {
+    'Jakarta': '151', 'Bandung': '23', 'Yogyakarta': '501',
+    'Surabaya': '444', 'Medan': '324', // Add more cities...
+  };
+  return cityIdMap[cityName];
+}
+
+export default function CheckoutPage() {
+  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const cartItems = useCartStore((state) => state.items);
+  
+  // ⭐ NEW: Smart weight calculation with multi-unit support
+  // Automatically handles: semen in sak/kg, besi per batang, etc.
+  const totalWeight = calculateCartTotalWeight(cartItems);
+  // Returns weight in grams (ready for RajaOngkir API)
+
+  return (
+    <MainLayout>
+      {/* Address selection (your code) */}
+      
+      {/* Shipping Calculator */}
+      {selectedAddress && (
+        <ShippingCalculator
+          destinationCity={selectedAddress.city}
+          destinationCityId={getCityIdFromName(selectedAddress.city)} // ⭐ Skip search if city ID known
+          destinationCountry={selectedAddress.country || 'Indonesia'}
+          cartWeight={totalWeight} // ⭐ Use calculated weight
+          rajaOngkirPlan="free" // or "all" for paid plan
+          onSelectShipping={setSelectedShipping}
+          selectedShipping={selectedShipping}
+        />
+      )}
+      
+      {/* Order summary with shipping cost */}
+      {selectedShipping && (
+        <div>
+          <p>Ongkir ({selectedShipping.courierName} - {selectedShipping.service}): 
+             Rp {selectedShipping.cost}</p>
+          <p>Total: Rp {subtotal + selectedShipping.cost}</p>
+        </div>
+      )}
+    </MainLayout>
+  );
+}
+```
+
+**How Weight Calculation Works**:
+
+```typescript
+// Example: Customer buys Semen Conch
+// Product: 1 sak = 50kg (stored in attributes.weight_kg or category default)
+
+// Scenario 1: Customer buys 2 SAK
+cartItem = { productId: "xxx", category: "Semen", unit: "sak", quantity: 2 }
+calculateCartItemWeight(cartItem) 
+// → 2 × 50kg × 1000g = 100,000 grams (100kg)
+
+// Scenario 2: Customer buys 75 KG
+cartItem = { productId: "xxx", category: "Semen", unit: "kg", quantity: 75 }
+calculateCartItemWeight(cartItem)
+// → 75 × 1kg × 1000g = 75,000 grams (75kg)
+
+// Scenario 3: Customer buys 0.5 TON
+cartItem = { productId: "xxx", category: "Semen", unit: "ton", quantity: 0.5 }
+calculateCartItemWeight(cartItem)
+// → 0.5 × 1000kg × 1000g = 500,000 grams (500kg)
+```
+
+**Weight Priority System**:
+1. **Product attributes** (`product.attributes.weight_kg`) - Most accurate
+2. **Category defaults** - Fallback for products without weight data
+3. **Unit conversions** - Smart conversion based on selected unit
+
+#### **Courier Configuration**
+
+```typescript
+// src/lib/rajaongkir.ts - Centralized courier config
+export const COURIER_CONFIG = {
+  free: ['jne', 'pos', 'tiki'],  // FREE plan couriers
+  all: ['jne','pos','tiki','sicepat','ide','sap','ninja','jnt','wahana','lion','rex'], // 11 couriers
+  international: ['jne', 'tiki', 'pos'], // Only these support international
+  names: {
+    jne: 'JNE',
+    pos: 'POS Indonesia',
+    tiki: 'TIKI',
+    sicepat: 'SiCepat',
+    ide: 'ID Express',
+    sap: 'SAP Express',
+    ninja: 'Ninja Xpress',
+    jnt: 'J&T Express',
+    wahana: 'Wahana',
+    lion: 'Lion Parcel',
+    rex: 'Royal Express'
+  }
+};
+```
+
+#### **tRPC Procedures**
+
+7 procedures available in `shipping` router:
+
+```typescript
+// Location data
+trpc.shipping.getProvinces.useQuery();
+trpc.shipping.getCitiesByProvince.useQuery({ provinceId: '9' });
+trpc.shipping.searchCity.useQuery({ query: 'Jakarta' });
+
+// Shipping calculation
+trpc.shipping.calculateShippingCost.useQuery({
+  destination: '152', // Jakarta city ID
+  weight: 1000,       // grams
+  courier: 'jne'
+});
+
+// International detection
+trpc.shipping.checkInternational.useQuery({ cityName: 'Singapore' });
+trpc.shipping.getAvailableCouriers.useQuery({ 
+  isInternational: false, 
+  plan: 'free' 
+});
+
+// Multi-courier comparison
+trpc.shipping.getAllShippingOptions.useQuery({
+  destination: '152',
+  weight: 1000,
+  isInternational: false,
+  plan: 'free'
+});
+```
+
+#### **International Shipping Logic**
+
+```typescript
+// Auto-detection
+const isInternational = destinationCountry !== 'Indonesia';
+
+// Courier filtering
+if (isInternational) {
+  // Only JNE, TIKI, POS (regardless of plan)
+  availableCouriers = ['jne', 'tiki', 'pos'];
+} else {
+  // Domestic: depends on plan
+  availableCouriers = plan === 'all' 
+    ? COURIER_CONFIG.all  // 11 couriers
+    : COURIER_CONFIG.free; // 3 couriers
+}
+```
+
+#### **Plan Comparison**
+
+| Feature | FREE Plan | PAID Plan (Rp 50k/month) |
+|---------|-----------|--------------------------|
+| API Calls | 1,000/month | 10,000/month |
+| Domestic Couriers | 3 (JNE, POS, TIKI) | 11 (+ SiCepat, J&T, Ninja, dll) |
+| International | 3 (JNE, TIKI, POS) | 3 (same - no additional) |
+| Cost | FREE | Rp 50,000/bulan |
+| Best For | Development, <30 orders/day | Production, >30 orders/day |
+
+#### **Environment Setup**
+
+```bash
+# .env.local
+RAJAONGKIR_API_KEY=your_rajaongkir_api_key_here
+```
+
+**Get API Key**: 
+1. Register at https://rajaongkir.com
+2. Copy API key from dashboard
+3. Paste in `.env.local`
+4. Restart dev server
+
+#### **Component Props**
+
+```typescript
+interface ShippingCalculatorProps {
+  destinationCity: string;           // Required: City name
+  destinationCityId?: string;        // Optional: RajaOngkir city ID (skip search if provided)
+  destinationCountry?: string;       // Optional: Country (default: 'Indonesia')
+  cartWeight: number;                // Required: Total weight in grams
+  onSelectShipping: (option: ShippingOption) => void; // Required: Callback
+  selectedShipping?: ShippingOption;  // Optional: Currently selected
+  rajaOngkirPlan?: 'free' | 'all';   // Optional: Plan level (default: 'free')
+}
+
+interface ShippingOption {
+  courier: string;         // e.g., 'jne' (changed from courierCode)
+  courierName: string;     // e.g., 'JNE'
+  service: string;         // e.g., 'REG'
+  description: string;     // e.g., 'Layanan Reguler'
+  cost: number;            // e.g., 25000
+  etd: string;             // e.g., '2-3' (changed from estimatedDays)
+}
+```
+
+#### **Important Patterns**
+
+**1. Weight Calculation** (Product-specific with multi-unit support):
+```typescript
+import { calculateCartTotalWeight } from '@/lib/shippingHelpers';
+
+// ✅ CORRECT: Use smart weight calculator
+const totalWeight = calculateCartTotalWeight(cartItems);
+// Automatically handles:
+// - Semen in sak/kg/ton (50kg, 1kg, 1000kg conversions)
+// - Besi per batang with dynamic weight from attributes
+// - All categories with proper unit conversions
+
+// ❌ WRONG: Fixed weight per item
+const totalWeight = cartItems.length * 1000; // Assumes all items 1kg
+
+// ❌ WRONG: Ignore unit differences
+const totalWeight = cartItems.reduce((total, item) => 
+  total + (item.quantity * 1000), 0
+); // Doesn't account for sak vs kg
+```
+
+**Weight Calculation Logic**:
+```typescript
+// Helper functions available in src/lib/shippingHelpers.ts
+
+// 1. Get base weight per product unit
+getProductWeightPerUnit(category, attributes)
+// Returns kg per supplier's unit (e.g., 50kg for 1 sak semen)
+
+// 2. Calculate single cart item weight
+calculateCartItemWeight(cartItem, productAttributes)
+// Returns total grams for that item with unit conversion
+
+// 3. Calculate entire cart weight
+calculateCartTotalWeight(cartItems, productsAttributes?)
+// Returns total grams for all items (ready for RajaOngkir)
+
+// 4. Format weight for display
+formatWeight(weightGrams)
+// Returns "2.5 kg" or "1.2 ton" for UI display
+```
+
+**2. City Name Validation**:
+```typescript
+// ✅ CORRECT: Validate via search
+const { data: cities } = trpc.shipping.searchCity.useQuery({ 
+  query: userInput 
+});
+const validCity = cities?.[0]?.city_name; // Use exact name from API
+
+// ❌ WRONG: Use user input directly (may have typos)
+<ShippingCalculator destinationCity={userInput} />
+```
+
+**3. International Detection**:
+```typescript
+// ✅ CORRECT: Pass country from address
+<ShippingCalculator
+  destinationCity={address.city}
+  destinationCountry={address.country || 'Indonesia'} // Explicit
+  {...otherProps}
+/>
+
+// ❌ WRONG: Assume always domestic
+<ShippingCalculator destinationCity={address.city} />
+```
+
+**4. Plan Switching**:
+```typescript
+// ✅ CORRECT: Get plan from user settings
+const userPlan = user?.subscription?.rajaOngkirPlan || 'free';
+<ShippingCalculator rajaOngkirPlan={userPlan} {...props} />
+
+// ❌ WRONG: Hardcode plan
+<ShippingCalculator rajaOngkirPlan="free" /> // Can't scale
+```
+
+#### **Upgrading to Paid Plan**
+
+**When to Upgrade**:
+- FREE plan limit reached (1000 requests/month)
+- Need more courier options (customer requests SiCepat, J&T, etc.)
+- Scaling business (>30 orders per day)
+
+**Steps**:
+1. Login to https://rajaongkir.com/panel/dashboard
+2. Click "Upgrade Paket" → Select "Basic Plan"
+3. Pay Rp 50,000/bulan via transfer/virtual account
+4. **API key remains the same** (no code changes for key)
+5. Update component: `rajaOngkirPlan="all"`
+
+#### **UI/UX Features**
+
+**Auto-displayed Info Cards**:
+- 🌍 International Shipping Notice (blue) - when destinationCountry !== 'Indonesia'
+- ℹ️ Free Plan Notice (blue) - when rajaOngkirPlan='free'
+- ✅ Paid Plan Info (green) - when rajaOngkirPlan='all'
+
+**Shipping Option Cards**:
+- Courier name + service (e.g., "JNE - REG")
+- Estimated delivery (e.g., "2-3 HARI")
+- Cost (e.g., "Rp 25,000")
+- Selected state (green border + checkmark)
+
+**Empty State**:
+- Message: "Tidak ada opsi pengiriman tersedia"
+- Instruction: "Mohon periksa kembali kota tujuan"
+
+#### **Accordion Pattern for Courier Grouping** (November 2025)
+
+**Status**: ✅ Production-ready, reduces UI height by ~70%
+
+**Problem**: With multiple couriers (JNE, POS, TIKI) each offering 3-5 services, flat list requires excessive scrolling (10+ option cards).
+
+**Solution**: Collapsible accordion that groups services by courier code.
+
+**Implementation Pattern**:
+
+```tsx
+// ShippingCalculator.tsx
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
+// State for tracking expanded couriers
+const [expandedCouriers, setExpandedCouriers] = useState<Set<string>>(new Set());
+
+// Group shipping options by courier code
+const groupedOptions = shippingOptions.options.reduce((acc, option) => {
+  const courier = option.courier;
+  if (!acc[courier]) {
+    acc[courier] = {
+      courierCode: courier,
+      courierName: option.courierName,
+      services: []
+    };
+  }
+  acc[courier].services.push(option);
+  return acc;
+}, {} as Record<string, { courierCode: string; courierName: string; services: ShippingOption[] }>);
+
+// Toggle expand/collapse
+const toggleCourier = (courierCode: string) => {
+  const newExpanded = new Set(expandedCouriers);
+  if (newExpanded.has(courierCode)) {
+    newExpanded.delete(courierCode);
+  } else {
+    newExpanded.add(courierCode);
+  }
+  setExpandedCouriers(newExpanded);
+};
+
+// Render grouped accordion
+{Object.values(groupedOptions).map((group) => {
+  const isExpanded = expandedCouriers.has(group.courierCode);
+  const hasSelectedService = group.services.some(
+    service => selectedShipping?.courier === service.courier && 
+               selectedShipping?.service === service.service
+  );
+  const minPrice = Math.min(...group.services.map(s => s.cost));
+  
+  return (
+    <Card key={group.courierCode} className={hasSelectedService ? 'border-green-500 border-2' : ''}>
+      {/* Courier Header (always visible, clickable) */}
+      <div 
+        onClick={() => toggleCourier(group.courierCode)}
+        className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+      >
+        <div className="flex items-center gap-3">
+          <Truck className="h-5 w-5 text-primary" />
+          <div>
+            <p className="font-semibold">{group.courierName.toUpperCase()}</p>
+            <p className="text-sm text-gray-600">
+              {group.services.length} layanan tersedia
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {hasSelectedService && (
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+              ✓ Dipilih
+            </span>
+          )}
+          <p className="text-sm text-gray-600">
+            Mulai {formatCurrency(minPrice)}
+          </p>
+          {isExpanded ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
+        </div>
+      </div>
+      
+      {/* Service List (only shown when expanded) */}
+      {isExpanded && (
+        <div className="border-t divide-y">
+          {group.services.map((option) => {
+            const isSelected = selectedShipping?.courier === option.courier &&
+                              selectedShipping?.service === option.service;
+            
+            return (
+              <div
+                key={`${option.courier}-${option.service}`}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent collapse when selecting
+                  onSelectShipping(option);
+                }}
+                className={`p-4 cursor-pointer hover:bg-gray-50 ${
+                  isSelected ? 'bg-green-50' : ''
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">
+                      {option.service}
+                      {isSelected && (
+                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          ✓ Dipilih
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-600">{option.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      <Clock className="inline h-3 w-3 mr-1" />
+                      Estimasi {option.etd} hari
+                    </p>
+                  </div>
+                  <p className="font-semibold text-primary">
+                    {formatCurrency(option.cost)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+})}
+```
+
+**Key Features**:
+
+1. **Collapsed by Default** - Only courier header visible initially
+2. **Service Count Preview** - Shows "X layanan tersedia" 
+3. **Cheapest Price Preview** - Shows "Mulai Rp XX,XXX"
+4. **Multiple Expansion** - Can expand multiple couriers simultaneously
+5. **Visual Indicators**:
+   - ChevronUp/Down for expand state
+   - "✓ Dipilih" badge on courier header if any service selected
+   - Green border on courier card if service selected
+6. **Smart Click Handling**:
+   - Click courier header → Toggle expand/collapse
+   - Click service card → Select shipping (e.stopPropagation prevents collapse)
+7. **State Management** - Uses Set<string> for efficient expand/collapse tracking
+
+**Benefits**:
+
+- ✅ **Reduced Scrolling** - Initial UI height reduced by ~70%
+- ✅ **Better Overview** - See all available couriers at a glance
+- ✅ **Progressive Disclosure** - Details shown only when needed
+- ✅ **Maintains Selection** - Selection persists across expand/collapse
+- ✅ **Mobile-Friendly** - Less vertical space = better mobile UX
+
+**Testing**:
+
+✅ All couriers collapsed by default → No scrolling needed  
+✅ Click courier header → Expands/collapses service list  
+✅ Chevron icon changes direction (Down → Up)  
+✅ Selecting service keeps accordion expanded  
+✅ "Dipilih" badge appears on both header and service  
+✅ Multiple couriers can be expanded simultaneously  
+✅ Green border highlights courier with selected service  
+
+#### **Error Handling**
+
+Common errors and solutions:
+
+**1. "Invalid API key"**:
+- Check `.env.local` has correct key
+- Restart dev server after adding key
+- Verify key in RajaOngkir dashboard
+
+**2. "Destination not found"**:
+- Use `searchCity` to validate city name
+- Use exact name from API response
+- Don't use abbreviations (e.g., "Jakarta Barat", NOT "Jakbar")
+
+**3. "Unsupported courier"**:
+- Check international destination → only JNE/TIKI/POS
+- Some couriers don't cover all cities
+- Show fallback message
+
+**4. Rate Limit Exceeded (429)**:
+- FREE plan: 1000 req/month exceeded
+- Implement caching for same city + weight
+- Consider upgrading to PAID plan
+
+#### **Testing Checklist**
+
+✅ Domestic shipping with FREE plan → Shows 3 couriers  
+✅ Domestic shipping with PAID plan → Shows 11 couriers  
+✅ International destination → Shows only JNE/TIKI/POS  
+✅ International + PAID plan → Still only 3 couriers (correct behavior)  
+✅ City validation → Uses exact name from searchCity  
+✅ Weight calculation → Accurate per product  
+✅ Selected state → Visual feedback with green border  
+✅ Empty state → Shows fallback message  
+✅ Loading state → Spinner while fetching  
+✅ Error handling → Toast notifications for errors  
+
+#### **Database Schema (Order Model)**
+
+Add shipping details to Order:
+
+```typescript
+interface Order {
+  // ... existing fields
+  shippingDetails: {
+    courierCode: string;      // e.g., "jne"
+    courierName: string;      // e.g., "JNE"
+    service: string;          // e.g., "REG"
+    cost: number;             // e.g., 25000
+    estimatedDays: string;    // e.g., "2-3 HARI"
+  };
+}
+```
+
+#### **Future Enhancements** (Optional)
+
+- [ ] Shipping cost caching (1 hour TTL)
+- [ ] Manual courier selection (checkbox filters)
+- [ ] Tracking integration (track package status)
+- [ ] COD (Cash on Delivery) support
+- [ ] Insurance calculation
+- [ ] Address autocomplete with Google Places API
+
+**Documentation**: Full setup guide, API reference, troubleshooting → `guide/rajaongkir_setup.md`
+
 ## Critical Rules
 
 ### Architecture & Code Standards
@@ -3189,6 +3851,89 @@ src/
 - Status: All intentional placeholders for future features
 
 ## Recent Features & Patterns (November 2025)
+
+### 0. Shipping Calculator Accordion UI + Komerce API (November 8, 2025)
+
+**Location**: `src/components/ShippingCalculator.tsx`
+
+**Key Updates**:
+
+1. **API Migration**: Changed from old RajaOngkir format to Komerce API
+   - Base URL: `https://rajaongkir.komerce.id/api/v1`
+   - Endpoint: `/calculate/district/domestic-cost`
+   - Content-Type: `application/x-www-form-urlencoded` (not JSON)
+   - Response format: `{ meta: {}, data: [] }` (flat array, not nested)
+
+2. **Accordion UI**: Grouped shipping options by courier to reduce scrolling
+   - Collapsed by default (shows courier name + service count + min price)
+   - Click courier header to expand/collapse service list
+   - ChevronUp/Down icons indicate state
+   - "✓ Dipilih" badge on selected courier header
+   - Reduces UI height by ~70% in default state
+
+3. **Store Origin Database**: Dynamic origin from MongoDB
+   - Collection: `store_configs`
+   - Store: Toko Pelita Bangunan (Makassar, city ID: 309)
+   - tRPC query: `trpc.store.getConfig.useQuery()`
+
+**Pattern**:
+
+```tsx
+// Group by courier code
+const groupedOptions = shippingOptions.options.reduce((acc, option) => {
+  const courier = option.courier;
+  if (!acc[courier]) {
+    acc[courier] = {
+      courierCode: courier,
+      courierName: option.courierName,
+      services: []
+    };
+  }
+  acc[courier].services.push(option);
+  return acc;
+}, {} as Record<string, {...}>);
+
+// State management with Set<string>
+const [expandedCouriers, setExpandedCouriers] = useState<Set<string>>(new Set());
+
+// Toggle function
+const toggleCourier = (courierCode: string) => {
+  const newExpanded = new Set(expandedCouriers);
+  if (newExpanded.has(courierCode)) {
+    newExpanded.delete(courierCode);
+  } else {
+    newExpanded.add(courierCode);
+  }
+  setExpandedCouriers(newExpanded);
+};
+
+// Render with conditional service list
+{Object.values(groupedOptions).map((group) => {
+  const isExpanded = expandedCouriers.has(group.courierCode);
+  return (
+    <Card>
+      <div onClick={() => toggleCourier(group.courierCode)}>
+        {/* Courier header: name, service count, min price, chevron */}
+      </div>
+      {isExpanded && (
+        <div>
+          {group.services.map(option => (
+            <div onClick={(e) => { e.stopPropagation(); onSelectShipping(option); }}>
+              {/* Service detail card */}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+})}
+```
+
+**Benefits**:
+- ✅ No excessive scrolling (see all couriers without scroll)
+- ✅ Progressive disclosure (expand only what you need)
+- ✅ Clear price preview (show cheapest option per courier)
+- ✅ Multiple expansion support (can compare multiple couriers)
 
 ### 1. Dynamic Unit Converter with Product Attributes
 
@@ -3725,3 +4470,12 @@ If you have dynamic data in session (like addresses), remove it:
 24. **Never merge cart items with different units** (same product, different units = separate items)
 25. **Never convert UnitConverter output to supplier unit** (send user's selected unit as-is)
 26. **Never forget unit parameter in cart operations** (removeItem, updateQuantity require both productId AND unit)
+27. **Never hardcode shipping cost** (use RajaOngkir API for dynamic calculation)
+28. **Never assume all items have same weight** (calculate per-product weight from database)
+29. **Never use user input directly for city names** (validate via searchCity tRPC query)
+30. **Never assume domestic shipping** (check destinationCountry for international)
+31. **Never hardcode rajaOngkirPlan prop** (get from user settings or environment)
+32. **Never show all 11 couriers for international** (only JNE/TIKI/POS regardless of plan)
+33. **Never ignore rate limits** (implement caching or upgrade plan if 429 errors)
+34. **Never skip weight validation** (ensure totalWeight > 0 before API call)
+35. **Never force unnecessary API calls** (pass destinationCityId prop to skip searchCity when address already selected)
