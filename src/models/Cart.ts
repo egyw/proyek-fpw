@@ -67,7 +67,7 @@ const CartSchema = new Schema<ICart>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true, // One cart per user
+      unique: true, // One cart per user - creates index automatically
     },
     items: [CartItemSchema],
   },
@@ -76,8 +76,8 @@ const CartSchema = new Schema<ICart>(
   }
 );
 
-// Index for faster queries
-CartSchema.index({ userId: 1 });
+// Note: userId index created automatically by unique: true
+// No need for manual CartSchema.index({ userId: 1 })
 
 const Cart = mongoose.models.Cart || mongoose.model<ICart>('Cart', CartSchema, 'carts');
 

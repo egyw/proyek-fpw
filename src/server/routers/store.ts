@@ -8,24 +8,11 @@ export const storeRouter = router({
   getConfig: publicProcedure.query(async () => {
     try {
       await connectDB();
-
-      // Debug: Log query attempt
-      console.log('[getConfig] Searching for active store config...');
       
       // Find active store config (should only be one)
       const storeConfig = await StoreConfig.findOne({ isActive: true }).lean() as unknown as IStoreConfig;
-
-      // Debug: Log result
-      console.log('[getConfig] Found store config:', storeConfig ? 'YES' : 'NO');
       
       if (!storeConfig) {
-        // Debug: Check if ANY store config exists
-        const anyConfig = await StoreConfig.findOne({}).lean();
-        console.log('[getConfig] Any config exists?', anyConfig ? 'YES' : 'NO');
-        if (anyConfig) {
-          console.log('[getConfig] Sample config:', JSON.stringify(anyConfig, null, 2));
-        }
-        
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Store configuration not found',

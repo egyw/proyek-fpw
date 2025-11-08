@@ -250,9 +250,6 @@ export async function calculateShippingCost(params: {
 
     const data = await response.json();
     
-    // Debug: Log response structure (comment out in production)
-    console.log('[calculateShippingCost] Response for', params.courier, ':', JSON.stringify(data, null, 2));
-    
     // Komerce API format: { meta: { code, status, message }, data: [array of services] }
     if (!data || !data.meta) {
       console.error('[calculateShippingCost] Invalid response structure:', data);

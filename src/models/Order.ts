@@ -86,7 +86,7 @@ const ShippingAddressSchema = new Schema<IShippingAddress>({
 
 const OrderSchema = new Schema<IOrder>(
   {
-    orderId: { type: String, required: true, unique: true },
+    orderId: { type: String, required: true, unique: true }, // unique: true creates index
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     items: [OrderItemSchema],
     shippingAddress: { type: ShippingAddressSchema, required: true },
@@ -126,8 +126,8 @@ const OrderSchema = new Schema<IOrder>(
 );
 
 // Indexes for faster queries
+// Note: orderId already has index from unique: true, no need for manual index
 OrderSchema.index({ userId: 1, createdAt: -1 });
-OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 
