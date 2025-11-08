@@ -246,8 +246,24 @@ export default function CheckoutPage() {
   // Determine cart items (from tRPC if logged in, from Zustand if guest)
   const items = isAuthenticated ? (cartData?.items || []) : cartItems;
 
-  // ⭐ Calculate total weight for shipping
-  const totalWeight = calculateCartTotalWeight(items);
+  // ⭐ Fetch product attributes for accurate weight calculation
+  // Get unique product IDs from cart
+  const productIds = [...new Set(items.map(item => item.productId))];
+  
+  // Query products to get attributes (weight_kg, etc.)
+  const { data: productsData } = trpc.products.getByIds.useQuery(
+    { productIds },
+    { enabled: productIds.length > 0 }
+  );
+  
+  // Create map of productId → attributes for weight calculation
+  const productsAttributesMap = productsData?.products.reduce((acc, product) => {
+    acc[product._id] = product.attributes as Record<string, string | number | boolean>;
+    return acc;
+  }, {} as Record<string, Record<string, string | number | boolean>>) || {};
+
+  // ⭐ Calculate total weight for shipping (WITH product attributes)
+  const totalWeight = calculateCartTotalWeight(items, productsAttributesMap);
 
   // Set default address when addresses load
   useEffect(() => {

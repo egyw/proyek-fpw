@@ -92,54 +92,77 @@ export function getProductWeightPerUnit(
 /**
  * Calculate total weight for a cart item (in grams for RajaOngkir API)
  * 
- * Logic:
- * 1. Get base weight (per supplier unit) from product attributes or category default
- * 2. Get conversion multiplier for customer's selected unit
- * 3. Calculate: quantity × conversion_multiplier × base_weight × 1000 (to grams)
+ * CRITICAL LOGIC:
+ * - product.attributes.weight_kg = Weight per SUPPLIER'S UNIT (e.g., 1 sak = 50kg, 1 batang = 7.4kg)
+ * - item.unit = Customer's selected unit (e.g., customer bought in "kg" or "sak")
+ * - We need to convert customer's quantity to actual weight in kg, then to grams
  * 
- * Example:
- * - Product: Semen (supplier sells in SAK, 1 sak = 50kg)
- * - Customer buys: 2 in KG unit
- * - Calculation: 2 kg × 1 (kg to kg) × 1000g = 2000 grams
+ * Example 1 (Simple - Weight Unit):
+ * - Product: Semen (supplier unit: SAK, weight_kg: 50)
+ * - Customer buys: 2 KG (not sak!)
+ * - Logic: Customer bought WEIGHT directly, no conversion needed
+ * - Calculation: 2 kg × 1000 = 2000 grams ✅
  * 
- * Example 2:
- * - Product: Semen (supplier sells in SAK, 1 sak = 50kg)
- * - Customer buys: 2 in SAK unit
- * - Calculation: 2 sak × 50kg × 1000g = 100,000 grams (100kg)
+ * Example 2 (Conversion - Supplier Unit):
+ * - Product: Semen (supplier unit: SAK, weight_kg: 50)
+ * - Customer buys: 2 SAK (supplier's unit)
+ * - Logic: 1 SAK = 50kg, so 2 SAK = 100kg
+ * - Calculation: 2 × 50kg × 1000 = 100,000 grams ✅
+ * 
+ * Example 3 (Dynamic Weight - Besi):
+ * - Product: Besi 10mm (supplier unit: BATANG, weight_kg: 7.4)
+ * - Customer buys: 3 BATANG
+ * - Calculation: 3 × 7.4kg × 1000 = 22,200 grams ✅
+ * 
+ * Example 4 (Fractional Quantity):
+ * - Product: Pipa (supplier unit: BATANG, weight_kg: 2)
+ * - Customer buys: 0.5 METER (half batang via conversion)
+ * - Calculation: 0.5 × 2kg × 1000 = 1000 grams ✅
  */
 export function calculateCartItemWeight(
   item: CartItem,
   productAttributes?: Record<string, string | number | boolean>
 ): number {
   const category = item.category;
-  const selectedUnit = item.unit;
+  const selectedUnit = item.unit.toLowerCase(); // Normalize
   const quantity = item.quantity;
 
-  // Get base weight per supplier's unit (in kg)
+  // Get base weight per supplier's unit from product attributes or category default
   const baseWeightKg = getProductWeightPerUnit(category, productAttributes);
 
-  // Get conversion multiplier for selected unit
+  // Get conversion map for this category
   const categoryConversions = UNIT_TO_KG_CONVERSION[category] || {};
   
-  // If customer bought in supplier's unit (no conversion needed)
-  // Use base weight directly
-  let weightPerUnit = baseWeightKg;
+  // Calculate weight based on selected unit
+  let weightInKg: number;
   
-  // If customer bought in different unit, apply conversion
-  if (categoryConversions[selectedUnit]) {
-    // For weight-based units (kg, ton), conversion is direct
-    // For quantity-based units (batang, sak), use base weight
-    const conversionFactor = categoryConversions[selectedUnit];
+  // Check if conversion exists for selected unit
+  if (categoryConversions[selectedUnit] !== undefined) {
+    const conversionValue = categoryConversions[selectedUnit];
     
-    // If conversion factor equals base weight, it means customer bought in supplier unit
-    // Otherwise, calculate proportional weight
-    if (conversionFactor !== baseWeightKg) {
-      weightPerUnit = conversionFactor;
+    // CRITICAL DISTINCTION:
+    // If conversion value is 1 → It's a pure WEIGHT unit (kg, liter)
+    // Customer bought weight directly, no need for base weight multiplication
+    if (selectedUnit === 'kg' || conversionValue === 1) {
+      // Customer bought in KG directly
+      weightInKg = quantity * 1; // 2 kg = 2 kg
+    } else if (selectedUnit === 'ton') {
+      // Customer bought in TON
+      weightInKg = quantity * 1000; // 0.5 ton = 500 kg
+    } else {
+      // Customer bought in QUANTITY unit (sak, batang, lembar, gulung, etc.)
+      // Use base weight from product (per supplier's unit)
+      // Example: 2 sak × 50kg/sak = 100kg
+      weightInKg = quantity * baseWeightKg;
     }
+  } else {
+    // No conversion found - assume it's supplier's unit (batang, sak, etc.)
+    // Use base weight directly
+    weightInKg = quantity * baseWeightKg;
   }
 
-  // Calculate total weight in grams
-  const totalWeightGrams = quantity * weightPerUnit * 1000;
+  // Convert to grams for RajaOngkir API
+  const totalWeightGrams = weightInKg * 1000;
 
   return Math.round(totalWeightGrams); // Round to avoid floating point issues
 }

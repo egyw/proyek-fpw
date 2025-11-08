@@ -312,4 +312,36 @@ export const productsRouter = router({
 
       return product;
     }),
+
+  // Get multiple products by IDs (for weight calculation in checkout)
+  getByIds: procedure
+    .input(
+      z.object({
+        productIds: z.array(z.string()).min(1).max(100), // Limit to 100 products
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        await connectDB();
+
+        // Query products by IDs
+        const products = await Product.find({
+          _id: { $in: input.productIds },
+          isActive: true, // Only get active products
+        })
+          .select('_id name slug category unit attributes') // Only select needed fields
+          .lean<IProductData[]>();
+
+        return {
+          products,
+        };
+      } catch (error) {
+        console.error('[getByIds] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch products',
+          cause: error,
+        });
+      }
+    }),
 });
