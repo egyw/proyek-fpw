@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import MainLayout from "@/components/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,115 +24,69 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Package, Truck, CheckCircle, XCircle, Star } from "lucide-react";
+import { Package, Truck, CheckCircle, XCircle, Star, Clock } from "lucide-react";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { trpc } from "@/utils/trpc";
+import { toast } from "sonner";
 
-// TODO: Replace with tRPC query
-// Expected API: trpc.orders.getAll.useQuery({ status?: string })
-// Input: { status?: 'processing' | 'shipping' | 'delivered' | 'completed' }
-// Output: Order[]
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: string;
-  status: "processing" | "shipping" | "delivered" | "completed";
-  total: number;
-  items: {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-    image: string;
-  }[];
-  shippingAddress: string;
-  estimatedDelivery?: string;
-  trackingNumber?: string;
-  rating?: number;
+// Order item interface
+interface OrderItem {
+  productId: string;
+  name: string;
+  slug: string;
+  image: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  category: string;
 }
 
-const dummyOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2025-001",
-    date: "2025-10-05",
-    status: "completed",
-    total: 1500000,
-    items: [
-      {
-        id: "1",
-        name: "Semen Gresik 50kg",
-        quantity: 20,
-        price: 65000,
-        image: "/images/dummy_image.jpg",
-      },
-      {
-        id: "2",
-        name: "Besi Beton 10mm",
-        quantity: 10,
-        price: 85000,
-        image: "/images/dummy_image.jpg",
-      },
-    ],
-    shippingAddress: "Jl. Merdeka No. 123, Jakarta Pusat",
-    rating: 5,
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2025-002",
-    date: "2025-10-08",
-    status: "shipping",
-    total: 2800000,
-    items: [
-      {
-        id: "3",
-        name: "Keramik Roman 30x30",
-        quantity: 100,
-        price: 28000,
-        image: "/images/dummy_image.jpg",
-      },
-    ],
-    shippingAddress: "Jl. Sudirman No. 456, Jakarta Selatan",
-    estimatedDelivery: "2025-10-12",
-    trackingNumber: "JNE123456789",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2025-003",
-    date: "2025-10-10",
-    status: "processing",
-    total: 750000,
-    items: [
-      {
-        id: "4",
-        name: "Cat Tembok Dulux 5L",
-        quantity: 10,
-        price: 75000,
-        image: "/images/dummy_image.jpg",
-      },
-    ],
-    shippingAddress: "Jl. Gatot Subroto No. 789, Tangerang",
-  },
-  {
-    id: "4",
-    orderNumber: "ORD-2025-004",
-    date: "2025-10-09",
-    status: "completed",
-    total: 3200000,
-    items: [
-      {
-        id: "5",
-        name: "Tangki Air Plastik 1000L",
-        quantity: 2,
-        price: 1600000,
-        image: "/images/dummy_image.jpg",
-      },
-    ],
-    shippingAddress: "Jl. Thamrin No. 321, Jakarta Pusat",
-    estimatedDelivery: "2025-10-10",
-  },
-];
+// Order interface from database
+interface Order {
+  _id: string;
+  orderId: string;
+  userId: string;
+  items: OrderItem[];
+  shippingAddress: {
+    recipientName: string;
+    phoneNumber: string;
+    fullAddress: string;
+    district: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    notes?: string;
+  };
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+  shippingDetails?: {
+    courierCode: string;
+    courierName: string;
+    service: string;
+    cost: number;
+    estimatedDays: string;
+  };
+  snapToken?: string;
+  snapRedirectUrl?: string;
+  transactionId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function OrdersPage() {
+  const router = useRouter();
+  
+  // Protect page - require authentication
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
+
+  // Get user's orders from database
+  const { data: ordersData, isLoading: ordersLoading } = trpc.orders.getUserOrders.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -152,40 +107,87 @@ export default function OrdersPage() {
     });
   };
 
-  // Filter orders based on status
+  // Extract orders from tRPC response
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orders: Order[] = (ordersData?.orders as any) || [];
+
+  // Filter orders based on payment status
   const filteredOrders =
     statusFilter === "all"
-      ? dummyOrders
-      : dummyOrders.filter((order) => order.status === statusFilter);
+      ? orders
+      : orders.filter((order) => order.paymentStatus === statusFilter);
 
-  const getStatusBadge = (status: Order["status"]) => {
+  // Loading state
+  if (authLoading || ordersLoading) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Memuat pesanan...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Not authenticated (redirect handled by useRequireAuth)
+  if (!isAuthenticated) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Mengalihkan ke login...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const getStatusBadge = (status: Order["paymentStatus"]) => {
     const variants: Record<
-      Order["status"],
+      Order["paymentStatus"],
       { label: string; className: string; icon: React.ReactNode }
     > = {
+      pending: {
+        label: "Menunggu Pembayaran",
+        className: "bg-yellow-100 text-yellow-800",
+        icon: <Clock className="h-3 w-3 mr-1" />,
+      },
+      paid: {
+        label: "Dibayar",
+        className: "bg-green-100 text-green-800",
+        icon: <CheckCircle className="h-3 w-3 mr-1" />,
+      },
       processing: {
         label: "Sedang Diproses",
         className: "bg-blue-100 text-blue-800",
         icon: <Package className="h-3 w-3 mr-1" />,
       },
-      shipping: {
-        label: "Dalam Perjalanan",
-        className: "bg-yellow-100 text-yellow-800",
+      shipped: {
+        label: "Dikirim",
+        className: "bg-purple-100 text-purple-800",
         icon: <Truck className="h-3 w-3 mr-1" />,
       },
       delivered: {
         label: "Sudah Sampai",
-        className: "bg-green-100 text-green-800",
+        className: "bg-indigo-100 text-indigo-800",
         icon: <CheckCircle className="h-3 w-3 mr-1" />,
       },
       completed: {
         label: "Selesai",
-        className: "bg-gray-100 text-gray-800",
+        className: "bg-green-100 text-green-800",
         icon: <CheckCircle className="h-3 w-3 mr-1" />,
+      },
+      cancelled: {
+        label: "Dibatalkan",
+        className: "bg-red-100 text-red-800",
+        icon: <XCircle className="h-3 w-3 mr-1" />,
       },
     };
 
-    const variant = variants[status];
+    const variant = variants[status] || variants.pending;
     return (
       <Badge className={`${variant.className} flex items-center w-fit`}>
         {variant.icon}
@@ -212,8 +214,9 @@ export default function OrdersPage() {
 
   const handleReturnRequest = (order: Order) => {
     // TODO: Implement with tRPC
-    // Expected: returnMutation.mutate({ orderId: order.id, reason: returnReason })
-    console.log("Return request for order:", order.orderNumber);
+    // Expected: trpc.orders.requestReturn.useMutation()
+    toast.info("Fitur pengembalian barang segera hadir");
+    console.log("Return request for order:", order.orderId);
     console.log("Return reason:", returnReason);
     setReturnDialogOpen(false);
     setReturnReason("");
@@ -221,8 +224,9 @@ export default function OrdersPage() {
 
   const handleSubmitRating = (order: Order) => {
     // TODO: Implement with tRPC
-    // Expected: ratingMutation.mutate({ orderId: order.id, rating: selectedRating, review?: string })
-    console.log("Rating submitted:", selectedRating, "for order:", order.orderNumber);
+    // Expected: trpc.orders.submitRating.useMutation()
+    toast.success("Rating berhasil dikirim!");
+    console.log("Rating submitted:", selectedRating, "for order:", order.orderId);
     setRatingDialogOpen(false);
     setSelectedRating(0);
   };
@@ -245,15 +249,18 @@ export default function OrdersPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700">Status:</span>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-[220px]">
                     <SelectValue placeholder="Semua Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="pending">Menunggu Pembayaran</SelectItem>
+                    <SelectItem value="paid">Dibayar</SelectItem>
                     <SelectItem value="processing">Sedang Diproses</SelectItem>
-                    <SelectItem value="shipping">Dalam Perjalanan</SelectItem>
+                    <SelectItem value="shipped">Dikirim</SelectItem>
                     <SelectItem value="delivered">Sudah Sampai</SelectItem>
                     <SelectItem value="completed">Selesai</SelectItem>
+                    <SelectItem value="cancelled">Dibatalkan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -281,28 +288,28 @@ export default function OrdersPage() {
               </Card>
             ) : (
               filteredOrders.map((order) => (
-                <Card key={order.id} className="p-6 hover:shadow-lg transition-shadow">
+                <Card key={order._id} className="p-6 hover:shadow-lg transition-shadow">
                   {/* Order Header */}
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {order.orderNumber}
+                          {order.orderId}
                         </h3>
-                        {getStatusBadge(order.status)}
+                        {getStatusBadge(order.paymentStatus)}
                       </div>
                       <p className="text-sm text-gray-600">
-                        Tanggal Pemesanan: {formatDate(order.date)}
+                        Tanggal Pemesanan: {formatDate(order.createdAt)}
                       </p>
-                      {order.estimatedDelivery && (
-                        <p className="text-sm text-gray-600">
-                          Estimasi Sampai: {formatDate(order.estimatedDelivery)}
-                        </p>
-                      )}
-                      {order.trackingNumber && (
-                        <p className="text-sm text-gray-600">
-                          No. Resi: <span className="font-mono">{order.trackingNumber}</span>
-                        </p>
+                      {order.shippingDetails && (
+                        <>
+                          <p className="text-sm text-gray-600">
+                            Kurir: {order.shippingDetails.courierName} - {order.shippingDetails.service}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Estimasi: {order.shippingDetails.estimatedDays} hari
+                          </p>
+                        </>
                       )}
                     </div>
                     <div className="text-right">
@@ -318,14 +325,14 @@ export default function OrdersPage() {
                   {/* Order Items - Show first 1 item by default */}
                   <div className="space-y-3 mb-4">
                     {(() => {
-                      const isExpanded = expandedOrders.has(order.id);
+                      const isExpanded = expandedOrders.has(order._id);
                       const displayItems = isExpanded ? order.items : order.items.slice(0, 1);
                       const remainingCount = order.items.length - 1;
 
                       return (
                         <>
-                          {displayItems.map((item) => (
-                            <div key={item.id} className="flex items-center gap-4">
+                          {displayItems.map((item: OrderItem) => (
+                            <div key={item.productId} className="flex items-center gap-4">
                               <Image
                                 src={item.image}
                                 alt={item.name}
@@ -336,7 +343,7 @@ export default function OrdersPage() {
                               <div className="flex-1">
                                 <h4 className="font-medium text-gray-900">{item.name}</h4>
                                 <p className="text-sm text-gray-600">
-                                  {item.quantity} x {formatPrice(item.price)}
+                                  {item.quantity} {item.unit} × {formatPrice(item.price)}
                                 </p>
                               </div>
                               <p className="font-semibold text-gray-900">
@@ -350,7 +357,7 @@ export default function OrdersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => toggleExpandOrder(order.id)}
+                              onClick={() => toggleExpandOrder(order._id)}
                               className="text-primary hover:text-primary/80 hover:bg-transparent p-0 h-auto font-medium"
                             >
                               {isExpanded ? (
@@ -370,17 +377,38 @@ export default function OrdersPage() {
                     <p className="text-sm font-medium text-gray-700 mb-1">
                       Alamat Pengiriman
                     </p>
-                    <p className="text-sm text-gray-600">{order.shippingAddress}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {order.shippingAddress.recipientName} - {order.shippingAddress.phoneNumber}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {order.shippingAddress.fullAddress}, {order.shippingAddress.district}, {order.shippingAddress.city}
+                      <br />
+                      {order.shippingAddress.province} {order.shippingAddress.postalCode}
+                    </p>
                   </div>
 
                   {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3">
-                    <Button variant="outline" className="flex-1 sm:flex-none">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 sm:flex-none"
+                      onClick={() => router.push(`/orders/${order.orderId}`)}
+                    >
                       Lihat Detail
                     </Button>
 
-                    {/* Return Button - Show for shipping/delivered status */}
-                    {(order.status === "shipping" || order.status === "delivered") && (
+                    {/* Pay Now Button - Show for pending status with snapToken */}
+                    {order.paymentStatus === "pending" && order.snapToken && (
+                      <Button 
+                        className="flex-1 sm:flex-none"
+                        onClick={() => router.push(`/orders/${order.orderId}`)}
+                      >
+                        Bayar Sekarang
+                      </Button>
+                    )}
+
+                    {/* Return Button - Show for shipped/delivered status */}
+                    {(order.paymentStatus === "shipped" || order.paymentStatus === "delivered") && (
                       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
@@ -396,7 +424,7 @@ export default function OrdersPage() {
                             <DialogTitle>Ajukan Pengembalian</DialogTitle>
                             <DialogDescription>
                               Anda akan mengajukan pengembalian untuk pesanan{" "}
-                              <span className="font-semibold">{selectedOrder?.orderNumber}</span>
+                              <span className="font-semibold">{selectedOrder?.orderId}</span>
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
@@ -437,8 +465,8 @@ export default function OrdersPage() {
                       </Dialog>
                     )}
 
-                    {/* Rating Button - Show for completed orders without rating */}
-                    {order.status === "completed" && !order.rating && (
+                    {/* Rating Button - Show for completed orders (TODO: Add rating field to Order model) */}
+                    {order.paymentStatus === "completed" && (
                       <Dialog open={ratingDialogOpen} onOpenChange={setRatingDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
@@ -506,16 +534,6 @@ export default function OrdersPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
-                    )}
-
-                    {/* Show rating if already rated */}
-                    {order.status === "completed" && order.rating && (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 rounded-lg">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium text-gray-700">
-                          Rating Anda: {order.rating}/5
-                        </span>
-                      </div>
                     )}
                   </div>
                 </Card>

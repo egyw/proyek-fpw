@@ -33,9 +33,10 @@ export interface IOrder extends Document {
   shippingCost: number;
   total: number;
   
-  // Payment
+  // Payment (auto-update via Midtrans webhook)
   paymentMethod: string; // "midtrans", "cod", etc.
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'expired';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'expired' | 'cancelled';
+  paymentExpiredAt?: Date; // Payment deadline (30 minutes from order creation)
   paidAt?: Date;
   
   // Midtrans specific
@@ -43,8 +44,8 @@ export interface IOrder extends Document {
   snapRedirectUrl?: string; // Midtrans redirect URL
   transactionId?: string; // Midtrans transaction ID
   
-  // Order status
-  orderStatus: 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+  // Order status (manual update by admin)
+  orderStatus: 'awaiting_payment' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
   
   // Shipping info (filled by admin after shipping)
   shippingInfo?: {
@@ -98,9 +99,10 @@ const OrderSchema = new Schema<IOrder>(
     paymentMethod: { type: String, required: true },
     paymentStatus: { 
       type: String, 
-      enum: ['pending', 'paid', 'failed', 'expired'],
+      enum: ['pending', 'paid', 'failed', 'expired', 'cancelled'],
       default: 'pending'
     },
+    paymentExpiredAt: { type: Date },
     paidAt: { type: Date },
     
     snapToken: { type: String },
@@ -109,8 +111,8 @@ const OrderSchema = new Schema<IOrder>(
     
     orderStatus: {
       type: String,
-      enum: ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'],
-      default: 'pending_payment'
+      enum: ['awaiting_payment', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'],
+      default: 'awaiting_payment'
     },
     
     shippingInfo: {

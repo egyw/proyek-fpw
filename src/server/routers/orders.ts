@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
-import Cart from '@/models/Cart';
 import { createSnapToken } from '@/lib/midtrans';
 
 // Generate unique order ID
@@ -58,6 +57,11 @@ export const ordersRouter = router({
         // Generate unique order ID
         const orderId = generateOrderId();
 
+        // Set payment expiry time (60 minutes from now)
+        // Strategy: 15 min Snap popup + 45 min payment completion
+        const paymentExpiredAt = new Date();
+        paymentExpiredAt.setMinutes(paymentExpiredAt.getMinutes() + 60);
+
         // Create order with pending_payment status
         const order = await Order.create({
           orderId,
@@ -69,7 +73,8 @@ export const ordersRouter = router({
           total: input.total,
           paymentMethod: input.paymentMethod,
           paymentStatus: 'pending',
-          orderStatus: 'pending_payment',
+          paymentExpiredAt, // 30 minutes deadline
+          orderStatus: 'awaiting_payment',
         });
 
         // If payment method is Midtrans, create Snap token
@@ -78,6 +83,13 @@ export const ordersRouter = router({
 
         if (input.paymentMethod === 'midtrans') {
           try {
+            // Format expiry time for Midtrans
+            // Format: "2024-12-02 17:00:00 +0700"
+            // Snap popup: 15 min to choose payment method
+            const expiryTime = new Date();
+            expiryTime.setMinutes(expiryTime.getMinutes() + 15);
+            const formattedExpiry = expiryTime.toISOString().slice(0, 19).replace('T', ' ') + ' +0700';
+
             const snapResult = await createSnapToken({
               orderId: orderId,
               grossAmount: input.total,
@@ -109,6 +121,14 @@ export const ordersRouter = router({
                 postal_code: input.shippingAddress.postalCode,
                 country_code: 'IDN',
               },
+              // ⭐ Snap popup expiry: 15 minutes to choose payment method
+              // After selection, Midtrans dashboard settings apply: +45 min for payment
+              // Total: 15 min (popup) + 45 min (payment) = 60 min (our order expiry)
+              customExpiry: {
+                start_time: formattedExpiry,
+                unit: 'minute',
+                duration: 15,
+              },
             });
 
             snapToken = snapResult.token;
@@ -130,6 +150,8 @@ export const ordersRouter = router({
         }
 
         // Clear user's cart after order created
+        // This prevents duplicate orders from same cart
+        const Cart = (await import('@/models/Cart')).default;
         await Cart.findOneAndUpdate(
           { userId: user.id },
           { items: [] }
@@ -271,10 +293,9 @@ export const ordersRouter = router({
     .input(
       z.object({
         orderId: z.string(),
-        paymentStatus: z.enum(['pending', 'paid', 'failed', 'expired']),
+        paymentStatus: z.enum(['pending', 'paid', 'failed', 'expired', 'cancelled']),
         orderStatus: z.enum([
-          'pending_payment',
-          'paid',
+          'awaiting_payment',
           'processing',
           'shipped',
           'delivered',
@@ -321,6 +342,196 @@ export const ordersRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update payment status',
+          cause: error,
+        });
+      }
+    }),
+
+  // Update order status (for admin to move order through workflow)
+  updateOrderStatus: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+        orderStatus: z.enum([
+          'awaiting_payment',
+          'processing',
+          'shipped',
+          'delivered',
+          'completed',
+          'cancelled',
+        ]),
+        shippingInfo: z.object({
+          courier: z.string(),
+          trackingNumber: z.string(),
+          shippedDate: z.string(),
+        }).optional(),
+        cancelReason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin or staff can update order status',
+          });
+        }
+
+        await connectDB();
+
+        const order = await Order.findOne({ orderId: input.orderId });
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found',
+          });
+        }
+
+        // Update order status
+        order.orderStatus = input.orderStatus;
+
+        // If status is shipped, add shipping info
+        if (input.orderStatus === 'shipped' && input.shippingInfo) {
+          order.shippingInfo = {
+            courier: input.shippingInfo.courier,
+            trackingNumber: input.shippingInfo.trackingNumber,
+            shippedDate: new Date(input.shippingInfo.shippedDate),
+          };
+        }
+
+        // If status is cancelled, add cancel reason
+        if (input.orderStatus === 'cancelled' && input.cancelReason) {
+          order.cancelReason = input.cancelReason;
+          order.cancelledAt = new Date();
+        }
+
+        await order.save();
+
+        return { 
+          success: true, 
+          order: {
+            orderId: order.orderId,
+            orderStatus: order.orderStatus,
+            shippingInfo: order.shippingInfo,
+          }
+        };
+      } catch (error) {
+        console.error('[updateOrderStatus] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update order status',
+          cause: error,
+        });
+      }
+    }),
+
+  // Check if order payment has expired (30 minutes deadline)
+  checkOrderExpiry: protectedProcedure
+    .input(z.object({
+      orderId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      try {
+        await connectDB();
+
+        const order = await Order.findOne({ orderId: input.orderId });
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found',
+          });
+        }
+
+        // Check if order has expired
+        const now = new Date();
+        const isExpired = order.paymentExpiredAt && now > order.paymentExpiredAt;
+
+        // Auto-update status if expired and still pending
+        if (isExpired && order.paymentStatus === 'pending') {
+          order.paymentStatus = 'expired';
+          order.orderStatus = 'cancelled';
+          order.cancelReason = 'Pembayaran melebihi batas waktu 30 menit';
+          order.cancelledAt = now;
+          await order.save();
+        }
+
+        return {
+          isExpired: order.paymentStatus === 'expired',
+          paymentExpiredAt: order.paymentExpiredAt?.toISOString(),
+          remainingSeconds: order.paymentExpiredAt 
+            ? Math.max(0, Math.floor((order.paymentExpiredAt.getTime() - now.getTime()) / 1000))
+            : 0,
+        };
+      } catch (error) {
+        console.error('[checkOrderExpiry] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check order expiry',
+          cause: error,
+        });
+      }
+    }),
+
+  // ⭐ Simulate payment success (for Sandbox testing only)
+  // In production, this should be done via webhook
+  simulatePaymentSuccess: protectedProcedure
+    .input(z.object({ orderId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await connectDB();
+
+        const order = await Order.findOne({
+          orderId: input.orderId,
+          userId: ctx.user.id,
+        });
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Pesanan tidak ditemukan',
+          });
+        }
+
+        // Only allow if payment is still pending
+        if (order.paymentStatus !== 'pending') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Pesanan sudah dibayar atau dibatalkan',
+          });
+        }
+
+        // Update to paid
+        order.paymentStatus = 'paid';
+        order.orderStatus = 'processing';
+        order.paidAt = new Date();
+        await order.save();
+
+        console.log(`[simulatePaymentSuccess] Order ${input.orderId} marked as paid`);
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[simulatePaymentSuccess] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal mensimulasi pembayaran',
           cause: error,
         });
       }

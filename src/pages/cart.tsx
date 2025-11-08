@@ -17,7 +17,6 @@ import {
   Minus,
   ArrowRight,
   ShoppingBag,
-  Package,
 } from "lucide-react";
 
 interface CartItem {
@@ -131,9 +130,6 @@ export default function CartPage() {
   const calculateSubtotal = (): number => {
     return mappedCartItems.reduce((total, item) => total + calculateItemTotal(item), 0);
   };
-
-  const shippingCost = 50000; // Flat shipping cost
-  const grandTotal = calculateSubtotal() + shippingCost;
 
   // Validation: Cart must have items
   const canCheckout = mappedCartItems.length > 0;
@@ -328,31 +324,13 @@ export default function CartPage() {
                   </h2>
                   <Separator className="mb-4" />
 
-                  <div className="space-y-3 mb-4">
+                  <div className="space-y-3 mb-6">
                     <div className="flex justify-between text-gray-700">
-                      <span>Subtotal ({mappedCartItems.length} item)</span>
+                      <span>Total Produk ({mappedCartItems.length} item)</span>
                       <span className="font-semibold">
                         Rp {calculateSubtotal().toLocaleString("id-ID")}
                       </span>
                     </div>
-                    <div className="flex justify-between text-gray-700">
-                      <span className="flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Ongkos Kirim
-                      </span>
-                      <span className="font-semibold">
-                        Rp {shippingCost.toLocaleString("id-ID")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Separator className="mb-4" />
-
-                  <div className="flex justify-between text-lg font-bold text-gray-900 mb-6">
-                    <span>Total</span>
-                    <span className="text-primary">
-                      Rp {grandTotal.toLocaleString("id-ID")}
-                    </span>
                   </div>
 
                   <Button 
@@ -378,8 +356,8 @@ export default function CartPage() {
                   {/* Info Box */}
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-900">
-                      <strong>💡 Info:</strong> Alamat pengiriman dan metode pembayaran 
-                      akan dipilih di halaman checkout.
+                      <strong>💡 Info:</strong> Ongkos kirim akan dihitung di halaman checkout 
+                      setelah Anda memilih alamat pengiriman.
                     </p>
                   </div>
                 </Card>

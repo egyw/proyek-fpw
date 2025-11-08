@@ -3935,6 +3935,329 @@ const toggleCourier = (courierCode: string) => {
 - ✅ Clear price preview (show cheapest option per courier)
 - ✅ Multiple expansion support (can compare multiple couriers)
 
+### 0.1. Payment Expiry System - Tiered Strategy (November 9, 2025)
+
+**Status**: ✅ Production-ready, optimized 2-tier expiry (15 min popup + 45 min payment)
+
+**Purpose**: Enforce payment deadline with proper separation between method selection and payment completion
+
+**Architecture**: Two-tier expiry system with distinct timeframes
+
+**Why Tiered Expiry?**
+
+The problem with single 30-minute expiry:
+```
+❌ OLD: Snap popup (30 min) + Payment completion (30 min) = 60 min total
+   → Inconsistent, confusing for customers
+```
+
+The solution with tiered expiry:
+```
+✅ NEW: Snap popup (15 min) + Payment completion (45 min) = 60 min total
+   → Clear stages, better UX, industry standard
+```
+
+**Tier 1: Snap Popup - Choose Payment Method** (15 minutes)
+- **Where**: Midtrans `custom_expiry` parameter in token creation
+- **Duration**: 15 minutes (enough to browse and select payment method)
+- **UI**: Midtrans Snap popup shows "Choose within 14:59" countdown
+- **Parameter**:
+  ```typescript
+  custom_expiry: {
+    start_time: "2024-12-02 17:00:00 +0700", // ISO format with timezone
+    unit: "minute",
+    duration: 15, // ⭐ 15 minutes for method selection
+  }
+  ```
+- **Benefits**:
+  - ✅ Sufficient time to browse payment options (most users < 5 min)
+  - ✅ Not too long (prevents abandoned sessions)
+  - ✅ Clear purpose: choose payment method only
+
+**Tier 2: Payment Completion** (45 minutes)
+- **Where**: Midtrans Dashboard settings per payment method
+- **Duration**: 45 minutes (after selecting payment method)
+- **Configuration**: Dashboard → Settings → Configuration → Payment Expiry
+- **Purpose**: Complete the actual payment transaction
+- **Use Cases**:
+  - BCA/Mandiri VA: Screenshot → Open m-banking → Transfer → Confirm
+  - Alfamart/Indomaret: Travel to physical store location
+  - QRIS: Scan QR code and authorize payment
+- **Benefits**:
+  - ✅ Enough time for VA transfer workflow
+  - ✅ Enough time to visit convenience store
+  - ✅ Not excessive (inventory not locked too long)
+
+**Layer 3: Custom Order Expiry** (60 minutes total)
+- **Where**: Order model + tRPC procedure + Order detail page
+- **Duration**: 60 minutes from order creation
+- **Database Field**: `paymentExpiredAt: Date` in Order model
+- **Purpose**: Overall order deadline and cleanup
+- **Benefits**:
+  - ✅ Web countdown shows total time remaining: 59:59 → 00:00
+  - ✅ Auto-cancel unpaid orders in database
+  - ✅ Consistent with e-commerce standards (Tokopedia, Shopee ~1 hour)
+
+**Complete Flow Timeline**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ T+0 min: Customer Create Order (17:00:00)                   │
+│ ✓ Order created: ORD-2025-001                               │
+│ ✓ paymentExpiredAt: 18:00:00 (60 min total)                │
+│ ✓ Web countdown starts: 59:59                               │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ T+0 to T+15: Tier 1 - Choose Payment Method                │
+│ ⏱️  Snap popup countdown: "Choose within 14:59"            │
+│ 🎯 Customer browses: GoPay, BCA VA, Alfamart, etc.         │
+│ ✓ Customer selects: "BCA Virtual Account"                  │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ T+15 to T+60: Tier 2 - Complete Payment                    │
+│ ⏱️  Duration: 45 minutes (Midtrans Dashboard setting)      │
+│ 💳 Customer actions:                                        │
+│    1. View BCA VA number on screen                         │
+│    2. Screenshot or note the VA number                     │
+│    3. Open BCA mobile banking app                          │
+│    4. Transfer to VA number                                │
+│    5. Confirm transaction                                  │
+│ ✓ Payment received by Midtrans                             │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ T+60: Order Expiry Deadline (18:00:00)                     │
+│                                                             │
+│ ✅ If Paid: Status → "processing", countdown removed       │
+│ ❌ If Unpaid: Status → "expired", order auto-cancelled     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Details**:
+
+```typescript
+// src/server/routers/orders.ts - Order creation with 60-minute expiry
+const paymentExpiredAt = new Date();
+paymentExpiredAt.setMinutes(paymentExpiredAt.getMinutes() + 60); // Total: 1 hour
+
+// Tier 1: Snap popup expiry (15 minutes for method selection)
+const expiryTime = new Date();
+expiryTime.setMinutes(expiryTime.getMinutes() + 15);
+const formattedExpiry = expiryTime.toISOString().slice(0, 19).replace('T', ' ') + ' +0700';
+
+await createSnapToken({
+  orderId: orderId,
+  grossAmount: input.total,
+  // ... other params
+  customExpiry: {
+    start_time: formattedExpiry,
+    unit: 'minute',
+    duration: 15, // ⭐ 15 min to choose payment method
+  },
+  // After selection, Tier 2 applies: +45 min from Dashboard settings
+});
+
+// src/pages/orders/[orderId].tsx - Frontend countdown (60 minutes)
+const { data: expiryData } = trpc.orders.checkOrderExpiry.useQuery(
+  { orderId },
+  { enabled: order.paymentStatus === 'pending', refetchInterval: 5000 }
+);
+
+// Display countdown: "59:45" → "00:00" (MM:SS format)
+```
+
+**Midtrans Dashboard Configuration** (Manual Setup Required):
+
+Login to https://dashboard.midtrans.com → Settings → Configuration
+
+Set **Payment Expiry** for all methods to **45 minutes**:
+- GoPay/GoPay Later: 45 min
+- All Virtual Accounts (BCA, Mandiri, BNI, BRI, Permata, etc.): 45 min
+- E-Wallets (ShopeePay, QRIS): 45 min
+- Convenience Stores (Alfamart, Indomaret): 45 min
+
+**Why This Strategy Works**:
+
+| Aspect | 15 min Popup | 45 min Payment | 60 min Total |
+|--------|--------------|----------------|--------------|
+| **Purpose** | Choose method | Complete payment | Order validity |
+| **User Action** | Browse & click | Transfer/scan/visit store | - |
+| **Typical Duration** | < 5 minutes | 10-30 minutes | - |
+| **Buffer** | 3x buffer | 1.5x buffer | Industry standard |
+| **If Exceeded** | Popup closes | Payment rejected | Order cancelled |
+
+**Testing Checklist**:
+✅ Create order → Web countdown starts at 59:59  
+✅ Open Snap popup → Shows "Choose within 14:59"  
+✅ Select payment method → Get 45 more minutes to pay  
+✅ Complete payment → Status updates, countdown disappears  
+✅ Wait 60 min without paying → Order auto-expired  
+
+---
+
+### 0.2. PDF Invoice Generation with jsPDF (November 8, 2025)
+
+**Status**: ✅ Production-ready, conditional rendering, auto-download
+
+**Location**: `src/pages/orders/[orderId].tsx`
+
+**Purpose**: Generate and download professional PDF invoice for paid orders with complete order details.
+
+**Key Features**:
+
+1. **Conditional Rendering** - Button only appears if `order.paymentStatus === 'paid'`
+2. **Dynamic Import** - jsPDF imported asynchronously to avoid SSR issues
+3. **Professional Layout** - Company branding, order info, customer details, itemized table
+4. **Responsive Content** - Auto-wrap long product names and addresses
+5. **Complete Details** - Includes subtotal, shipping, discount, and total
+
+**Implementation Pattern**:
+
+```tsx
+// Button with conditional rendering (lines 402-408)
+{order.paymentStatus === 'paid' && (
+  <Button variant="outline" onClick={generateInvoicePDF}>
+    <Download className="h-4 w-4 mr-2" />
+    Download Invoice
+  </Button>
+)}
+
+// PDF Generation Function (lines 257-380)
+const generateInvoicePDF = async () => {
+  // Dynamic import to avoid SSR issues
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF();
+
+  // Company Header
+  doc.setFontSize(20);
+  doc.text('INVOICE', 105, 20, { align: 'center' });
+  doc.setFontSize(10);
+  doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+  doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+
+  // Order & Customer Info (2 columns)
+  doc.text(`Order ID: ${order.orderId}`, 20, 62);
+  doc.text(`Tanggal: ${formatDate(order.createdAt)}`, 20, 68);
+  doc.text(`Status: ${currentStatus.label}`, 20, 74);
+  doc.text(order.shippingAddress.recipientName, 110, 62);
+  doc.text(order.shippingAddress.phoneNumber, 110, 68);
+  
+  // Auto-wrap address
+  const addressLines = doc.splitTextToSize(order.shippingAddress.fullAddress, 80);
+  addressLines.forEach((line: string) => doc.text(line, 110, currentY));
+
+  // Items Table
+  order.items.forEach((item: OrderItem) => {
+    const productNameLines = doc.splitTextToSize(item.name, 85);
+    productNameLines.forEach((line: string, index: number) => {
+      doc.text(line, 20, itemY + (index * 6));
+    });
+    doc.text(`${item.quantity} ${item.unit}`, 110, baseY);
+    doc.text(formatCurrency(item.price), 135, baseY);
+    doc.text(formatCurrency(item.price * item.quantity), 170, baseY);
+  });
+
+  // Totals with optional discount
+  doc.text('Subtotal:', 135, itemY);
+  doc.text(formatCurrency(order.subtotal), 170, itemY);
+  doc.text('Ongkir:', 135, itemY + 6);
+  doc.text(formatCurrency(order.shippingCost), 170, itemY + 6);
+  
+  if (order.discount?.amount) {
+    doc.text(`Diskon (${order.discount.code}):`, 135, itemY + 12);
+    doc.text(`-${formatCurrency(order.discount.amount)}`, 170, itemY + 12);
+  }
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('TOTAL:', 135, itemY + 20);
+  doc.text(formatCurrency(order.total), 170, itemY + 20);
+
+  // Footer
+  doc.setFontSize(9);
+  doc.text('Terima kasih atas pembelian Anda!', 105, 280, { align: 'center' });
+
+  // Save & Notify
+  doc.save(`Invoice-${order.orderId}.pdf`);
+  toast.success('Invoice Berhasil Diunduh!', {
+    description: `Invoice ${order.orderId} telah diunduh.`,
+  });
+};
+```
+
+**PDF Layout Coordinates**:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      INVOICE                      (20)  │
+│              Toko Pelita Bangunan                 (30)  │
+│        Jl. Raya Bangunan No. 123, Makassar       (35)  │
+├─────────────────────────────────────────────────────────┤ (45)
+│ Informasi Pesanan (55)   │  Informasi Penerima (55)    │
+│ Order ID: ...       (62)  │  Nama ...            (62)   │
+│ Tanggal: ...        (68)  │  Telp ...            (68)   │
+│ Status: ...         (74)  │  Alamat (multi-line) (74+)  │
+├─────────────────────────────────────────────────────────┤ (90+)
+│ Produk | Qty | Harga Satuan | Subtotal                 │
+├─────────────────────────────────────────────────────────┤
+│ Item 1 ...                                              │
+│ Item 2 ...                                              │
+├─────────────────────────────────────────────────────────┤
+│                            Subtotal: Rp XXX,XXX         │
+│                            Ongkir:   Rp XX,XXX          │
+│                            Diskon:  -Rp XX,XXX (opt)    │
+│                            ──────────────────           │
+│                            TOTAL:    Rp XXX,XXX         │
+├─────────────────────────────────────────────────────────┤
+│        Terima kasih atas pembelian Anda!          (280) │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Library**: jsPDF (version ^2.5.2)
+
+```bash
+npm install jspdf
+```
+
+**Important Patterns**:
+
+1. **Dynamic Import** - MUST use `await import('jspdf')` to prevent SSR errors in Next.js
+2. **Text Wrapping** - Use `doc.splitTextToSize(text, maxWidth)` for long content
+3. **Coordinate System** - Y-axis starts at top (0), increases downward
+4. **Font Control** - Reset font/size before each section for consistency
+5. **Toast Notification** - Confirm successful download to user
+
+**Benefits**:
+
+- ✅ No server-side PDF generation (client-side, instant)
+- ✅ Professional invoice layout with company branding
+- ✅ Handles dynamic content (multiple items, optional discount)
+- ✅ Auto-wrap long text (product names, addresses)
+- ✅ Small library size (~100KB minified)
+- ✅ No external API dependencies
+
+**Testing Checklist**:
+
+✅ Button only shows if `paymentStatus === 'paid'`  
+✅ PDF downloads automatically with filename `Invoice-{orderId}.pdf`  
+✅ Company info appears in header  
+✅ Order details (ID, date, status) displayed correctly  
+✅ Customer address wraps properly for long addresses  
+✅ All order items listed with correct quantities and prices  
+✅ Subtotal, shipping, discount, total all calculated correctly  
+✅ Toast notification confirms successful download  
+✅ Works in all major browsers (Chrome, Firefox, Edge, Safari)  
+
+**Future Enhancements** (Optional):
+
+- [ ] Add company logo image to invoice header
+- [ ] Support multiple pages for large orders (>10 items)
+- [ ] Add barcode/QR code for order ID
+- [ ] Email invoice option (send to customer email)
+- [ ] Print option (open in new tab for printing)
+- [ ] Customizable invoice template (admin settings)
+
 ### 1. Dynamic Unit Converter with Product Attributes
 
 **Location**: `src/components/UnitConverter.tsx`

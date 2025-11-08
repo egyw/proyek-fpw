@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -42,9 +43,6 @@ import {
   Edit,
   CheckCircle2,
 } from "lucide-react";
-
-// Import Midtrans Payment Button
-import MidtransPaymentButton from "@/components/MidtransPaymentButton";
 
 // Dynamic import for AddressMapPicker to avoid SSR issues with Leaflet
 const DynamicAddressMapPicker = dynamic(
@@ -182,6 +180,11 @@ function getCityIdFromName(cityName: string): string | undefined {
   return cityIdMap[cityName];
 }
 
+// Helper function to format currency
+const formatCurrency = (amount: number): string => {
+  return `Rp ${amount.toLocaleString('id-ID')}`;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   
@@ -230,10 +233,8 @@ export default function CheckoutPage() {
     lng: number;
   } | null>(null);
 
-  // ⭐ Midtrans payment state
-  const [orderCreated, setOrderCreated] = useState(false);
-  const [snapToken, setSnapToken] = useState<string | null>(null);
-  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  // ⭐ Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Address form with react-hook-form + Zod
   const addressForm = useForm<AddressFormValues>({
@@ -411,30 +412,30 @@ export default function CheckoutPage() {
         subtotal,
         shippingCost,
         total,
-        paymentMethod: 'midtrans', // ⭐ Midtrans payment
+        paymentMethod: 'midtrans', // ⭐ Midtrans only
       });
 
-      // ⭐ Save Snap token and order ID for payment
+      // ⭐ Save order ID and redirect to order detail page
       if (result.snapToken) {
-        setSnapToken(result.snapToken);
-        setCurrentOrderId(result.orderId);
-        setOrderCreated(true);
+        // ⭐ Clear cart immediately after order created
+        // This prevents user from creating duplicate orders
+        if (cartItems.length > 0) {
+          clearCart(); // Clear Zustand store (frontend)
+        }
+        // Backend cart is already cleared by createOrder mutation
+
+        // ⭐ Close dialog
+        setShowConfirmDialog(false);
 
         toast.success('Pesanan Berhasil Dibuat!', {
-          description: `Order ID: ${result.orderId}. Lanjutkan ke pembayaran.`,
+          description: `Order ID: ${result.orderId}. Mengarahkan ke halaman pembayaran...`,
         });
-      } else {
-        // Fallback if no Snap token (COD or other payment method)
-        toast.success('Pesanan Berhasil Dibuat!', {
-          description: `Order ID: ${result.orderId}`,
-        });
-        
-        // Clear cart
-        if (cartItems.length > 0) {
-          clearCart();
-        }
-        
-        router.push(`/orders/${result.orderId}`);
+
+        // ⭐ Redirect to order detail page with auto-pay flag
+        // Order detail page will auto-open Midtrans popup
+        setTimeout(() => {
+          router.push(`/orders/${result.orderId}?auto_pay=true`);
+        }, 500); // Small delay to show toast
       }
     } catch (error) {
       console.error('Place order error:', error);
@@ -444,54 +445,6 @@ export default function CheckoutPage() {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // ⭐ Handle payment success
-  const handlePaymentSuccess = () => {
-    toast.success('Pembayaran Berhasil!', {
-      description: 'Pesanan Anda telah dibayar. Kami akan segera memprosesnya.',
-    });
-
-    // Clear cart
-    if (cartItems.length > 0) {
-      clearCart();
-    }
-
-    // Redirect to order detail with success status
-    if (currentOrderId) {
-      router.push(`/orders/${currentOrderId}?status=success`);
-    }
-  };
-
-  // ⭐ Handle payment pending
-  const handlePaymentPending = () => {
-    toast.info('Pembayaran Tertunda', {
-      description: 'Menunggu konfirmasi pembayaran. Periksa status pesanan Anda.',
-    });
-
-    // Clear cart
-    if (cartItems.length > 0) {
-      clearCart();
-    }
-
-    // Redirect to order detail with pending status
-    if (currentOrderId) {
-      router.push(`/orders/${currentOrderId}?status=pending`);
-    }
-  };
-
-  // ⭐ Handle payment error
-  const handlePaymentError = () => {
-    toast.error('Pembayaran Gagal', {
-      description: 'Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi.',
-    });
-  };
-
-  // ⭐ Handle payment closed
-  const handlePaymentClose = () => {
-    toast.info('Pembayaran Dibatalkan', {
-      description: 'Anda dapat melanjutkan pembayaran kapan saja dari halaman pesanan.',
-    });
   };
 
   // Show loading while checking auth
@@ -1021,65 +974,20 @@ export default function CheckoutPage() {
                 <span>Rp {total.toLocaleString('id-ID')}</span>
               </div>
 
-              {/* Payment Method Preview */}
-              {/* ⭐ Conditional Rendering: Create Order OR Pay with Midtrans */}
-              {!orderCreated ? (
-                <>
-                  {/* Create Order Button */}
-                  <Button
-                    className="w-full h-12 text-lg"
-                    onClick={handlePlaceOrder}
-                    disabled={!selectedAddress || !selectedShipping || isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Membuat Pesanan...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-5 w-5 mr-2" />
-                        Buat Pesanan
-                      </>
-                    )}
-                  </Button>
+              {/* Create Order Button */}
+              <Button
+                className="w-full h-12 text-lg"
+                onClick={() => setShowConfirmDialog(true)}
+                disabled={!selectedAddress || !selectedShipping}
+              >
+                <CreditCard className="h-5 w-5 mr-2" />
+                Buat Pesanan
+              </Button>
 
-                  {!selectedShipping && selectedAddress && (
-                    <p className="text-xs text-yellow-600 text-center mt-2">
-                      Pilih metode pengiriman untuk melanjutkan
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* ⭐ Midtrans Payment Button */}
-                  {snapToken && currentOrderId && (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                        <p className="text-sm font-semibold text-green-800">
-                          Pesanan Berhasil Dibuat
-                        </p>
-                        <p className="text-xs text-green-700 mt-1">
-                          Order ID: {currentOrderId}
-                        </p>
-                      </div>
-
-                      <MidtransPaymentButton
-                        snapToken={snapToken}
-                        orderId={currentOrderId}
-                        onSuccess={handlePaymentSuccess}
-                        onPending={handlePaymentPending}
-                        onError={handlePaymentError}
-                        onClose={handlePaymentClose}
-                      />
-
-                      <p className="text-xs text-gray-500 text-center">
-                        Klik tombol di atas untuk melanjutkan ke pembayaran
-                      </p>
-                    </div>
-                  )}
-                </>
+              {!selectedShipping && selectedAddress && (
+                <p className="text-xs text-yellow-600 text-center mt-2">
+                  Pilih metode pengiriman untuk melanjutkan
+                </p>
               )}
 
               <p className="text-xs text-gray-500 text-center mt-4">
@@ -1090,6 +998,177 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Konfirmasi Pesanan</DialogTitle>
+            <DialogDescription>
+              Periksa kembali detail pesanan Anda sebelum melanjutkan ke pembayaran
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Alamat Pengiriman */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg border-b pb-2">
+                Alamat Pengiriman
+              </h3>
+              {selectedAddress && (
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <p className="font-medium">{selectedAddress.label}</p>
+                  <p className="text-sm text-gray-700">
+                    {selectedAddress.recipientName} ({selectedAddress.phoneNumber})
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {selectedAddress.fullAddress}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {selectedAddress.district}, {selectedAddress.city}, {selectedAddress.province} {selectedAddress.postalCode}
+                  </p>
+                  {selectedAddress.notes && (
+                    <p className="text-xs text-gray-500 italic">
+                      Catatan: {selectedAddress.notes}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Metode Pengiriman */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg border-b pb-2">
+                Metode Pengiriman
+              </h3>
+              {selectedShipping && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">
+                        {selectedShipping.courierName} - {selectedShipping.service}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {selectedShipping.description}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Estimasi: {selectedShipping.etd} hari
+                      </p>
+                    </div>
+                    <p className="font-semibold text-primary">
+                      {formatCurrency(selectedShipping.cost)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Daftar Produk */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg border-b pb-2">
+                Daftar Produk ({items.length} item)
+              </h3>
+              <div className="space-y-3 max-h-[250px] overflow-y-auto">
+                {items.map((item) => (
+                  <div
+                    key={`${item.productId}-${item.unit}`}
+                    className="flex gap-4 bg-gray-50 p-3 rounded-lg"
+                  >
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      width={60}
+                      height={60}
+                      className="rounded object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{item.name}</p>
+                      <p className="text-xs text-gray-600">
+                        {item.quantity} {item.unit.toUpperCase()} × {formatCurrency(item.price)}
+                      </p>
+                    </div>
+                    <p className="font-semibold text-sm">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Ringkasan Pembayaran */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg border-b pb-2">
+                Ringkasan Pembayaran
+              </h3>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Subtotal Produk</span>
+                  <span className="font-medium">{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Biaya Pengiriman</span>
+                  <span className="font-medium">
+                    {formatCurrency(shippingCost)}
+                  </span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-lg">Total</span>
+                    <span className="font-bold text-xl text-primary">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Info Metode Pembayaran */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <div className="shrink-0">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Metode Pembayaran: Midtrans
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Setelah konfirmasi, Anda akan diarahkan ke halaman pembayaran Midtrans untuk menyelesaikan transaksi.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isProcessing}
+              className="min-w-[100px]"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handlePlaceOrder}
+              disabled={isProcessing}
+              className="min-w-[180px]"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Konfirmasi & Buat Pesanan
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

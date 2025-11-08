@@ -58,6 +58,11 @@ export interface MidtransTransactionParams {
     postal_code: string;
     country_code?: string;
   };
+  customExpiry?: {
+    start_time: string; // Format: "2024-12-02 17:00:00 +0700"
+    unit: 'second' | 'minute' | 'hour' | 'day';
+    duration: number;
+  };
 }
 
 export async function createSnapToken(params: MidtransTransactionParams) {
@@ -89,11 +94,15 @@ export async function createSnapToken(params: MidtransTransactionParams) {
       credit_card: {
         secure: true,
       },
-      // Expiry time (24 hours)
-      expiry: {
-        unit: 'hours',
-        duration: 24,
-      },
+      // Custom expiry (use if provided, otherwise default 24 hours)
+      ...(params.customExpiry ? {
+        custom_expiry: params.customExpiry,
+      } : {
+        expiry: {
+          unit: 'hours',
+          duration: 24,
+        },
+      }),
     };
 
     const transaction = await snap.createTransaction(parameter);

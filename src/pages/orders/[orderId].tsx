@@ -36,10 +36,13 @@ interface OrderItem {
 
 export default function OrderDetailPage() {
   const router = useRouter();
-  const { orderId, status: queryStatus } = router.query;
+  const { orderId, status: queryStatus, auto_pay } = router.query;
   
   // Protect page
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
+
+  // tRPC utils for invalidating queries
+  const utils = trpc.useContext();
 
   // Get order detail
   const { data: orderData, isLoading: orderLoading } = trpc.orders.getOrderById.useQuery(
@@ -47,31 +50,145 @@ export default function OrderDetailPage() {
     { enabled: !!orderId && isAuthenticated }
   );
 
+  // Mutation to simulate payment success (for Sandbox)
+  const simulatePaymentMutation = trpc.orders.simulatePaymentSuccess.useMutation();
+
   // Extract order from data (tRPC returns { order: ... })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const order = orderData?.order as any; // TODO: Add proper Order interface type
 
-  const [hasShownStatusToast, setHasShownStatusToast] = useState(false);
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
+  const [remainingTime, setRemainingTime] = useState<number>(0);
+  const [isExpired, setIsExpired] = useState(false);
 
-  // Show toast based on payment status from query params
-  useEffect(() => {
-    if (!hasShownStatusToast && queryStatus && order) {
-      if (queryStatus === 'success') {
-        toast.success('Pembayaran Berhasil!', {
-          description: `Order ${order.orderId} telah dibayar.`,
-        });
-      } else if (queryStatus === 'pending') {
-        toast.info('Pembayaran Tertunda', {
-          description: 'Menunggu konfirmasi pembayaran.',
-        });
-      } else if (queryStatus === 'failed') {
-        toast.error('Pembayaran Gagal', {
-          description: 'Pembayaran tidak berhasil diproses.',
-        });
-      }
-      setHasShownStatusToast(true);
+  // Check order expiry status
+  const { data: expiryData } = trpc.orders.checkOrderExpiry.useQuery(
+    { orderId: orderId as string },
+    { 
+      enabled: !!orderId && !!order && order.paymentStatus === 'pending',
+      refetchInterval: 5000, // Check every 5 seconds
     }
-  }, [queryStatus, order, hasShownStatusToast]);
+  );
+
+  // Update countdown timer
+  useEffect(() => {
+    if (expiryData) {
+      setRemainingTime(expiryData.remainingSeconds);
+      setIsExpired(expiryData.isExpired);
+
+      if (expiryData.isExpired && order?.paymentStatus === 'pending') {
+        // Order expired, refresh page to show updated status
+        router.replace(`/orders/${orderId}`);
+      }
+    }
+  }, [expiryData, order, orderId, router]);
+
+  // Countdown timer (update every second)
+  useEffect(() => {
+    if (remainingTime > 0 && !isExpired) {
+      const timer = setInterval(() => {
+        setRemainingTime((prev) => Math.max(0, prev - 1));
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [remainingTime, isExpired]);
+
+  // ⭐ Auto-open Midtrans popup if auto_pay=true from checkout
+  useEffect(() => {
+    if (
+      !hasAutoOpened &&
+      auto_pay === 'true' &&
+      order &&
+      order.snapToken &&
+      order.paymentStatus === 'pending'
+    ) {
+      setHasAutoOpened(true);
+
+      console.log('[AUTO_PAY] Triggering auto-payment...');
+      console.log('[AUTO_PAY] Order:', order.orderId);
+      console.log('[AUTO_PAY] Snap Token:', order.snapToken);
+
+      // Wait for Midtrans script to load with retry mechanism
+      const tryOpenPayment = (retries = 0) => {
+        if (window.snap && order.snapToken) {
+          console.log('[AUTO_PAY] Midtrans script loaded, opening popup...');
+          window.snap.pay(order.snapToken, {
+            onSuccess: async () => {
+              console.log('[AUTO_PAY] Payment success');
+              
+              try {
+                // ⭐ Update payment status in backend (for Sandbox)
+                await simulatePaymentMutation.mutateAsync({ 
+                  orderId: order.orderId 
+                });
+                
+                // Invalidate and refetch order data
+                await utils.orders.getOrderById.invalidate();
+                
+                toast.success('Pembayaran Berhasil!', {
+                  description: `Order ${order.orderId} telah dibayar.`,
+                });
+                
+                // Reload page to show updated status
+                setTimeout(() => {
+                  router.reload();
+                }, 1000);
+              } catch (error) {
+                console.error('[AUTO_PAY] Failed to update status:', error);
+                toast.error('Pembayaran Berhasil, Silakan Refresh Halaman', {
+                  description: 'Status akan diperbarui otomatis.',
+                });
+              }
+            },
+            onPending: () => {
+              console.log('[AUTO_PAY] Payment pending');
+              // No toast notification for pending - user chose async payment method
+              router.replace(`/orders/${orderId}`, undefined, { shallow: true });
+            },
+            onError: () => {
+              console.log('[AUTO_PAY] Payment error');
+              toast.error('Pembayaran Gagal', {
+                description: 'Terjadi kesalahan saat memproses pembayaran.',
+              });
+              router.replace(`/orders/${orderId}?status=failed`);
+            },
+            onClose: () => {
+              console.log('[AUTO_PAY] Popup closed');
+              router.replace(`/orders/${orderId}`, undefined, { shallow: true });
+            },
+          });
+        } else if (retries < 10) {
+          // Retry every 500ms, max 10 times (5 seconds total)
+          console.log(`[AUTO_PAY] Midtrans not ready, retry ${retries + 1}/10...`);
+          setTimeout(() => tryOpenPayment(retries + 1), 500);
+        } else {
+          console.error('[AUTO_PAY] Failed to load Midtrans script after 5 seconds');
+          toast.error('Gagal Memuat Pembayaran', {
+            description: 'Silakan klik tombol "Bayar Sekarang" untuk membayar.',
+          });
+          // Clear auto_pay parameter so user can manually click
+          router.replace(`/orders/${orderId}`, undefined, { shallow: true });
+        }
+      };
+
+      // Start trying to open payment after 500ms
+      setTimeout(() => tryOpenPayment(), 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto_pay, order, hasAutoOpened, orderId, router]);
+
+  // Clean up status query param after redirect (no toast needed, already shown in callback)
+  useEffect(() => {
+    if (queryStatus && order) {
+      // Just clean up the URL, toast already shown by payment callback
+      const timer = setTimeout(() => {
+        router.replace(`/orders/${orderId}`, undefined, { shallow: true });
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [queryStatus, order, orderId, router]);
 
   // Loading state
   if (authLoading || orderLoading) {
@@ -105,7 +222,7 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <MainLayout>
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-12 min-h-screen flex items-center justify-center">
           <div className="max-w-2xl mx-auto text-center">
             <AlertCircle className="h-24 w-24 text-gray-300 mx-auto mb-6" />
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -124,41 +241,47 @@ export default function OrderDetailPage() {
     );
   }
 
-  // Status configuration
-  const statusConfig = {
-    pending: {
+  // Order Status configuration (shows order progress, not payment)
+  const orderStatusConfig = {
+    awaiting_payment: {
       icon: Clock,
       color: 'text-yellow-600 bg-yellow-50 border-yellow-200',
       label: 'Menunggu Pembayaran',
-    },
-    paid: {
-      icon: CheckCircle2,
-      color: 'text-green-600 bg-green-50 border-green-200',
-      label: 'Dibayar',
+      description: 'Silakan selesaikan pembayaran untuk melanjutkan pesanan',
     },
     processing: {
       icon: Package,
       color: 'text-blue-600 bg-blue-50 border-blue-200',
-      label: 'Diproses',
+      label: 'Sedang Diproses',
+      description: 'Pesanan Anda sedang dikemas oleh tim kami',
     },
     shipped: {
       icon: Truck,
       color: 'text-purple-600 bg-purple-50 border-purple-200',
-      label: 'Dikirim',
+      label: 'Dalam Pengiriman',
+      description: 'Pesanan sedang dalam perjalanan ke alamat Anda',
+    },
+    delivered: {
+      icon: CheckCircle2,
+      color: 'text-green-600 bg-green-50 border-green-200',
+      label: 'Pesanan Sampai',
+      description: 'Pesanan telah sampai di alamat tujuan',
     },
     completed: {
       icon: CheckCircle2,
       color: 'text-green-600 bg-green-50 border-green-200',
       label: 'Selesai',
+      description: 'Pesanan telah selesai dan dikonfirmasi',
     },
     cancelled: {
       icon: XCircle,
       color: 'text-red-600 bg-red-50 border-red-200',
       label: 'Dibatalkan',
+      description: 'Pesanan telah dibatalkan',
     },
   };
 
-  const currentStatus = statusConfig[order.paymentStatus as keyof typeof statusConfig] || statusConfig.pending;
+  const currentStatus = orderStatusConfig[order.orderStatus as keyof typeof orderStatusConfig] || orderStatusConfig.awaiting_payment;
   const StatusIcon = currentStatus.icon;
 
   // Format currency
@@ -181,6 +304,141 @@ export default function OrderDetailPage() {
     });
   };
 
+  // Format countdown timer (MM:SS)
+  const formatCountdown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Generate and download PDF invoice
+  const generateInvoicePDF = async () => {
+    // Dynamic import to avoid SSR issues
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+
+    // Company Info
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVOICE', 105, 20, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+    doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+    doc.text('Telp: (0411) 123-4567 | Email: info@pelitabangunan.com', 105, 40, { align: 'center' });
+
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(20, 45, 190, 45);
+
+    // Order Info
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Informasi Pesanan', 20, 55);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Order ID: ${order.orderId}`, 20, 62);
+    doc.text(`Tanggal: ${formatDate(order.createdAt)}`, 20, 68);
+    doc.text(`Status: ${currentStatus.label}`, 20, 74);
+    doc.text(`Status Pembayaran: ${order.paymentStatus === 'paid' ? 'LUNAS' : 'PENDING'}`, 20, 80);
+
+    // Customer Info
+    doc.setFont('helvetica', 'bold');
+    doc.text('Informasi Penerima', 110, 55);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.shippingAddress.recipientName, 110, 62);
+    doc.text(order.shippingAddress.phoneNumber, 110, 68);
+    
+    // Split address into multiple lines if too long
+    const addressLines = doc.splitTextToSize(order.shippingAddress.fullAddress, 80);
+    let currentY = 74;
+    addressLines.forEach((line: string) => {
+      doc.text(line, 110, currentY);
+      currentY += 6;
+    });
+    doc.text(`${order.shippingAddress.city}, ${order.shippingAddress.province}`, 110, currentY);
+    currentY += 6;
+    doc.text(order.shippingAddress.postalCode, 110, currentY);
+
+    // Items Table
+    const tableStartY = Math.max(90, currentY + 10);
+    doc.setLineWidth(0.5);
+    doc.line(20, tableStartY, 190, tableStartY);
+
+    // Table Header
+    doc.setFont('helvetica', 'bold');
+    doc.text('Produk', 20, tableStartY + 8);
+    doc.text('Qty', 110, tableStartY + 8);
+    doc.text('Harga Satuan', 135, tableStartY + 8);
+    doc.text('Subtotal', 170, tableStartY + 8);
+
+    doc.line(20, tableStartY + 12, 190, tableStartY + 12);
+
+    // Table Rows
+    doc.setFont('helvetica', 'normal');
+    let itemY = tableStartY + 20;
+
+    order.items.forEach((item: OrderItem) => {
+      // Handle long product names
+      const productNameLines = doc.splitTextToSize(item.name, 85);
+      
+      productNameLines.forEach((line: string, index: number) => {
+        doc.text(line, 20, itemY + (index * 6));
+      });
+
+      const maxLines = productNameLines.length;
+      const baseY = itemY + ((maxLines - 1) * 6);
+
+      doc.text(`${item.quantity} ${item.unit}`, 110, baseY);
+      doc.text(formatCurrency(item.price), 135, baseY);
+      doc.text(formatCurrency(item.price * item.quantity), 170, baseY);
+
+      itemY = baseY + 10;
+    });
+
+    // Line before totals
+    doc.line(20, itemY, 190, itemY);
+
+    // Totals
+    itemY += 8;
+    doc.text('Subtotal:', 135, itemY);
+    doc.text(formatCurrency(order.subtotal), 170, itemY);
+
+    itemY += 6;
+    doc.text('Ongkir:', 135, itemY);
+    doc.text(formatCurrency(order.shippingCost), 170, itemY);
+
+    if (order.discount?.amount) {
+      itemY += 6;
+      doc.text(`Diskon (${order.discount.code}):`, 135, itemY);
+      doc.text(`-${formatCurrency(order.discount.amount)}`, 170, itemY);
+    }
+
+    // Total
+    itemY += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL:', 135, itemY);
+    doc.text(formatCurrency(order.total), 170, itemY);
+
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    const footerY = 280;
+    doc.text('Terima kasih atas pembelian Anda!', 105, footerY, { align: 'center' });
+    doc.text('Untuk pertanyaan, hubungi customer service kami.', 105, footerY + 5, { align: 'center' });
+
+    // Save PDF
+    doc.save(`Invoice-${order.orderId}.pdf`);
+    
+    toast.success('Invoice Berhasil Diunduh!', {
+      description: `Invoice ${order.orderId} telah diunduh.`,
+    });
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
@@ -199,10 +457,13 @@ export default function OrderDetailPage() {
               <h1 className="text-3xl font-bold text-gray-900">Detail Pesanan</h1>
               <p className="text-gray-600 mt-2">Order ID: {order.orderId}</p>
             </div>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Download Invoice
-            </Button>
+            {/* Show invoice button only if order is paid */}
+            {order.paymentStatus === 'paid' && (
+              <Button variant="outline" onClick={generateInvoicePDF}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Invoice
+              </Button>
+            )}
           </div>
         </div>
 
@@ -212,14 +473,64 @@ export default function OrderDetailPage() {
             <div className="rounded-full p-3 bg-white">
               <StatusIcon className="h-8 w-8" />
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-2xl font-bold">{currentStatus.label}</h2>
-              <p className="text-sm mt-1">
-                Tanggal Pesanan: {formatDate(order.createdAt)}
+              <p className="text-sm mt-1 text-gray-600">
+                {currentStatus.description}
               </p>
+              <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                <span>Tanggal Pesanan: {formatDate(order.createdAt)}</span>
+                {order.paymentStatus === 'paid' && order.paidAt && (
+                  <span>• Dibayar: {formatDate(order.paidAt)}</span>
+                )}
+              </div>
             </div>
           </div>
         </Card>
+
+        {/* Payment Countdown Timer (only show if pending) */}
+        {order.paymentStatus === 'pending' && !isExpired && remainingTime > 0 && (
+          <Card className="p-6 mb-8 bg-linear-to-r from-orange-50 to-red-50 border-2 border-orange-200">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full p-3 bg-white shadow-sm">
+                <Clock className="h-8 w-8 text-orange-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                  Batas Waktu Pembayaran
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Selesaikan pembayaran sebelum waktu habis
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl font-bold text-orange-600 font-mono">
+                  {formatCountdown(remainingTime)}
+                </div>
+                <p className="text-xs text-gray-600 mt-1">Menit:Detik</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Expired Warning */}
+        {(isExpired || order.paymentStatus === 'expired') && (
+          <Card className="p-6 mb-8 bg-red-50 border-2 border-red-200">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full p-3 bg-white">
+                <XCircle className="h-8 w-8 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-red-900 mb-1">
+                  Pembayaran Kadaluarsa
+                </h3>
+                <p className="text-sm text-red-700">
+                  Batas waktu pembayaran 30 menit telah habis. Silakan buat pesanan baru.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Order Items */}
@@ -283,6 +594,42 @@ export default function OrderDetailPage() {
                 )}
               </div>
             </Card>
+
+            {/* Shipping Info (if shipped) */}
+            {order.shippingInfo && (order.orderStatus === 'shipped' || order.orderStatus === 'delivered' || order.orderStatus === 'completed') && (
+              <Card className="p-6 bg-purple-50 border-purple-200">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-purple-600" />
+                  Informasi Pengiriman
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Kurir</span>
+                    <span className="font-semibold text-gray-900">{order.shippingInfo.courier.toUpperCase()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">No. Resi</span>
+                    <span className="font-mono font-semibold text-gray-900">{order.shippingInfo.trackingNumber}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Tanggal Kirim</span>
+                    <span className="text-sm text-gray-900">{formatDate(order.shippingInfo.shippedDate)}</span>
+                  </div>
+                  <Separator className="my-2" />
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      // TODO: Integrate with courier tracking API
+                      toast.info('Fitur lacak paket akan segera tersedia');
+                    }}
+                  >
+                    <Truck className="h-4 w-4 mr-2" />
+                    Lacak Paket
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
 
           {/* Right Column - Payment Summary */}
@@ -308,36 +655,88 @@ export default function OrderDetailPage() {
                 <span>{formatCurrency(order.total)}</span>
               </div>
 
-              {/* Payment Method */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Metode Pembayaran</p>
-                    <p className="text-xs text-gray-600">
-                      {order.paymentMethod === 'midtrans' ? 'Midtrans Payment Gateway' : order.paymentMethod}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Action Buttons */}
-              {order.paymentStatus === 'pending' && order.snapToken && (
+              {/* Show payment button if payment is still pending and not expired */}
+              {order.paymentStatus === 'pending' && order.snapToken && !isExpired && remainingTime > 0 && (
                 <Button className="w-full mb-3" onClick={() => {
-                  // TODO: Reopen Midtrans payment popup
-                  toast.info('Fitur pembayaran ulang segera hadir');
+                  if (window.snap && order.snapToken) {
+                    console.log('[MANUAL_PAY] Opening Midtrans popup...');
+                    window.snap.pay(order.snapToken, {
+                      onSuccess: async () => {
+                        console.log('[MANUAL_PAY] Payment success');
+                        
+                        try {
+                          // ⭐ Update payment status in backend (for Sandbox)
+                          await simulatePaymentMutation.mutateAsync({ 
+                            orderId: order.orderId 
+                          });
+                          
+                          // Invalidate and refetch order data
+                          await utils.orders.getOrderById.invalidate();
+                          
+                          toast.success('Pembayaran Berhasil!', {
+                            description: `Order ${order.orderId} telah dibayar.`,
+                          });
+                          
+                          // Reload page to show updated status
+                          setTimeout(() => {
+                            router.reload();
+                          }, 1000);
+                        } catch (error) {
+                          console.error('[MANUAL_PAY] Failed to update status:', error);
+                          toast.error('Pembayaran Berhasil, Silakan Refresh Halaman', {
+                            description: 'Status akan diperbarui otomatis.',
+                          });
+                        }
+                      },
+                      onPending: () => {
+                        console.log('[MANUAL_PAY] Payment pending');
+                        // No toast notification for pending - user chose async payment method
+                        // Don't change URL, stay on same page
+                      },
+                      onError: () => {
+                        console.log('[MANUAL_PAY] Payment error');
+                        toast.error('Pembayaran Gagal', {
+                          description: 'Terjadi kesalahan saat memproses pembayaran.',
+                        });
+                        router.replace(`/orders/${orderId}?status=failed`);
+                      },
+                      onClose: () => {
+                        console.log('[MANUAL_PAY] Popup closed');
+                        // Don't change URL on manual close
+                      },
+                    });
+                  } else {
+                    console.error('[MANUAL_PAY] Midtrans script not loaded');
+                    toast.error('Gagal Memuat Pembayaran', {
+                      description: 'Silakan refresh halaman dan coba lagi.',
+                    });
+                  }
                 }}>
                   <CreditCard className="h-4 w-4 mr-2" />
                   Bayar Sekarang
                 </Button>
               )}
 
-              {order.paymentStatus === 'paid' && (
+              {/* Show tracking button if shipped/delivered */}
+              {(order.orderStatus === 'shipped' || order.orderStatus === 'delivered') && order.shippingInfo && (
                 <Button className="w-full mb-3" variant="outline" onClick={() => {
-                  toast.info('Fitur lacak pesanan segera hadir');
+                  // TODO: Integrate with courier tracking API
+                  toast.info('Fitur lacak paket akan segera tersedia');
                 }}>
                   <Truck className="h-4 w-4 mr-2" />
-                  Lacak Pesanan
+                  Lacak Paket
+                </Button>
+              )}
+
+              {/* Show confirm button if delivered (not yet completed) */}
+              {order.orderStatus === 'delivered' && (
+                <Button className="w-full mb-3" onClick={() => {
+                  // TODO: Add confirm order mutation
+                  toast.info('Fitur konfirmasi pesanan akan segera tersedia');
+                }}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Konfirmasi Pesanan Diterima
                 </Button>
               )}
 

@@ -8,31 +8,7 @@ import { Button } from './ui/button';
 import { CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Midtrans Snap result type
-interface MidtransResult {
-  order_id: string;
-  status_code: string;
-  transaction_status: string;
-  gross_amount: string;
-  payment_type: string;
-}
-
-// Extend Window interface for Midtrans Snap
-declare global {
-  interface Window {
-    snap?: {
-      pay: (
-        token: string,
-        options: {
-          onSuccess?: (result: MidtransResult) => void;
-          onPending?: (result: MidtransResult) => void;
-          onError?: (result: MidtransResult) => void;
-          onClose?: () => void;
-        }
-      ) => void;
-    };
-  }
-}
+// Window.snap and MidtransResult types declared in src/types/global.d.ts
 
 interface MidtransPaymentButtonProps {
   snapToken: string;

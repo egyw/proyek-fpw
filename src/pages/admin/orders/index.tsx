@@ -40,6 +40,8 @@ import {
   Send,
   Ban,
 } from "lucide-react";
+import { trpc } from "@/utils/trpc";
+import { toast } from "sonner";
 
 // TODO: Replace with tRPC query
 // Expected API: trpc.orders.getAll.useQuery()
@@ -387,26 +389,99 @@ export default function AdminOrdersPage() {
     setCancelReason("");
   };
 
-  const confirmProcess = () => {
-    // TODO: Call tRPC mutation to update order status to "processing"
-    console.log("Process order:", selectedOrder?.orderNumber);
-    setProcessDialog(false);
+  // tRPC mutations
+  const utils = trpc.useContext();
+  const updateOrderStatusMutation = trpc.orders.updateOrderStatus.useMutation({
+    onSuccess: () => {
+      // Refetch orders data
+      utils.orders.invalidate();
+    },
+  });
+
+  const confirmProcess = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      await updateOrderStatusMutation.mutateAsync({
+        orderId: selectedOrder.orderNumber,
+        orderStatus: 'processing',
+      });
+
+      toast.success('Pesanan Diproses', {
+        description: `Order ${selectedOrder.orderNumber} sedang diproses.`,
+      });
+
+      setProcessDialog(false);
+    } catch (error) {
+      console.error('Error processing order:', error);
+      toast.error('Gagal Memproses Pesanan', {
+        description: 'Terjadi kesalahan saat memproses pesanan.',
+      });
+    }
   };
 
-  const confirmShip = () => {
-    // TODO: Call tRPC mutation to update order status to "shipped" with shipping info
-    console.log("Ship order:", selectedOrder?.orderNumber, {
-      courier: shippingCourier,
-      trackingNumber,
-      shippedAt: shippedDate,
-    });
-    setShipDialog(false);
+  const confirmShip = async () => {
+    if (!selectedOrder) return;
+
+    if (!shippingCourier || !trackingNumber || !shippedDate) {
+      toast.error('Data Tidak Lengkap', {
+        description: 'Mohon lengkapi semua data pengiriman.',
+      });
+      return;
+    }
+
+    try {
+      await updateOrderStatusMutation.mutateAsync({
+        orderId: selectedOrder.orderNumber,
+        orderStatus: 'shipped',
+        shippingInfo: {
+          courier: shippingCourier,
+          trackingNumber: trackingNumber,
+          shippedDate: shippedDate,
+        },
+      });
+
+      toast.success('Pesanan Dikirim', {
+        description: `Order ${selectedOrder.orderNumber} telah dikirim.`,
+      });
+
+      setShipDialog(false);
+    } catch (error) {
+      console.error('Error shipping order:', error);
+      toast.error('Gagal Mengirim Pesanan', {
+        description: 'Terjadi kesalahan saat mengirim pesanan.',
+      });
+    }
   };
 
-  const confirmCancel = () => {
-    // TODO: Call tRPC mutation to update order status to "cancelled" with reason
-    console.log("Cancel order:", selectedOrder?.orderNumber, "Reason:", cancelReason);
-    setCancelDialog(false);
+  const confirmCancel = async () => {
+    if (!selectedOrder) return;
+
+    if (!cancelReason.trim()) {
+      toast.error('Alasan Diperlukan', {
+        description: 'Mohon masukkan alasan pembatalan.',
+      });
+      return;
+    }
+
+    try {
+      await updateOrderStatusMutation.mutateAsync({
+        orderId: selectedOrder.orderNumber,
+        orderStatus: 'cancelled',
+        cancelReason: cancelReason,
+      });
+
+      toast.success('Pesanan Dibatalkan', {
+        description: `Order ${selectedOrder.orderNumber} telah dibatalkan.`,
+      });
+
+      setCancelDialog(false);
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('Gagal Membatalkan Pesanan', {
+        description: 'Terjadi kesalahan saat membatalkan pesanan.',
+      });
+    }
   };
 
   const formatCurrency = (amount: number) => {
