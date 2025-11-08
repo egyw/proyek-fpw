@@ -14,13 +14,28 @@ import { trpc } from '@/utils/trpc';
 import { useCartStore } from '@/store/cartStore';
 import { toast } from 'sonner';
 
+// Address interface based on User model
+interface Address {
+  id: string;
+  label: string;
+  recipientName: string;
+  phoneNumber: string;
+  fullAddress: string;
+  district: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  notes?: string;
+  isDefault: boolean;
+}
+
 export default function CheckoutExample() {
   const router = useRouter();
   const { data: session } = useSession();
   const cartItems = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
 
-  const [selectedAddress, setSelectedAddress] = useState<any>(null); // Replace with actual address type
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [shippingCost, setShippingCost] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'midtrans' | 'cod'>('midtrans');
   const [orderCreated, setOrderCreated] = useState(false);

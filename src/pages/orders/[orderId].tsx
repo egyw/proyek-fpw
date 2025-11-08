@@ -22,6 +22,18 @@ import {
   Download,
 } from "lucide-react";
 
+// Order item interface
+interface OrderItem {
+  productId: string;
+  name: string;
+  slug: string;
+  image: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  category: string;
+}
+
 export default function OrderDetailPage() {
   const router = useRouter();
   const { orderId, status: queryStatus } = router.query;
@@ -219,7 +231,7 @@ export default function OrderDetailPage() {
                 Produk Pesanan ({order.items.length} item)
               </h2>
               <div className="space-y-4">
-                {order.items.map((item) => (
+                {order.items.map((item: OrderItem) => (
                   <div key={item.productId} className="flex gap-4 pb-4 border-b last:border-0">
                     <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 shrink-0">
                       <Image
