@@ -1,86 +1,155 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Users, DollarSign, ShoppingCart } from "lucide-react";
+import { 
+  Package, 
+  Users, 
+  DollarSign, 
+  ShoppingCart, 
+  Plus, 
+  PackageOpen, 
+  BarChart3, 
+  Ticket,
+  AlertTriangle 
+} from "lucide-react";
 import {trpc} from "@/utils/trpc";
+import { useRouter } from "next/router";
+
+// Type for order from database
+interface OrderData {
+  orderId: string;
+  customerName: string;
+  items: Array<{ name: string }>;
+  total: number;
+  orderStatus: string;
+  createdAt: string | Date;
+}
 
 export default function AdminDashboard() {
-  // Dummy data - nanti akan diganti dengan tRPC
-
+  const router = useRouter();
   const {data: dashboardStats, isLoading: statsLoading} = trpc.products.getDashBoardStats.useQuery();
   console.log(dashboardStats);
+
+  // Quick Action Handlers
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case "add-product":
+        router.push("/admin/products"); // Go to products page where there's add button
+        break;
+      case "manage-stock":
+        router.push("/admin/inventory"); // Go to inventory page
+        break;
+      case "view-reports":
+        router.push("/admin/reports"); // Go to reports page
+        break;
+      case "manage-voucher":
+        router.push("/admin/vouchers"); // Go to vouchers page
+        break;
+      default:
+        break;
+    }
+  };
+
   const stats = [
     {
       title: "Total Produk",
       value: dashboardStats?.totalProducts || "0",
-      change: "+12%",
-      context: "vs bulan lalu",
-      trend: "up",
+      change: "", // No growth percentage
+      context: "produk aktif",
+      trend: "neutral" as const,
       icon: Package,
       color: "bg-blue-50 text-blue-600",
     },
     {
       title: "Pesanan Hari Ini",
-      value: "89",
-      change: "+23%",
-      trend: "up",
+      value: dashboardStats?.ordersToday?.toString() || "0",
+      change: (() => {
+        const growth = dashboardStats?.ordersGrowth || 0;
+        if (growth === 999) {
+          // Special case: new orders (yesterday was 0)
+          return "Pesanan Baru!";
+        } else if (growth === 0 && dashboardStats?.ordersToday === 0) {
+          // Both days are 0
+          return "";
+        } else {
+          // Normal growth calculation
+          return `${growth >= 0 ? '+' : ''}${growth}%`;
+        }
+      })(),
+      context: (() => {
+        const growth = dashboardStats?.ordersGrowth || 0;
+        if (growth === 999 || (growth === 0 && dashboardStats?.ordersToday === 0)) {
+          return "pesanan hari ini";
+        } else {
+          return "vs hari kemarin";
+        }
+      })(),
+      trend: (dashboardStats?.ordersGrowth || 0) >= 0 ? "up" : "down",
       icon: ShoppingCart,
       color: "bg-green-50 text-green-600",
     },
     {
       title: "Total Pelanggan",
       value: dashboardStats?.totalCustomer.thisMonth || "0",
-      change: `+${dashboardStats?.totalCustomer.growth || 0}%`,
+      change: (() => {
+        const growth = dashboardStats?.totalCustomer.growth || 0;
+        return `${growth >= 0 ? '+' : ''}${growth}%`;
+      })(),
       context: "vs bulan lalu",
-      trend: "up",
+      trend: dashboardStats?.totalCustomer.trend || "up",
       icon: Users,
       color: "bg-purple-50 text-purple-600",
     },
     {
       title: "Revenue Bulan Ini",
       value: dashboardStats?.totalRevenue.formatted || "Rp 0",
-      change: `+${dashboardStats?.totalRevenue.growth || 0}%`,
+      change: (() => {
+        const growth = dashboardStats?.totalRevenue.growth || 0;
+        return `${growth >= 0 ? '+' : ''}${growth}%`;
+      })(),
       context: "vs bulan lalu",
-      trend: dashboardStats?.totalRevenue.trend  || "up",
+      trend: dashboardStats?.totalRevenue.trend || "up",
       icon: DollarSign,
       color: "bg-orange-50 text-orange-600",
     },
   ];
 
-  const recentOrders = [
-    {
-      id: "ORD-001",
-      customer: "Ahmad Fauzi",
-      product: "Semen Gresik 50kg",
-      amount: "Rp 650.000",
-      status: "pending",
-      time: "5 menit lalu",
-    },
-    {
-      id: "ORD-002",
-      customer: "Siti Nurhaliza",
-      product: "Cat Tembok Avian 5kg",
-      amount: "Rp 1.800.000",
-      status: "processing",
-      time: "15 menit lalu",
-    },
-    {
-      id: "ORD-003",
-      customer: "Budi Santoso",
-      product: "Besi Beton 10mm",
-      amount: "Rp 4.250.000",
-      status: "completed",
-      time: "1 jam lalu",
-    },
-    {
-      id: "ORD-004",
-      customer: "Dewi Lestari",
-      product: "Keramik Platinum 40x40",
-      amount: "Rp 2.100.000",
-      status: "completed",
-      time: "2 jam lalu",
-    },
-  ];
+  // Format time ago helper
+  const getTimeAgo = (date: string | Date) => {
+    const now = new Date();
+    const orderDate = new Date(date);
+    const diffMs = now.getTime() - orderDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Baru saja";
+    if (diffMins < 60) return `${diffMins} menit lalu`;
+    if (diffHours < 24) return `${diffHours} jam lalu`;
+    return `${diffDays} hari lalu`;
+  };
+
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Map real orders to display format
+  const rawOrders = (dashboardStats?.recentOrders || []) as unknown as OrderData[];
+  const recentOrders = rawOrders.map((order) => ({
+    id: order.orderId || "N/A",
+    customer: order.customerName || "Unknown",
+    product: order.items && order.items.length > 1 
+      ? `${order.items[0]?.name || "Produk"} +${order.items.length - 1} lainnya`
+      : order.items?.[0]?.name || "Tidak ada produk",
+    amount: formatCurrency(order.total || 0),
+    status: order.orderStatus || "pending",
+    time: getTimeAgo(order.createdAt || new Date()),
+  }));
 
    const lowStockProducts = (dashboardStats?.lowStockProducts as Array<{
     name: string;
@@ -102,9 +171,13 @@ export default function AdminDashboard() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
-      pending: { label: "Menunggu", className: "bg-yellow-100 text-yellow-800" },
-      processing: { label: "Diproses", className: "bg-blue-100 text-blue-800" },
+      pending: { label: "Menunggu Bayar", className: "bg-yellow-100 text-yellow-800" },
+      paid: { label: "Dibayar", className: "bg-blue-100 text-blue-800" },
+      processing: { label: "Diproses", className: "bg-indigo-100 text-indigo-800" },
+      shipped: { label: "Dikirim", className: "bg-purple-100 text-purple-800" },
+      delivered: { label: "Terkirim", className: "bg-teal-100 text-teal-800" },
       completed: { label: "Selesai", className: "bg-green-100 text-green-800" },
+      cancelled: { label: "Dibatalkan", className: "bg-red-100 text-red-800" },
     };
     const variant = variants[status] || variants.pending;
     return (
@@ -150,9 +223,15 @@ export default function AdminDashboard() {
                   {stat.value}
                 </h3>
                 <div className="flex items-center gap-1">
-                  <span className="text-green-600 text-sm font-medium">
-                    {stat.change}
-                  </span>
+                  {stat.change && (
+                    <span className={`text-sm font-medium ${
+                      stat.trend === 'up' ? 'text-green-600' : 
+                      stat.trend === 'down' ? 'text-red-600' : 
+                      'text-gray-600'
+                    }`}>
+                      {stat.change}
+                    </span>
+                  )}
                   <span className="text-gray-500 text-xs">{stat.context}</span>
                 </div>
               </div>
@@ -177,36 +256,43 @@ export default function AdminDashboard() {
             </button>
           </div>
           <div className="space-y-4">
-            {recentOrders.map((order) => (
-              <div
-                key={order.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className="font-semibold text-gray-900">
-                      {order.id}
-                    </span>
-                    {getStatusBadge(order.status)}
+            {recentOrders.length > 0 ? (
+              recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="font-semibold text-gray-900">
+                        {order.id}
+                      </span>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">{order.customer}</p>
+                    <p className="text-xs text-gray-500">{order.product}</p>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">{order.customer}</p>
-                  <p className="text-xs text-gray-500">{order.product}</p>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 mb-1">
+                      {order.amount}
+                    </p>
+                    <p className="text-xs text-gray-500">{order.time}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900 mb-1">
-                    {order.amount}
-                  </p>
-                  <p className="text-xs text-gray-500">{order.time}</p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Belum ada pesanan</p>
               </div>
-            ))}
+            )}
           </div>
         </Card>
 
         {/* Low Stock Alert */}
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-6">
-            <span className="text-2xl">⚠️</span>
+            <AlertTriangle className="h-6 w-6 text-red-600" />
             <h3 className="text-lg font-semibold text-gray-900">
               Stok Menipis
             </h3>
@@ -222,7 +308,7 @@ export default function AdminDashboard() {
                     <p className="text-xs text-gray-500">{product.category}</p>
                   </div>
                   <Badge variant="destructive" className="text-xs">
-                    {product.stock} pcs
+                    {product.stock} {product.unit}
                   </Badge>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -234,7 +320,7 @@ export default function AdminDashboard() {
                   ></div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Min. stok: {product.minStock} pcs
+                  Min. stok: {product.minStock} {product.unit}
                 </p>
               </div>
             ))}
@@ -248,28 +334,40 @@ export default function AdminDashboard() {
           Aksi Cepat
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105">
+          <Card 
+            className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            onClick={() => handleQuickAction("add-product")}
+          >
             <div className="text-center">
-              <div className="text-3xl mb-2">➕</div>
+              <Plus className="h-10 w-10 mx-auto mb-2 text-primary" />
               <p className="text-sm font-medium text-gray-900">Tambah Produk</p>
             </div>
           </Card>
-          <Card className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105">
+          <Card 
+            className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            onClick={() => handleQuickAction("manage-stock")}
+          >
             <div className="text-center">
-              <div className="text-3xl mb-2">📦</div>
+              <PackageOpen className="h-10 w-10 mx-auto mb-2 text-primary" />
               <p className="text-sm font-medium text-gray-900">Kelola Stok</p>
             </div>
           </Card>
-          <Card className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105">
+          <Card 
+            className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            onClick={() => handleQuickAction("view-reports")}
+          >
             <div className="text-center">
-              <div className="text-3xl mb-2">📊</div>
+              <BarChart3 className="h-10 w-10 mx-auto mb-2 text-primary" />
               <p className="text-sm font-medium text-gray-900">Lihat Laporan</p>
             </div>
           </Card>
-          <Card className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105">
+          <Card 
+            className="p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            onClick={() => handleQuickAction("manage-voucher")}
+          >
             <div className="text-center">
-              <div className="text-3xl mb-2">🏷️</div>
-              <p className="text-sm font-medium text-gray-900">Atur Promo</p>
+              <Ticket className="h-10 w-10 mx-auto mb-2 text-primary" />
+              <p className="text-sm font-medium text-gray-900">Kelola Voucher</p>
             </div>
           </Card>
         </div>

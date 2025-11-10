@@ -149,7 +149,7 @@ export default function LoginPage() {
           {/* Card Body with Form */}
           <div className="px-6 py-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form id="login-form" name="login-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Email */}
                 <FormField
                   control={form.control}

@@ -195,6 +195,7 @@ export default function Home() {
             src="/images/hero_image.png"
             alt="Hero Background"
             fill
+            sizes="100vw"
             className="object-cover brightness-90"
             priority
           />
@@ -245,6 +246,7 @@ export default function Home() {
                       src={item.image}
                       alt={`Carousel ${item.id}`}
                       fill
+                      sizes="(max-width: 768px) 100vw, 90vw"
                       className="object-cover"
                     />
                   </div>
@@ -292,6 +294,7 @@ export default function Home() {
                             src={product.images[0] || "/images/dummy_image.jpg"}
                             alt={product.name}
                             fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             className="object-cover"
                           />
                           {product.discount && product.discount.percentage > 0 && (
@@ -380,6 +383,7 @@ export default function Home() {
                           src={product.images[0] || "/images/dummy_image.jpg"}
                           alt={product.name}
                           fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           className="object-cover"
                         />
                         {product.discount && product.discount.percentage > 0 && (

@@ -19,6 +19,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Ticket,
 } from "lucide-react";
 
 import {
@@ -111,6 +112,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       href: "/admin/customers",
       active: router.pathname.startsWith("/admin/customers"),
+    },
+    {
+      title: "Voucher",
+      icon: Ticket,
+      href: "/admin/vouchers",
+      active: router.pathname.startsWith("/admin/vouchers"),
     },
     {
       title: "Laporan",
@@ -208,6 +215,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           
           <div className="flex items-center gap-4">
+            {/* View Store Button */}
+            <Link href="/" target="_blank">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Store className="h-4 w-4" />
+                <span className="hidden md:inline">Lihat Toko</span>
+              </Button>
+            </Link>
+
             {/* Notifications */}
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />

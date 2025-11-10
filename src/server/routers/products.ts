@@ -3,6 +3,7 @@ import { z } from "zod";
 import connectDB from "@/lib/mongodb";
 import Product, { IProductData } from "@/models/Product";
 import User from "@/models/User";
+import Order from "@/models/Order";
 import { TRPCError } from "@trpc/server";
 
 function formatRupiahShort(value: number): string {
@@ -119,9 +120,20 @@ export const productsRouter = router({
       await connectDB();
 
       const now = new Date();
+      
+      // Start of today (00:00:00)
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfTodayISO = startOfToday.toISOString();
+      
+      // Start of yesterday (00:00:00)
+      const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const startOfYesterdayISO = startOfYesterday.toISOString();
+      
+      // This month range
       const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfThisMonthISO = startOfThisMonth.toISOString();
 
+      // Last month range
       const startOfLastMonth = new Date(
         now.getFullYear(),
         now.getMonth() - 1,
@@ -151,10 +163,18 @@ export const productsRouter = router({
         recentProducts,
 
         totalProductThisMonth,
+        totalProductLastMonth,
 
         totalCustomersThisMonth,
         totalCustomersLastMonth,
 
+        recentOrders,
+        
+        // Orders today count
+        ordersToday,
+        ordersYesterday,
+
+        // Revenue calculations
         totalRevenueThisMonth,
         totalRevenueLastMonth,
       ] = await Promise.all([
@@ -179,6 +199,14 @@ export const productsRouter = router({
           isActive: true,
         }),
 
+        Product.countDocuments({
+          createdAt: {
+            $gte: startOfLastMonthISO,
+            $lte: endOfLastMonthISO,
+          },
+          isActive: true,
+        }),
+
         User.countDocuments({
           role: "user",
           createdAt: { $gte: startOfThisMonthISO },
@@ -192,10 +220,84 @@ export const productsRouter = router({
           },
         }),
 
-        // Revenue stats - dummy for now
-        Promise.resolve(125000000),
-        Promise.resolve(108000000),
+        // Recent orders - get latest 10 orders
+        Order.find()
+          .sort({ createdAt: -1 })
+          .select("orderId customerName items total orderStatus createdAt")
+          .limit(10)
+          .lean(),
+        
+        // Orders today count
+        Order.countDocuments({
+          createdAt: { $gte: startOfTodayISO },
+        }),
+
+        // Orders yesterday count
+        Order.countDocuments({
+          createdAt: {
+            $gte: startOfYesterdayISO,
+            $lt: startOfTodayISO, // Before today
+          },
+        }),
+
+        // Revenue this month - sum of completed orders
+        Order.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: startOfThisMonthISO },
+              orderStatus: { $in: ["completed", "delivered"] }, // Only count completed/delivered orders
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$total" },
+            },
+          },
+        ]).then((result) => result[0]?.total || 0),
+
+        // Revenue last month - sum of completed orders
+        Order.aggregate([
+          {
+            $match: {
+              createdAt: {
+                $gte: startOfLastMonthISO,
+                $lte: endOfLastMonthISO,
+              },
+              orderStatus: { $in: ["completed", "delivered"] },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$total" },
+            },
+          },
+        ]).then((result) => result[0]?.total || 0),
       ]);
+
+      const productGrowth =
+        totalProductLastMonth > 0
+          ? Math.round(
+              ((totalProductThisMonth - totalProductLastMonth) /
+                totalProductLastMonth) *
+                100
+            )
+          : 0;
+
+      // Calculate orders growth - handle edge cases properly
+      let ordersGrowth = 0;
+      if (ordersYesterday > 0) {
+        // Normal calculation when there were orders yesterday
+        ordersGrowth = Math.round(
+          ((ordersToday - ordersYesterday) / ordersYesterday) * 100
+        );
+      } else if (ordersToday > 0 && ordersYesterday === 0) {
+        // If no orders yesterday but orders today, it's technically infinite growth
+        // We'll use null to indicate this special case
+        ordersGrowth = 999; // Use 999 as a flag for "new orders"
+      }
+      // else: both 0, keep ordersGrowth = 0
 
       const customerGrowth =
         totalCustomersLastMonth > 0
@@ -237,6 +339,10 @@ export const productsRouter = router({
         totalProductThisMonth,
         totalCustomer,
         totalRevenue,
+        recentOrders,
+        ordersToday, // Orders count today
+        productGrowth, // Product growth %
+        ordersGrowth, // Orders growth %
       };
     } catch (error: unknown) {
       console.error("[products.getDashBoardStats] Error:", error);
@@ -340,6 +446,335 @@ export const productsRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch products',
+          cause: error,
+        });
+      }
+    }),
+
+  // ADMIN: Get all products for admin panel
+  getAdminAll: procedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        category: z.string().optional(),
+        status: z.enum(['all', 'active', 'inactive']).default('all'),
+        sortBy: z.string().optional(),
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(10),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        await connectDB();
+
+        const query: Record<string, unknown> = {};
+
+        // Filter by status
+        if (input.status === 'active') {
+          query.isActive = true;
+        } else if (input.status === 'inactive') {
+          query.isActive = false;
+        }
+
+        // Filter by category
+        if (input.category && input.category !== 'all') {
+          query.category = input.category;
+        }
+
+        // Search by name or brand
+        if (input.search) {
+          query.$or = [
+            { name: { $regex: input.search, $options: 'i' } },
+            { brand: { $regex: input.search, $options: 'i' } },
+          ];
+        }
+
+        // Determine sort order
+        let sortQuery: Record<string, 1 | -1> = { createdAt: -1 };
+
+        if (input.sortBy) {
+          switch (input.sortBy) {
+            case 'newest':
+              sortQuery = { createdAt: -1 };
+              break;
+            case 'oldest':
+              sortQuery = { createdAt: 1 };
+              break;
+            case 'name-asc':
+              sortQuery = { name: 1 };
+              break;
+            case 'name-desc':
+              sortQuery = { name: -1 };
+              break;
+            case 'price-low':
+              sortQuery = { price: 1 };
+              break;
+            case 'price-high':
+              sortQuery = { price: -1 };
+              break;
+            case 'stock-low':
+              sortQuery = { stock: 1 };
+              break;
+            case 'stock-high':
+              sortQuery = { stock: -1 };
+              break;
+            default:
+              sortQuery = { createdAt: -1 };
+          }
+        }
+
+        // Calculate pagination
+        const skip = (input.page - 1) * input.limit;
+
+        // Get total count for pagination
+        const totalCount = await Product.countDocuments(query);
+
+        // Get paginated products
+        const products = await Product.find(query)
+          .sort(sortQuery)
+          .skip(skip)
+          .limit(input.limit)
+          .lean<IProductData[]>();
+
+        // Calculate stats from all products (not just current page)
+        const allProducts = await Product.find(query).lean();
+        const totalProducts = allProducts.length;
+        const activeProducts = allProducts.filter(p => p.isActive).length;
+        const lowStockProducts = allProducts.filter(
+          p => p.stock <= p.minStock
+        ).length;
+        const outOfStockProducts = allProducts.filter(p => p.stock === 0).length;
+
+        return {
+          products,
+          pagination: {
+            currentPage: input.page,
+            totalPages: Math.ceil(totalCount / input.limit),
+            totalItems: totalCount,
+            itemsPerPage: input.limit,
+            hasNextPage: input.page < Math.ceil(totalCount / input.limit),
+            hasPrevPage: input.page > 1,
+          },
+          stats: {
+            total: totalProducts,
+            active: activeProducts,
+            lowStock: lowStockProducts,
+            outOfStock: outOfStockProducts,
+          },
+        };
+      } catch (error) {
+        console.error('[getAdminAll] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch products',
+          cause: error,
+        });
+      }
+    }),
+
+  // ADMIN: Create product
+  createProduct: procedure
+    .input(
+      z.object({
+        name: z.string().min(3),
+        slug: z.string().min(3),
+        category: z.string(),
+        brand: z.string(),
+        unit: z.string(),
+        price: z.number().positive(),
+        originalPrice: z.number().optional(),
+        discount: z.object({
+          percentage: z.number().min(0).max(100),
+          validUntil: z.string(),
+        }).optional(),
+        stock: z.number().min(0),
+        minStock: z.number().min(0),
+        availableUnits: z.array(z.string()),
+        images: z.array(z.string()),
+        description: z.string().min(10),
+        attributes: z.record(z.string(), z.unknown()),
+        isActive: z.boolean(),
+        isFeatured: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await connectDB();
+
+        // Check if slug already exists
+        const existingProduct = await Product.findOne({ slug: input.slug });
+        if (existingProduct) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Product with this slug already exists',
+          });
+        }
+
+        const product = await Product.create(input);
+
+        return {
+          success: true,
+          product: product.toObject(),
+        };
+      } catch (error) {
+        console.error('[createProduct] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create product',
+          cause: error,
+        });
+      }
+    }),
+
+  // ADMIN: Update product
+  updateProduct: procedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(3).optional(),
+        slug: z.string().min(3).optional(),
+        category: z.string().optional(),
+        brand: z.string().optional(),
+        unit: z.string().optional(),
+        price: z.number().positive().optional(),
+        originalPrice: z.number().optional(),
+        discount: z.object({
+          percentage: z.number().min(0).max(100),
+          validUntil: z.string(),
+        }).optional(),
+        stock: z.number().min(0).optional(),
+        minStock: z.number().min(0).optional(),
+        availableUnits: z.array(z.string()).optional(),
+        images: z.array(z.string()).optional(),
+        description: z.string().min(10).optional(),
+        attributes: z.record(z.string(), z.unknown()).optional(),
+        isActive: z.boolean().optional(),
+        isFeatured: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await connectDB();
+
+        const { id, ...updateData } = input;
+
+        // Check if slug is being updated and already exists
+        if (updateData.slug) {
+          const existingProduct = await Product.findOne({ 
+            slug: updateData.slug,
+            _id: { $ne: id }
+          });
+          if (existingProduct) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Product with this slug already exists',
+            });
+          }
+        }
+
+        const product = await Product.findByIdAndUpdate(
+          id,
+          { $set: updateData },
+          { new: true, runValidators: true }
+        );
+
+        if (!product) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Product not found',
+          });
+        }
+
+        return {
+          success: true,
+          product: product.toObject(),
+        };
+      } catch (error) {
+        console.error('[updateProduct] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update product',
+          cause: error,
+        });
+      }
+    }),
+
+  // ADMIN: Delete product
+  deleteProduct: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      try {
+        await connectDB();
+
+        // First, get the product to extract image URLs
+        const product = await Product.findById(input.id);
+
+        if (!product) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Product not found',
+          });
+        }
+
+        // Extract public_ids from Cloudinary URLs and delete images
+        if (product.images && product.images.length > 0) {
+          const { v2: cloudinary } = await import('cloudinary');
+          
+          // Configure Cloudinary
+          cloudinary.config({
+            cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET,
+          });
+
+          // Delete each image from Cloudinary
+          for (const imageUrl of product.images) {
+            try {
+              // Extract public_id from URL
+              const parts = imageUrl.split('/upload/');
+              if (parts.length >= 2) {
+                let pathAfterUpload = parts[1];
+                // Remove version (v1234567890) if exists
+                pathAfterUpload = pathAfterUpload.replace(/^v\d+\//, '');
+                // Remove file extension
+                const publicId = pathAfterUpload.replace(/\.[^.]+$/, '');
+                
+                await cloudinary.uploader.destroy(publicId);
+              }
+            } catch (imgError) {
+              console.error('Failed to delete image from Cloudinary:', imgError);
+              // Continue with product deletion even if image deletion fails
+            }
+          }
+        }
+
+        // Delete product from database
+        await Product.findByIdAndDelete(input.id);
+
+        return {
+          success: true,
+          message: 'Product deleted successfully',
+        };
+      } catch (error) {
+        console.error('[deleteProduct] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete product',
           cause: error,
         });
       }
