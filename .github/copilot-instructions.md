@@ -3852,7 +3852,222 @@ src/
 
 ## Recent Features & Patterns (November 2025)
 
-### 0. Shipping Calculator Accordion UI + Komerce API (November 8, 2025)
+### 0. Cloudinary Upload Flow - Deferred Upload Pattern (November 10, 2025)
+
+**Status**: ✅ Production-ready, no orphan images, proper folder routing
+
+**Purpose**: Upload images to Cloudinary only when form is submitted (not on file selection) to prevent orphan images and ensure correct folder placement.
+
+**Architecture**: Local preview → Form submit → Cloudinary upload → Database save
+
+**Why Deferred Upload?**
+
+The problem with immediate upload on file selection:
+```
+❌ OLD: User selects file → Upload to Cloudinary immediately
+   → User cancels form → Orphan image in Cloudinary
+   → Category not selected yet → Upload to root folder (wrong location)
+```
+
+The solution with deferred upload:
+```
+✅ NEW: User selects file → Base64 preview locally
+   → User fills form + selects category
+   → User clicks "Tambah Produk"
+   → Upload to Cloudinary with correct folder
+   → Save to database with image URL
+   → No orphan images if cancelled
+```
+
+**Key Components**:
+
+1. **ImagePreview Component** (`src/components/ImagePreview.tsx`):
+   - Shows local base64 preview (no upload)
+   - File validation (type, size max 5MB)
+   - Props: `onFileSelect(file: File)`, `onRemove()`, `currentImage` (base64)
+   - No Cloudinary integration
+
+2. **Admin Products Form** (`src/pages/admin/products/index.tsx`):
+   - State: `selectedFile: File | null` for storing file object
+   - State: `imagePreview: string` for base64 preview
+   - Handler `handleFileSelect(file)`: Convert file to base64 for preview
+   - Handler `onSubmit()`: Upload to Cloudinary THEN save to database
+
+**Upload Flow**:
+
+```typescript
+// src/pages/admin/products/index.tsx
+const onSubmit = async (data: ProductFormValues) => {
+  try {
+    let imageUrl = "/images/dummy_image.jpg";
+
+    // Upload image ONLY if file selected
+    if (selectedFile) {
+      // 1. Map category to folder name
+      const categoryFolderMap: Record<string, string> = {
+        'Pipa': 'pipa-pvc',
+        'Tangki Air': 'tangki-air',
+        'Semen': 'semen',
+        'Besi': 'besi',
+        'Kawat': 'kawat',
+        'Paku': 'paku',
+        'Baut': 'baut',
+        'Aspal': 'aspal',
+        'Triplek': 'triplek',
+      };
+      const folderName = categoryFolderMap[data.category] || data.category.toLowerCase();
+      const folder = `proyekFPW/product_assets/${folderName}`;
+
+      // 2. Get signature from backend (signed upload)
+      const signResponse = await fetch('/api/cloudinary/sign-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder }),
+      });
+      const { signature, timestamp, api_key, cloud_name } = await signResponse.json();
+
+      // 3. Upload to Cloudinary with signature
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('folder', folder);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+      formData.append('api_key', api_key);
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`,
+        { method: 'POST', body: formData }
+      );
+      const uploadData = await uploadResponse.json();
+      imageUrl = uploadData.secure_url;
+    }
+
+    // 4. Save product to database with image URL
+    const productData = {
+      // ... other fields
+      images: [imageUrl], // Cloudinary URL or dummy image
+    };
+
+    createProductMutation.mutate(productData);
+  } catch (error) {
+    console.error('Submit error:', error);
+    toast.error('Gagal menambahkan produk');
+  }
+};
+
+// Handler for file selection
+const handleFileSelect = (file: File) => {
+  setSelectedFile(file);
+  
+  // Create base64 preview
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    setImagePreview(reader.result as string);
+  };
+  reader.readAsDataURL(file);
+};
+
+// Handler for image removal
+const handleRemoveImage = () => {
+  setSelectedFile(null);
+  setImagePreview("");
+};
+```
+
+**ImagePreview Component**:
+
+```tsx
+// src/components/ImagePreview.tsx
+interface ImagePreviewProps {
+  currentImage?: string; // Base64 or URL
+  onFileSelect: (file: File) => void;
+  onRemove: () => void;
+  disabled?: boolean;
+}
+
+export default function ImagePreview({ currentImage, onFileSelect, onRemove, disabled }: ImagePreviewProps) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('File harus berupa gambar');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    setError('');
+    onFileSelect(file); // Pass File object to parent
+  };
+
+  return (
+    <div className="space-y-4">
+      {currentImage ? (
+        <div className="space-y-4">
+          <div className="relative w-full aspect-square max-w-xs mx-auto border-2 border-gray-200 rounded-lg overflow-hidden">
+            <Image src={currentImage} alt="Preview" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+          </div>
+          <Button type="button" variant="destructive" size="sm" onClick={onRemove} disabled={disabled} className="w-full">
+            <X className="h-4 w-4 mr-2" />
+            Hapus Gambar
+          </Button>
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
+          <label htmlFor="image-upload" className="flex flex-col items-center cursor-pointer">
+            <Upload className="h-12 w-12 text-gray-400 mb-2" />
+            <p className="text-sm text-gray-600 mb-1">Klik untuk upload gambar</p>
+            <p className="text-xs text-gray-500">PNG, JPG, WEBP (max 5MB)</p>
+            <input id="image-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={disabled} />
+          </label>
+        </div>
+      )}
+      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+    </div>
+  );
+}
+```
+
+**Benefits**:
+
+✅ **No Orphan Images** - Images only uploaded if form successfully submitted  
+✅ **Correct Folder Routing** - Upload directly to category folder (e.g., `proyekFPW/product_assets/besi/`)  
+✅ **Better UX** - Users see preview immediately without waiting for upload  
+✅ **Atomic Operation** - Upload + database save happen together (no inconsistency)  
+✅ **Cleaner Cloudinary** - No abandoned images from cancelled forms  
+✅ **Category-Aware** - Folder determined by selected category in form  
+
+**Toast Notification**: Only show "Produk berhasil ditambahkan!" (no separate "Gambar berhasil diupload!" to avoid double toast)
+
+**Form Cleanup**:
+```typescript
+// Reset state when dialog closes
+const handleAddDialogClose = (open: boolean) => {
+  if (!open) {
+    form.reset();
+    setImagePreview("");
+    setSelectedFile(null); // Clear file object
+  }
+};
+```
+
+**Testing Checklist**:
+✅ Select file → See base64 preview immediately  
+✅ Cancel form → No image uploaded to Cloudinary  
+✅ Select category "Besi" → Upload goes to `proyekFPW/product_assets/besi/`  
+✅ Submit form → Image uploaded THEN product saved  
+✅ Single toast notification on success  
+✅ Form reset clears preview and file state  
+
+---
+
+### 0.1. Shipping Calculator Accordion UI + Komerce API (November 8, 2025)
 
 **Location**: `src/components/ShippingCalculator.tsx`
 
