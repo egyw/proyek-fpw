@@ -1,0 +1,248 @@
+[
+  {
+    "_id": {
+      "$oid": "68c8342bd2788dc4d9e60800"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60876"
+    },
+    "orderId": "ORD-2025-001",
+    "orderNumber": "ORD-2025-001",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608c8"
+        },
+        "name": "Fumato Pipa PVC AW 1 inc",
+        "slug": "fumato-pipa-pvc-aw-1-inc",
+        "quantity": 10,
+        "unit": "batang",
+        "price": 47000,
+        "image": "/images/products/pipa-pvc-1.jpg"
+      },
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608c9"
+        },
+        "name": "Rucika Pipa PVC AW 3/4 inc",
+        "slug": "rucika-pipa-pvc-aw-3-4-inc",
+        "quantity": 5,
+        "unit": "batang",
+        "price": 35000,
+        "image": "/images/products/pipa-pvc-2.jpg"
+      }
+    ],
+    "shippingAddress": {
+      "recipientName": "Budi Santoso",
+      "phoneNumber": "081234567890",
+      "fullAddress": "Jl. Merdeka No. 123, RT 05/RW 03",
+      "district": "Menteng",
+      "city": "Jakarta",
+      "province": "DKI Jakarta",
+      "postalCode": "10110",
+      "notes": "Rumah cat hijau, dekat minimarket"
+    },
+    "subtotal": 645000,
+    "shippingCost": 50000,
+    "total": 695000,
+    "paymentMethod": "Transfer Bank BCA",
+    "paymentStatus": "paid",
+    "orderStatus": "paid",
+    "createdAt": "2025-11-10T08:30:00Z",
+    "updatedAt": "2025-11-10T08:30:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68c8342bd2788dc4d9e60801"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60877"
+    },
+    "orderId": "ORD-2025-002",
+    "orderNumber": "ORD-2025-002",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608d0"
+        },
+        "name": "Conch Semen Putih 40kg",
+        "slug": "conch-semen-putih-40kg",
+        "quantity": 20,
+        "unit": "sak",
+        "price": 62000,
+        "image": "/images/products/semen-1.jpg"
+      }
+    ],
+    "shippingAddress": {
+      "recipientName": "Siti Aminah",
+      "phoneNumber": "082345678901",
+      "fullAddress": "Jl. Sudirman No. 456, Komplek Perumahan",
+      "district": "Cicendo",
+      "city": "Bandung",
+      "province": "Jawa Barat",
+      "postalCode": "40123",
+      "notes": ""
+    },
+    "subtotal": 1240000,
+    "shippingCost": 100000,
+    "total": 1340000,
+    "paymentMethod": "Transfer Bank Mandiri",
+    "paymentStatus": "paid",
+    "orderStatus": "processing",
+    "createdAt": "2025-11-09T14:20:00Z",
+    "updatedAt": "2025-11-10T09:15:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68c8342bd2788dc4d9e60802"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60878"
+    },
+    "orderId": "ORD-2025-003",
+    "orderNumber": "ORD-2025-003",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608d4"
+        },
+        "name": "Besi Beton 10mm Full SNI",
+        "slug": "besi-beton-10mm-full-sni",
+        "quantity": 15,
+        "unit": "batang",
+        "price": 67000,
+        "image": "/images/products/besi-1.jpg"
+      },
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608d5"
+        },
+        "name": "Besi Beton 8mm Full SNI",
+        "slug": "besi-beton-8mm-full-sni",
+        "quantity": 25,
+        "unit": "batang",
+        "price": 43000,
+        "image": "/images/products/besi-2.jpg"
+      }
+    ],
+    "shippingAddress": {
+      "recipientName": "Ahmad Hidayat",
+      "phoneNumber": "083456789012",
+      "fullAddress": "Jl. Ahmad Yani No. 789",
+      "district": "Sawahan",
+      "city": "Surabaya",
+      "province": "Jawa Timur",
+      "postalCode": "60234",
+      "notes": ""
+    },
+    "subtotal": 2080000,
+    "shippingCost": 150000,
+    "total": 2230000,
+    "paymentMethod": "Transfer Bank BNI",
+    "paymentStatus": "paid",
+    "orderStatus": "shipped",
+    "shippingInfo": {
+      "courier": "jne",
+      "courierName": "JNE",
+      "service": "REG",
+      "trackingNumber": "JNE1234567890",
+      "shippedDate": "2025-11-08T10:00:00Z"
+    },
+    "createdAt": "2025-11-07T16:45:00Z",
+    "updatedAt": "2025-11-08T10:00:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68c8342bd2788dc4d9e60803"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60876"
+    },
+    "orderId": "ORD-2025-004",
+    "orderNumber": "ORD-2025-004",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608e0"
+        },
+        "name": "Tandon Air Supra 550L",
+        "slug": "tandon-air-supra-550l",
+        "quantity": 2,
+        "unit": "set",
+        "price": 1250000,
+        "image": "/images/products/tangki-air-1.jpg"
+      }
+    ],
+    "shippingAddress": {
+      "recipientName": "Budi Santoso",
+      "phoneNumber": "081234567890",
+      "fullAddress": "Jl. Merdeka No. 123, RT 05/RW 03",
+      "district": "Menteng",
+      "city": "Jakarta",
+      "province": "DKI Jakarta",
+      "postalCode": "10110",
+      "notes": "Rumah cat hijau, dekat minimarket"
+    },
+    "subtotal": 2500000,
+    "shippingCost": 200000,
+    "total": 2700000,
+    "paymentMethod": "Transfer Bank BCA",
+    "paymentStatus": "paid",
+    "orderStatus": "completed",
+    "shippingInfo": {
+      "courier": "sicepat",
+      "courierName": "SiCepat",
+      "service": "REG",
+      "trackingNumber": "SICEPAT123456",
+      "shippedDate": "2025-11-01T09:00:00Z"
+    },
+    "createdAt": "2025-10-30T13:20:00Z",
+    "updatedAt": "2025-11-05T15:45:00Z"
+  },
+  {
+    "_id": {
+      "$oid": "68c8342bd2788dc4d9e60804"
+    },
+    "userId": {
+      "$oid": "68b82d09d2788dc4d9e60877"
+    },
+    "orderId": "ORD-2025-005",
+    "orderNumber": "ORD-2025-005",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608e8"
+        },
+        "name": "Kawat Bronjong 8mm",
+        "slug": "kawat-bronjong-8mm",
+        "quantity": 10,
+        "unit": "gulung",
+        "price": 285000,
+        "image": "/images/products/kawat-1.jpg"
+      }
+    ],
+    "shippingAddress": {
+      "recipientName": "Siti Aminah",
+      "phoneNumber": "082345678901",
+      "fullAddress": "Jl. Sudirman No. 456, Komplek Perumahan",
+      "district": "Cicendo",
+      "city": "Bandung",
+      "province": "Jawa Barat",
+      "postalCode": "40123",
+      "notes": ""
+    },
+    "subtotal": 2850000,
+    "shippingCost": 300000,
+    "discount": {
+      "amount": 150000,
+      "code": "PROMO10"
+    },
+    "total": 3000000,
+    "paymentMethod": "Transfer Bank Mandiri",
+    "paymentStatus": "failed",
+    "orderStatus": "cancelled",
+    "cancelReason": "Pembayaran tidak diterima dalam batas waktu yang ditentukan",
+    "createdAt": "2025-11-08T11:45:00Z",
+    "updatedAt": "2025-11-09T08:30:00Z"
+  }
+]

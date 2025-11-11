@@ -220,10 +220,11 @@ export const productsRouter = router({
           },
         }),
 
-        // Recent orders - get latest 10 orders
+        // Recent orders - get latest 10 orders with user info
         Order.find()
           .sort({ createdAt: -1 })
-          .select("orderId customerName items total orderStatus createdAt")
+          .populate('userId', 'fullName name') // Populate user name
+          .select("orderId userId items total orderStatus createdAt")
           .limit(10)
           .lean(),
         

@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ShoppingCart, User, Package, LogOut } from "lucide-react";
+import { ShoppingCart, User, Package, LogOut, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -119,6 +119,20 @@ export default function Navbar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  
+                  {/* Admin/Staff: Dashboard Link in Dropdown */}
+                  {(session.user.role === 'admin' || session.user.role === 'staff') && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center cursor-pointer">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Dashboard Admin</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="flex items-center cursor-pointer">
                       <User className="mr-2 h-4 w-4" />

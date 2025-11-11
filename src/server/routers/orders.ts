@@ -200,94 +200,6 @@ export const ordersRouter = router({
     }
   }),
 
-  // Get single order detail
-  getOrderById: protectedProcedure
-    .input(z.object({ orderId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        await connectDB();
-
-        const order = await Order.findOne({
-          orderId: input.orderId,
-          userId: ctx.user.id, // Ensure user owns this order
-        }).lean();
-
-        if (!order) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Pesanan tidak ditemukan',
-          });
-        }
-
-        return { order };
-      } catch (error) {
-        console.error('[getOrderById] Error:', error);
-        
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Gagal mengambil detail pesanan',
-          cause: error,
-        });
-      }
-    }),
-
-  // Cancel order (before payment or if payment failed)
-  cancelOrder: protectedProcedure
-    .input(
-      z.object({
-        orderId: z.string(),
-        reason: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        await connectDB();
-
-        const order = await Order.findOne({
-          orderId: input.orderId,
-          userId: ctx.user.id,
-        });
-
-        if (!order) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Pesanan tidak ditemukan',
-          });
-        }
-
-        // Can only cancel if not paid yet
-        if (order.paymentStatus === 'paid') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Pesanan yang sudah dibayar tidak dapat dibatalkan',
-          });
-        }
-
-        order.orderStatus = 'cancelled';
-        order.cancelReason = input.reason;
-        order.cancelledAt = new Date();
-        await order.save();
-
-        return { success: true };
-      } catch (error) {
-        console.error('[cancelOrder] Error:', error);
-
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Gagal membatalkan pesanan',
-          cause: error,
-        });
-      }
-    }),
-
   // Update payment status (called from webhook)
   updatePaymentStatus: protectedProcedure
     .input(
@@ -536,4 +448,315 @@ export const ordersRouter = router({
         });
       }
     }),
+
+  // ========== ADMIN PROCEDURES ==========
+
+  // Get all orders (admin only)
+  getAllOrders: protectedProcedure
+    .input(
+      z.object({
+        status: z.enum(['all', 'pending', 'awaiting_payment', 'paid', 'processing', 'shipped', 'delivered', 'completed', 'cancelled']).optional(),
+        search: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and staff can access all orders',
+          });
+        }
+
+        await connectDB();
+
+        // Build query
+        interface OrderQuery {
+          orderStatus?: string;
+          $or?: Array<Record<string, RegExp>>;
+        }
+        const query: OrderQuery = {};
+
+        // Filter by status
+        if (input.status && input.status !== 'all') {
+          query.orderStatus = input.status;
+        }
+
+        // Search by order number, customer name, or phone
+        if (input.search) {
+          const searchRegex = new RegExp(input.search, 'i');
+          query.$or = [
+            { orderNumber: searchRegex },
+            { 'shippingAddress.recipientName': searchRegex },
+            { 'shippingAddress.phoneNumber': searchRegex },
+          ];
+        }
+
+        const orders = await Order.find(query)
+          .populate('userId', 'fullName name email phone')
+          .sort({ createdAt: -1 })
+          .lean();
+
+        return { orders };
+      } catch (error) {
+        console.error('[getAllOrders] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch orders',
+          cause: error,
+        });
+      }
+    }),
+
+  // Get order by ID (admin)
+  // Get order by ID (User can view own orders, Admin/Staff can view all)
+  getOrderById: protectedProcedure
+    .input(z.object({ orderId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        await connectDB();
+
+        // Build query based on role
+        const query: { orderId: string; userId?: string } = { orderId: input.orderId };
+        
+        // Regular users can only view their own orders
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          query.userId = ctx.user.id;
+        }
+        // Admin/staff can view any order (no userId filter)
+
+        const order = await Order.findOne(query)
+          .populate('userId', 'fullName name email phone')
+          .lean();
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found',
+          });
+        }
+
+        return { order };
+      } catch (error) {
+        console.error('[getOrderById] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch order',
+          cause: error,
+        });
+      }
+    }),
+
+  // Process order (paid → processing)
+  processOrder: protectedProcedure
+    .input(z.object({ orderId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and staff can process orders',
+          });
+        }
+
+        await connectDB();
+
+        const order = await Order.findOneAndUpdate(
+          { orderId: input.orderId, orderStatus: 'paid' },
+          { orderStatus: 'processing' },
+          { new: true }
+        ).lean();
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found or already processed',
+          });
+        }
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[processOrder] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to process order',
+          cause: error,
+        });
+      }
+    }),
+
+  // Ship order (processing → shipped)
+  shipOrder: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+        courier: z.string(),
+        courierName: z.string(),
+        service: z.string(),
+        trackingNumber: z.string(),
+        shippedDate: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and staff can ship orders',
+          });
+        }
+
+        await connectDB();
+
+        const order = await Order.findOneAndUpdate(
+          { orderId: input.orderId, orderStatus: 'processing' },
+          {
+            orderStatus: 'shipped',
+            shippingInfo: {
+              courier: input.courier,
+              courierName: input.courierName,
+              service: input.service,
+              trackingNumber: input.trackingNumber,
+              shippedDate: input.shippedDate,
+            },
+          },
+          { new: true }
+        ).lean();
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found or not in processing status',
+          });
+        }
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[shipOrder] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to ship order',
+          cause: error,
+        });
+      }
+    }),
+
+  // Cancel order
+  cancelOrder: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+        cancelReason: z.string().min(1, 'Cancel reason is required'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and staff can cancel orders',
+          });
+        }
+
+        await connectDB();
+
+        const order = await Order.findOneAndUpdate(
+          {
+            orderId: input.orderId,
+            orderStatus: { $in: ['paid', 'processing'] },
+          },
+          {
+            orderStatus: 'cancelled',
+            cancelReason: input.cancelReason,
+          },
+          { new: true }
+        ).lean();
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found or cannot be cancelled',
+          });
+        }
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[cancelOrder] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to cancel order',
+          cause: error,
+        });
+      }
+    }),
+
+  // Get order statistics (for dashboard cards)
+  getOrderStatistics: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      // Check if user is admin or staff
+      if (!['admin', 'staff'].includes(ctx.user.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin and staff can access statistics',
+        });
+      }
+
+      await connectDB();
+
+      const [paidCount, processingCount, shippedCount, completedCount] = await Promise.all([
+        Order.countDocuments({ orderStatus: 'paid' }),
+        Order.countDocuments({ orderStatus: 'processing' }),
+        Order.countDocuments({ orderStatus: 'shipped' }),
+        Order.countDocuments({ orderStatus: 'completed' }),
+      ]);
+
+      return {
+        paid: paidCount,
+        processing: processingCount,
+        shipped: shippedCount,
+        completed: completedCount,
+      };
+    } catch (error) {
+      console.error('[getOrderStatistics] Error:', error);
+      
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch order statistics',
+        cause: error,
+      });
+    }
+  }),
 });

@@ -469,21 +469,34 @@ export default function OrderDetailPage() {
 
         {/* Status Card */}
         <Card className={`p-6 mb-8 border-2 ${currentStatus.color}`}>
-          <div className="flex items-center gap-4">
-            <div className="rounded-full p-3 bg-white">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full p-3 bg-white shrink-0">
               <StatusIcon className="h-8 w-8" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold">{currentStatus.label}</h2>
               <p className="text-sm mt-1 text-gray-600">
                 {currentStatus.description}
               </p>
-              <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+              
+              <div className="mt-3 text-xs text-gray-500">
                 <span>Tanggal Pesanan: {formatDate(order.createdAt)}</span>
                 {order.paymentStatus === 'paid' && order.paidAt && (
-                  <span>• Dibayar: {formatDate(order.paidAt)}</span>
+                  <span> • Dibayar: {formatDate(order.paidAt)}</span>
                 )}
               </div>
+              
+              {/* Show cancel reason if cancelled */}
+              {order.orderStatus === 'cancelled' && order.cancelReason && (
+                <div className="mt-4 pt-4 border-t border-red-200">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">Alasan Pembatalan:</p>
+                  <p className="text-sm text-gray-900 leading-relaxed">{order.cancelReason}</p>
+                  <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-500">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span>Pesanan dibatalkan oleh admin/staff</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Card>

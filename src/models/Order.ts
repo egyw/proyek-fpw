@@ -49,7 +49,9 @@ export interface IOrder extends Document {
   
   // Shipping info (filled by admin after shipping)
   shippingInfo?: {
-    courier: string;
+    courier: string; // Courier code (e.g., "jne", "jnt")
+    courierName: string; // Courier display name (e.g., "JNE", "J&T Express")
+    service: string; // Service type (e.g., "REG", "YES")
     trackingNumber: string;
     shippedDate: Date;
   };
@@ -117,6 +119,8 @@ const OrderSchema = new Schema<IOrder>(
     
     shippingInfo: {
       courier: { type: String },
+      courierName: { type: String },
+      service: { type: String },
       trackingNumber: { type: String },
       shippedDate: { type: Date },
     },

@@ -35,6 +35,7 @@ import {
   Truck,
   CheckCircle,
   XCircle,
+  Clock,
   Search,
   Eye,
   Send,
@@ -43,45 +44,55 @@ import {
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
 
-// TODO: Replace with tRPC query
-// Expected API: trpc.orders.getAll.useQuery()
-// Input: { status?: string, search?: string }
-// Output: Order[]
-
 interface OrderItem {
-  id: string;
   productId: string;
-  productName: string;
+  name: string;
+  slug: string;
   quantity: number;
   unit: string;
   price: number;
-  subtotal: number;
+  image: string;
+}
+
+interface UserInfo {
+  _id: string;
+  fullName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
 }
 
 interface Order {
-  id: string;
-  orderNumber: string;
-  customerId: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
+  _id: string;
+  orderId: string;
+  userId: UserInfo | null;
   shippingAddress: {
-    street: string;
+    recipientName: string;
+    phoneNumber: string;
+    fullAddress: string;
+    district: string;
     city: string;
     province: string;
     postalCode: string;
+    notes?: string;
   };
   items: OrderItem[];
   subtotal: number;
   shippingCost: number;
+  discount?: {
+    amount: number;
+    code: string;
+  };
   total: number;
-  status: "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+  orderStatus: "pending" | "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+  paymentStatus: string;
   paymentMethod: string;
-  paymentProof?: string;
   shippingInfo?: {
     courier: string;
-    trackingNumber: string;
-    shippedAt: string;
+    courierName: string;
+    service: string;
+    trackingNumber?: string;
+    shippedDate?: string;
   };
   cancelReason?: string;
   notes?: string;
@@ -89,236 +100,9 @@ interface Order {
   updatedAt: string;
 }
 
-const dummyOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2025-001",
-    customerId: "customer-1",
-    customerName: "Budi Santoso",
-    customerPhone: "081234567890",
-    customerEmail: "budi@email.com",
-    shippingAddress: {
-      street: "Jl. Merdeka No. 123",
-      city: "Jakarta Pusat",
-      province: "DKI Jakarta",
-      postalCode: "10110",
-    },
-    items: [
-      {
-        id: "item-1",
-        productId: "prod-1",
-        productName: "Semen Gresik 50kg",
-        quantity: 10,
-        unit: "SAK",
-        price: 65000,
-        subtotal: 650000,
-      },
-      {
-        id: "item-2",
-        productId: "prod-2",
-        productName: "Cat Avian 5kg",
-        quantity: 5,
-        unit: "KALENG",
-        price: 120000,
-        subtotal: 600000,
-      },
-    ],
-    subtotal: 1250000,
-    shippingCost: 50000,
-    total: 1300000,
-    status: "paid",
-    paymentMethod: "Transfer Bank BCA",
-    createdAt: "2025-10-11T08:30:00Z",
-    updatedAt: "2025-10-11T08:30:00Z",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2025-002",
-    customerId: "customer-2",
-    customerName: "Siti Aminah",
-    customerPhone: "082345678901",
-    customerEmail: "siti@email.com",
-    shippingAddress: {
-      street: "Jl. Sudirman No. 456",
-      city: "Bandung",
-      province: "Jawa Barat",
-      postalCode: "40123",
-    },
-    items: [
-      {
-        id: "item-3",
-        productId: "prod-3",
-        productName: "Besi Beton 10mm",
-        quantity: 20,
-        unit: "BATANG",
-        price: 85000,
-        subtotal: 1700000,
-      },
-    ],
-    subtotal: 1700000,
-    shippingCost: 100000,
-    total: 1800000,
-    status: "processing",
-    paymentMethod: "Transfer Bank Mandiri",
-    createdAt: "2025-10-10T14:20:00Z",
-    updatedAt: "2025-10-11T09:15:00Z",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2025-003",
-    customerId: "customer-3",
-    customerName: "Ahmad Hidayat",
-    customerPhone: "083456789012",
-    customerEmail: "ahmad@email.com",
-    shippingAddress: {
-      street: "Jl. Ahmad Yani No. 789",
-      city: "Surabaya",
-      province: "Jawa Timur",
-      postalCode: "60234",
-    },
-    items: [
-      {
-        id: "item-4",
-        productId: "prod-4",
-        productName: "Pipa PVC 4 inch",
-        quantity: 15,
-        unit: "BATANG",
-        price: 45000,
-        subtotal: 675000,
-      },
-      {
-        id: "item-5",
-        productId: "prod-5",
-        productName: "Keramik 40x40",
-        quantity: 50,
-        unit: "PCS",
-        price: 35000,
-        subtotal: 1750000,
-      },
-    ],
-    subtotal: 2425000,
-    shippingCost: 150000,
-    total: 2575000,
-    status: "shipped",
-    paymentMethod: "Transfer Bank BNI",
-    shippingInfo: {
-      courier: "JNE",
-      trackingNumber: "JNE1234567890",
-      shippedAt: "2025-10-09T10:00:00Z",
-    },
-    createdAt: "2025-10-08T16:45:00Z",
-    updatedAt: "2025-10-09T10:00:00Z",
-  },
-  {
-    id: "4",
-    orderNumber: "ORD-2025-004",
-    customerId: "customer-4",
-    customerName: "Dewi Lestari",
-    customerPhone: "084567890123",
-    customerEmail: "dewi@email.com",
-    shippingAddress: {
-      street: "Jl. Gatot Subroto No. 321",
-      city: "Semarang",
-      province: "Jawa Tengah",
-      postalCode: "50145",
-    },
-    items: [
-      {
-        id: "item-6",
-        productId: "prod-6",
-        productName: "Genteng Metal",
-        quantity: 100,
-        unit: "LEMBAR",
-        price: 25000,
-        subtotal: 2500000,
-      },
-    ],
-    subtotal: 2500000,
-    shippingCost: 200000,
-    total: 2700000,
-    status: "delivered",
-    paymentMethod: "Transfer Bank BRI",
-    shippingInfo: {
-      courier: "J&T",
-      trackingNumber: "JT9876543210",
-      shippedAt: "2025-10-05T11:30:00Z",
-    },
-    createdAt: "2025-10-04T13:20:00Z",
-    updatedAt: "2025-10-10T15:45:00Z",
-  },
-  {
-    id: "5",
-    orderNumber: "ORD-2025-005",
-    customerId: "customer-5",
-    customerName: "Eko Prasetyo",
-    customerPhone: "085678901234",
-    customerEmail: "eko@email.com",
-    shippingAddress: {
-      street: "Jl. Diponegoro No. 654",
-      city: "Yogyakarta",
-      province: "DI Yogyakarta",
-      postalCode: "55223",
-    },
-    items: [
-      {
-        id: "item-7",
-        productId: "prod-7",
-        productName: "Pasir Cor",
-        quantity: 5,
-        unit: "M3",
-        price: 350000,
-        subtotal: 1750000,
-      },
-    ],
-    subtotal: 1750000,
-    shippingCost: 300000,
-    total: 2050000,
-    status: "completed",
-    paymentMethod: "Transfer Bank BCA",
-    shippingInfo: {
-      courier: "SiCepat",
-      trackingNumber: "SICEPAT123456",
-      shippedAt: "2025-09-28T09:00:00Z",
-    },
-    createdAt: "2025-09-27T10:15:00Z",
-    updatedAt: "2025-10-02T14:30:00Z",
-  },
-  {
-    id: "6",
-    orderNumber: "ORD-2025-006",
-    customerId: "customer-6",
-    customerName: "Rina Melati",
-    customerPhone: "086789012345",
-    customerEmail: "rina@email.com",
-    shippingAddress: {
-      street: "Jl. Pahlawan No. 987",
-      city: "Malang",
-      province: "Jawa Timur",
-      postalCode: "65117",
-    },
-    items: [
-      {
-        id: "item-8",
-        productId: "prod-8",
-        productName: "Cat Dulux 20L",
-        quantity: 3,
-        unit: "GALON",
-        price: 450000,
-        subtotal: 1350000,
-      },
-    ],
-    subtotal: 1350000,
-    shippingCost: 75000,
-    total: 1425000,
-    status: "cancelled",
-    paymentMethod: "Transfer Bank Mandiri",
-    cancelReason: "Stok habis, customer minta refund",
-    createdAt: "2025-10-07T11:45:00Z",
-    updatedAt: "2025-10-08T08:30:00Z",
-  },
-];
-
 const statusConfig = {
+  pending: { label: "Pending", color: "bg-gray-100 text-gray-800", icon: Clock },
+  awaiting_payment: { label: "Awaiting Payment", color: "bg-orange-100 text-orange-800", icon: Clock },
   paid: { label: "Paid", color: "bg-blue-100 text-blue-800", icon: ShoppingCart },
   processing: { label: "Processing", color: "bg-yellow-100 text-yellow-800", icon: Package },
   shipped: { label: "Shipped", color: "bg-purple-100 text-purple-800", icon: Truck },
@@ -329,7 +113,7 @@ const statusConfig = {
 
 export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled">("all");
   
   // Dialog states
   const [viewDetailDialog, setViewDetailDialog] = useState(false);
@@ -347,23 +131,16 @@ export default function AdminOrdersPage() {
   // Cancel form
   const [cancelReason, setCancelReason] = useState("");
 
-  // Filter orders
-  const filteredOrders = dummyOrders.filter((order) => {
-    const matchesSearch =
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerPhone.includes(searchQuery);
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  // tRPC queries
+  const { data: ordersData, isLoading } = trpc.orders.getAllOrders.useQuery({
+    status: statusFilter as "all" | "pending" | "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled" | undefined,
+    search: searchQuery,
   });
 
-  // Stats
-  const stats = {
-    paid: dummyOrders.filter((o) => o.status === "paid").length,
-    processing: dummyOrders.filter((o) => o.status === "processing").length,
-    shipped: dummyOrders.filter((o) => o.status === "shipped").length,
-    completed: dummyOrders.filter((o) => o.status === "completed").length,
-  };
+  const { data: statsData } = trpc.orders.getOrderStatistics.useQuery();
+
+  const orders = ordersData?.orders || [];
+  const stats = statsData || { paid: 0, processing: 0, shipped: 0, completed: 0 };
 
   const handleViewDetail = (order: Order) => {
     setSelectedOrder(order);
@@ -391,36 +168,71 @@ export default function AdminOrdersPage() {
 
   // tRPC mutations
   const utils = trpc.useContext();
-  const updateOrderStatusMutation = trpc.orders.updateOrderStatus.useMutation({
+  
+  const processOrderMutation = trpc.orders.processOrder.useMutation({
     onSuccess: () => {
-      // Refetch orders data
-      utils.orders.invalidate();
+      utils.orders.getAllOrders.invalidate();
+      utils.orders.getOrderStatistics.invalidate();
+      toast.success('Pesanan Diproses', {
+        description: 'Pesanan berhasil diproses.',
+      });
+      setProcessDialog(false);
+      setViewDetailDialog(false); // Close view detail dialog to refresh data
+      setSelectedOrder(null); // Clear selected order
+    },
+    onError: (error) => {
+      toast.error('Gagal Memproses Pesanan', {
+        description: error.message,
+      });
     },
   });
 
-  const confirmProcess = async () => {
+  const shipOrderMutation = trpc.orders.shipOrder.useMutation({
+    onSuccess: () => {
+      utils.orders.getAllOrders.invalidate();
+      utils.orders.getOrderStatistics.invalidate();
+      toast.success('Pesanan Dikirim', {
+        description: 'Pesanan berhasil dikirim.',
+      });
+      setShipDialog(false);
+      setViewDetailDialog(false); // Close view detail dialog to refresh data
+      setSelectedOrder(null); // Clear selected order
+      setShippingCourier("");
+      setTrackingNumber("");
+      setShippedDate("");
+    },
+    onError: (error) => {
+      toast.error('Gagal Mengirim Pesanan', {
+        description: error.message,
+      });
+    },
+  });
+
+  const cancelOrderMutation = trpc.orders.cancelOrder.useMutation({
+    onSuccess: () => {
+      utils.orders.getAllOrders.invalidate();
+      utils.orders.getOrderStatistics.invalidate();
+      toast.success('Pesanan Dibatalkan', {
+        description: 'Pesanan berhasil dibatalkan.',
+      });
+      setCancelDialog(false);
+      setViewDetailDialog(false); // Close view detail dialog to refresh data
+      setSelectedOrder(null); // Clear selected order
+      setCancelReason("");
+    },
+    onError: (error) => {
+      toast.error('Gagal Membatalkan Pesanan', {
+        description: error.message,
+      });
+    },
+  });
+
+  const confirmProcess = () => {
     if (!selectedOrder) return;
-
-    try {
-      await updateOrderStatusMutation.mutateAsync({
-        orderId: selectedOrder.orderNumber,
-        orderStatus: 'processing',
-      });
-
-      toast.success('Pesanan Diproses', {
-        description: `Order ${selectedOrder.orderNumber} sedang diproses.`,
-      });
-
-      setProcessDialog(false);
-    } catch (error) {
-      console.error('Error processing order:', error);
-      toast.error('Gagal Memproses Pesanan', {
-        description: 'Terjadi kesalahan saat memproses pesanan.',
-      });
-    }
+    processOrderMutation.mutate({ orderId: selectedOrder.orderId });
   };
 
-  const confirmShip = async () => {
+  const confirmShip = () => {
     if (!selectedOrder) return;
 
     if (!shippingCourier || !trackingNumber || !shippedDate) {
@@ -430,31 +242,29 @@ export default function AdminOrdersPage() {
       return;
     }
 
-    try {
-      await updateOrderStatusMutation.mutateAsync({
-        orderId: selectedOrder.orderNumber,
-        orderStatus: 'shipped',
-        shippingInfo: {
-          courier: shippingCourier,
-          trackingNumber: trackingNumber,
-          shippedDate: shippedDate,
-        },
-      });
+    // Map courier code to name
+    const courierMap: Record<string, { name: string; service: string }> = {
+      jne: { name: 'JNE', service: 'REG' },
+      jnt: { name: 'J&T Express', service: 'REG' },
+      sicepat: { name: 'SiCepat', service: 'REG' },
+      anteraja: { name: 'AnterAja', service: 'REG' },
+      idexpress: { name: 'ID Express', service: 'REG' },
+      ninja: { name: 'Ninja Xpress', service: 'REG' },
+    };
 
-      toast.success('Pesanan Dikirim', {
-        description: `Order ${selectedOrder.orderNumber} telah dikirim.`,
-      });
+    const courierInfo = courierMap[shippingCourier] || { name: shippingCourier.toUpperCase(), service: 'REG' };
 
-      setShipDialog(false);
-    } catch (error) {
-      console.error('Error shipping order:', error);
-      toast.error('Gagal Mengirim Pesanan', {
-        description: 'Terjadi kesalahan saat mengirim pesanan.',
-      });
-    }
+    shipOrderMutation.mutate({
+      orderId: selectedOrder.orderId,
+      courier: shippingCourier,
+      courierName: courierInfo.name,
+      service: courierInfo.service,
+      trackingNumber: trackingNumber,
+      shippedDate: shippedDate,
+    });
   };
 
-  const confirmCancel = async () => {
+  const confirmCancel = () => {
     if (!selectedOrder) return;
 
     if (!cancelReason.trim()) {
@@ -464,24 +274,10 @@ export default function AdminOrdersPage() {
       return;
     }
 
-    try {
-      await updateOrderStatusMutation.mutateAsync({
-        orderId: selectedOrder.orderNumber,
-        orderStatus: 'cancelled',
-        cancelReason: cancelReason,
-      });
-
-      toast.success('Pesanan Dibatalkan', {
-        description: `Order ${selectedOrder.orderNumber} telah dibatalkan.`,
-      });
-
-      setCancelDialog(false);
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      toast.error('Gagal Membatalkan Pesanan', {
-        description: 'Terjadi kesalahan saat membatalkan pesanan.',
-      });
-    }
+    cancelOrderMutation.mutate({
+      orderId: selectedOrder.orderId,
+      cancelReason: cancelReason,
+    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -576,12 +372,28 @@ export default function AdminOrdersPage() {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select
+              value={statusFilter}
+              onValueChange={(
+                value:
+                  | "all"
+                  | "pending"
+                  | "awaiting_payment"
+                  | "paid"
+                  | "processing"
+                  | "shipped"
+                  | "delivered"
+                  | "completed"
+                  | "cancelled"
+              ) => setStatusFilter(value)}
+            >
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>
@@ -608,22 +420,37 @@ export default function AdminOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : orders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                     Tidak ada pesanan yang sesuai dengan filter
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((order) => {
-                  const StatusIcon = statusConfig[order.status].icon;
+                orders.map((orderData) => {
+                  const order = orderData as unknown as Order;
+                  // Safe access to statusConfig with fallback
+                  const statusKey = order.orderStatus as keyof typeof statusConfig;
+                  const statusData = statusConfig[statusKey] || statusConfig.pending;
+                  const StatusIcon = statusData.icon;
+                  const customerName = order.userId?.fullName || order.userId?.name || order.shippingAddress.recipientName;
+                  const customerPhone = order.userId?.phone || order.shippingAddress.phoneNumber;
+                  
                   return (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                    <TableRow key={String(order._id)}>
+                      <TableCell className="font-medium">{order.orderId}</TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{order.customerName}</p>
-                          <p className="text-sm text-gray-500">{order.customerPhone}</p>
+                          <p className="font-medium">{customerName}</p>
+                          <p className="text-sm text-gray-500">{customerPhone}</p>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
@@ -632,9 +459,9 @@ export default function AdminOrdersPage() {
                         {formatCurrency(order.total)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusConfig[order.status].color}>
+                        <Badge className={statusData.color}>
                           <StatusIcon className="h-3 w-3 mr-1" />
-                          {statusConfig[order.status].label}
+                          {statusData.label}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -646,7 +473,7 @@ export default function AdminOrdersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {order.status === "paid" && (
+                          {order.orderStatus === "paid" && (
                             <Button
                               variant="default"
                               size="sm"
@@ -655,7 +482,7 @@ export default function AdminOrdersPage() {
                               Proses
                             </Button>
                           )}
-                          {order.status === "processing" && (
+                          {order.orderStatus === "processing" && (
                             <Button
                               variant="default"
                               size="sm"
@@ -665,7 +492,7 @@ export default function AdminOrdersPage() {
                               Kirim
                             </Button>
                           )}
-                          {(order.status === "paid" || order.status === "processing") && (
+                          {(order.orderStatus === "paid" || order.orderStatus === "processing") && (
                             <Button
                               variant="destructive"
                               size="sm"
@@ -688,7 +515,7 @@ export default function AdminOrdersPage() {
         <Dialog open={viewDetailDialog} onOpenChange={setViewDetailDialog}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Detail Pesanan {selectedOrder?.orderNumber}</DialogTitle>
+              <DialogTitle>Detail Pesanan {selectedOrder?.orderId}</DialogTitle>
               <DialogDescription>
                 Informasi lengkap pesanan customer
               </DialogDescription>
@@ -701,16 +528,18 @@ export default function AdminOrdersPage() {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-600">Nama</p>
-                      <p className="font-medium">{selectedOrder.customerName}</p>
+                      <p className="font-medium">{selectedOrder.userId?.fullName || selectedOrder.userId?.name || selectedOrder.shippingAddress.recipientName}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Telepon</p>
-                      <p className="font-medium">{selectedOrder.customerPhone}</p>
+                      <p className="font-medium">{selectedOrder.userId?.phone || selectedOrder.shippingAddress.phoneNumber}</p>
                     </div>
-                    <div className="col-span-2">
-                      <p className="text-gray-600">Email</p>
-                      <p className="font-medium">{selectedOrder.customerEmail}</p>
-                    </div>
+                    {selectedOrder.userId?.email && (
+                      <div className="col-span-2">
+                        <p className="text-gray-600">Email</p>
+                        <p className="font-medium">{selectedOrder.userId.email}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -718,9 +547,9 @@ export default function AdminOrdersPage() {
                 <div>
                   <h3 className="font-semibold mb-3">Alamat Pengiriman</h3>
                   <p className="text-sm">
-                    {selectedOrder.shippingAddress.street}<br />
-                    {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.province}<br />
-                    {selectedOrder.shippingAddress.postalCode}
+                    {selectedOrder.shippingAddress.fullAddress}<br />
+                    {selectedOrder.shippingAddress.district}, {selectedOrder.shippingAddress.city}<br />
+                    {selectedOrder.shippingAddress.province} {selectedOrder.shippingAddress.postalCode}
                   </p>
                 </div>
 
@@ -728,15 +557,15 @@ export default function AdminOrdersPage() {
                 <div>
                   <h3 className="font-semibold mb-3">Item Pesanan</h3>
                   <div className="space-y-2">
-                    {selectedOrder.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center text-sm border-b pb-2">
+                    {selectedOrder.items.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm border-b pb-2">
                         <div>
-                          <p className="font-medium">{item.productName}</p>
+                          <p className="font-medium">{item.name}</p>
                           <p className="text-gray-600">
                             {item.quantity} {item.unit} × {formatCurrency(item.price)}
                           </p>
                         </div>
-                        <p className="font-medium">{formatCurrency(item.subtotal)}</p>
+                        <p className="font-medium">{formatCurrency(item.price * item.quantity)}</p>
                       </div>
                     ))}
                   </div>
@@ -752,6 +581,12 @@ export default function AdminOrdersPage() {
                     <p className="text-gray-600">Ongkir</p>
                     <p className="font-medium">{formatCurrency(selectedOrder.shippingCost)}</p>
                   </div>
+                  {selectedOrder.discount && selectedOrder.discount.amount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <p>Diskon ({selectedOrder.discount.code})</p>
+                      <p>-{formatCurrency(selectedOrder.discount.amount)}</p>
+                    </div>
+                  )}
                   <div className="flex justify-between text-base border-t pt-2">
                     <p className="font-semibold">Total</p>
                     <p className="font-bold text-primary">{formatCurrency(selectedOrder.total)}</p>
@@ -774,16 +609,20 @@ export default function AdminOrdersPage() {
                     <div className="space-y-2 text-sm">
                       <p>
                         <span className="text-gray-600">Kurir:</span>{" "}
-                        <span className="font-medium">{selectedOrder.shippingInfo.courier}</span>
+                        <span className="font-medium">{selectedOrder.shippingInfo.courierName} ({selectedOrder.shippingInfo.service})</span>
                       </p>
-                      <p>
-                        <span className="text-gray-600">No. Resi:</span>{" "}
-                        <span className="font-medium">{selectedOrder.shippingInfo.trackingNumber}</span>
-                      </p>
-                      <p>
-                        <span className="text-gray-600">Tanggal Kirim:</span>{" "}
-                        <span className="font-medium">{formatDate(selectedOrder.shippingInfo.shippedAt)}</span>
-                      </p>
+                      {selectedOrder.shippingInfo.trackingNumber && (
+                        <p>
+                          <span className="text-gray-600">No. Resi:</span>{" "}
+                          <span className="font-medium">{selectedOrder.shippingInfo.trackingNumber}</span>
+                        </p>
+                      )}
+                      {selectedOrder.shippingInfo.shippedDate && (
+                        <p>
+                          <span className="text-gray-600">Tanggal Kirim:</span>{" "}
+                          <span className="font-medium">{formatDate(selectedOrder.shippingInfo.shippedDate)}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -826,7 +665,7 @@ export default function AdminOrdersPage() {
             <DialogHeader>
               <DialogTitle>Input Informasi Pengiriman</DialogTitle>
               <DialogDescription>
-                Masukkan detail pengiriman untuk pesanan {selectedOrder?.orderNumber}
+                Masukkan detail pengiriman untuk pesanan {selectedOrder?.orderId}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -837,12 +676,12 @@ export default function AdminOrdersPage() {
                     <SelectValue placeholder="Pilih ekspedisi" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="JNE">JNE</SelectItem>
-                    <SelectItem value="J&T">J&T Express</SelectItem>
-                    <SelectItem value="SiCepat">SiCepat</SelectItem>
-                    <SelectItem value="Anteraja">Anteraja</SelectItem>
-                    <SelectItem value="IDExpress">ID Express</SelectItem>
-                    <SelectItem value="Ninja">Ninja Express</SelectItem>
+                    <SelectItem value="jne">JNE</SelectItem>
+                    <SelectItem value="jnt">J&T Express</SelectItem>
+                    <SelectItem value="sicepat">SiCepat</SelectItem>
+                    <SelectItem value="anteraja">AnterAja</SelectItem>
+                    <SelectItem value="idexpress">ID Express</SelectItem>
+                    <SelectItem value="ninja">Ninja Xpress</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -886,7 +725,7 @@ export default function AdminOrdersPage() {
             <DialogHeader>
               <DialogTitle>Batalkan Pesanan</DialogTitle>
               <DialogDescription>
-                Masukkan alasan pembatalan untuk pesanan {selectedOrder?.orderNumber}
+                Masukkan alasan pembatalan untuk pesanan {selectedOrder?.orderId}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">

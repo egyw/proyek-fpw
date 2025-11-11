@@ -18,7 +18,11 @@ import { useRouter } from "next/router";
 // Type for order from database
 interface OrderData {
   orderId: string;
-  customerName: string;
+  userId: {
+    _id: string;
+    fullName?: string;
+    name?: string;
+  } | null;
   items: Array<{ name: string }>;
   total: number;
   orderStatus: string;
@@ -142,7 +146,7 @@ export default function AdminDashboard() {
   const rawOrders = (dashboardStats?.recentOrders || []) as unknown as OrderData[];
   const recentOrders = rawOrders.map((order) => ({
     id: order.orderId || "N/A",
-    customer: order.customerName || "Unknown",
+    customer: order.userId?.fullName || order.userId?.name || "Unknown",
     product: order.items && order.items.length > 1 
       ? `${order.items[0]?.name || "Produk"} +${order.items.length - 1} lainnya`
       : order.items?.[0]?.name || "Tidak ada produk",

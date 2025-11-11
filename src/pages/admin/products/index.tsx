@@ -651,16 +651,14 @@ export default function AdminProducts() {
                       <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          Rp {product.price.toLocaleString('id-ID')}
+                      <p className="font-semibold text-gray-900">
+                        Rp {product.price.toLocaleString('id-ID')}
+                      </p>
+                      {product.discount && product.discount.percentage > 0 && (
+                        <p className="text-xs text-green-600">
+                          Diskon {product.discount.percentage}%
                         </p>
-                        {product.discount?.percentage && product.discount.percentage > 0 && (
-                          <p className="text-xs text-green-600">
-                            Diskon {product.discount.percentage}%
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <p className={`font-medium ${
