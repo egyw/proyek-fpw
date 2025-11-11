@@ -1,9 +1,10 @@
-import { router, procedure } from "../trpc";
+import { router, procedure, protectedProcedure } from "../trpc";
 import { z } from "zod";
 import connectDB from "@/lib/mongodb";
 import Product, { IProductData } from "@/models/Product";
 import User from "@/models/User";
 import Order from "@/models/Order";
+import StockMovement from "@/models/StockMovement";
 import { TRPCError } from "@trpc/server";
 
 function formatRupiahShort(value: number): string {
@@ -541,6 +542,7 @@ export const productsRouter = router({
         const allProducts = await Product.find(query).lean();
         const totalProducts = allProducts.length;
         const activeProducts = allProducts.filter(p => p.isActive).length;
+        const inactiveProducts = allProducts.filter(p => !p.isActive).length;
         const lowStockProducts = allProducts.filter(
           p => p.stock <= p.minStock
         ).length;
@@ -559,6 +561,7 @@ export const productsRouter = router({
           stats: {
             total: totalProducts,
             active: activeProducts,
+            inactive: inactiveProducts,
             lowStock: lowStockProducts,
             outOfStock: outOfStockProducts,
           },
@@ -574,7 +577,7 @@ export const productsRouter = router({
     }),
 
   // ADMIN: Create product
-  createProduct: procedure
+  createProduct: protectedProcedure
     .input(
       z.object({
         name: z.string().min(3),
@@ -598,7 +601,7 @@ export const productsRouter = router({
         isFeatured: z.boolean(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
         await connectDB();
 
@@ -612,6 +615,26 @@ export const productsRouter = router({
         }
 
         const product = await Product.create(input);
+
+        // ⭐ Phase 3: Record initial stock movement if stock > 0
+        if (input.stock > 0) {
+          await StockMovement.create({
+            productId: product._id as unknown as import('mongoose').Types.ObjectId,
+            productName: product.name,
+            productCode: product.slug,
+            movementType: 'in',
+            quantity: input.stock,
+            unit: product.unit,
+            reason: 'Produk baru ditambahkan',
+            referenceType: 'initial',
+            referenceId: (product._id as unknown as import('mongoose').Types.ObjectId).toString(),
+            performedBy: ctx.user.id,
+            performedByName: ctx.user.name,
+            previousStock: 0,
+            newStock: input.stock,
+            notes: 'Stok awal saat produk dibuat',
+          });
+        }
 
         return {
           success: true,
@@ -633,7 +656,7 @@ export const productsRouter = router({
     }),
 
   // ADMIN: Update product
-  updateProduct: procedure
+  updateProduct: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -656,13 +679,14 @@ export const productsRouter = router({
         attributes: z.record(z.string(), z.unknown()).optional(),
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
+        stockAdjustmentReason: z.string().optional(), // ⭐ For stock movement tracking
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
         await connectDB();
 
-        const { id, ...updateData } = input;
+        const { id, stockAdjustmentReason, ...updateData } = input;
 
         // Check if slug is being updated and already exists
         if (updateData.slug) {
@@ -674,6 +698,43 @@ export const productsRouter = router({
             throw new TRPCError({
               code: 'CONFLICT',
               message: 'Product with this slug already exists',
+            });
+          }
+        }
+
+        // ⭐ Phase 2: Track stock adjustment if stock is being updated
+        let previousStock = 0;
+        if (updateData.stock !== undefined) {
+          const currentProduct = await Product.findById(id);
+          if (!currentProduct) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Product not found',
+            });
+          }
+          previousStock = currentProduct.stock;
+
+          // Record stock movement if stock changed
+          if (previousStock !== updateData.stock) {
+            const stockDifference = updateData.stock - previousStock;
+            const movementType = stockDifference > 0 ? 'in' : 'out';
+            const quantity = Math.abs(stockDifference);
+
+            await StockMovement.create({
+              productId: currentProduct._id,
+              productName: currentProduct.name,
+              productCode: currentProduct.slug,
+              movementType,
+              quantity,
+              unit: currentProduct.unit,
+              reason: stockAdjustmentReason || 'Penyesuaian stok manual',
+              referenceType: 'adjustment',
+              referenceId: `ADJ-${Date.now()}`,
+              performedBy: ctx.user.id,
+              performedByName: ctx.user.name,
+              previousStock,
+              newStock: updateData.stock,
+              notes: stockAdjustmentReason,
             });
           }
         }
@@ -710,15 +771,22 @@ export const productsRouter = router({
       }
     }),
 
-  // ADMIN: Delete product
+  // ADMIN: Delete product (SOFT DELETE)
   deleteProduct: procedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       try {
         await connectDB();
 
-        // First, get the product to extract image URLs
-        const product = await Product.findById(input.id);
+        // Soft delete: set isActive = false (keep product in database)
+        const product = await Product.findByIdAndUpdate(
+          input.id,
+          { 
+            isActive: false,
+            updatedAt: new Date().toISOString()
+          },
+          { new: true }
+        );
 
         if (!product) {
           throw new TRPCError({
@@ -727,44 +795,13 @@ export const productsRouter = router({
           });
         }
 
-        // Extract public_ids from Cloudinary URLs and delete images
-        if (product.images && product.images.length > 0) {
-          const { v2: cloudinary } = await import('cloudinary');
-          
-          // Configure Cloudinary
-          cloudinary.config({
-            cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-            api_key: process.env.CLOUDINARY_API_KEY,
-            api_secret: process.env.CLOUDINARY_API_SECRET,
-          });
-
-          // Delete each image from Cloudinary
-          for (const imageUrl of product.images) {
-            try {
-              // Extract public_id from URL
-              const parts = imageUrl.split('/upload/');
-              if (parts.length >= 2) {
-                let pathAfterUpload = parts[1];
-                // Remove version (v1234567890) if exists
-                pathAfterUpload = pathAfterUpload.replace(/^v\d+\//, '');
-                // Remove file extension
-                const publicId = pathAfterUpload.replace(/\.[^.]+$/, '');
-                
-                await cloudinary.uploader.destroy(publicId);
-              }
-            } catch (imgError) {
-              console.error('Failed to delete image from Cloudinary:', imgError);
-              // Continue with product deletion even if image deletion fails
-            }
-          }
-        }
-
-        // Delete product from database
-        await Product.findByIdAndDelete(input.id);
+        // ⭐ NOTE: We do NOT delete images from Cloudinary
+        // Reason: Product can be restored, and we want to keep images
+        // If you need to clean up orphaned images, use a scheduled job
 
         return {
           success: true,
-          message: 'Product deleted successfully',
+          message: 'Product archived successfully (soft delete)',
         };
       } catch (error) {
         console.error('[deleteProduct] Error:', error);

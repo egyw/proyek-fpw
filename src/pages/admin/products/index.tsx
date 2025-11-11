@@ -569,7 +569,7 @@ export default function AdminProducts() {
       </Card>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card className="p-4">
           <p className="text-sm text-gray-600 mb-1">Total Produk</p>
           <p className="text-2xl font-bold text-gray-900">
@@ -580,6 +580,12 @@ export default function AdminProducts() {
           <p className="text-sm text-gray-600 mb-1">Produk Aktif</p>
           <p className="text-2xl font-bold text-green-600">
             {productsData?.stats?.active || 0}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-gray-600 mb-1">Produk Tidak Aktif</p>
+          <p className="text-2xl font-bold text-gray-600">
+            {productsData?.stats?.inactive || 0}
           </p>
         </Card>
         <Card className="p-4">

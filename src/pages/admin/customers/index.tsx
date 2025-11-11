@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -18,6 +20,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -26,158 +29,132 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Eye, UserCheck, UserX, ShoppingBag, Calendar } from "lucide-react";
+import { Search, Eye, UserCheck, UserX, ShoppingBag, Calendar, Ban, CheckCircle, MessageCircle } from "lucide-react";
+import { trpc } from "@/utils/trpc";
+import { toast } from "sonner";
 
+// Customer interface for type safety
 interface Customer {
-  id: string;
-  name: string;
+  _id: string;
+  fullName: string;
   email: string;
   phone: string;
-  registeredDate: string; // ISO date
-  totalOrders: number;
-  totalSpent: number;
-  status: "active" | "inactive";
-  address: {
-    street: string;
+  username: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLogin: string;
+  suspendedAt?: string;
+  suspensionReason?: string;
+  totalOrders: number; // ⭐ NEW: From aggregation
+  totalSpent: number; // ⭐ NEW: From aggregation
+  addresses: Array<{
+    id: string;
+    label: string;
+    recipientName: string;
+    phoneNumber: string;
+    fullAddress: string;
+    district: string;
     city: string;
     province: string;
     postalCode: string;
-  };
-  lastOrderDate?: string;
+    notes?: string;
+    isDefault: boolean;
+  }>;
 }
 
 export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [detailDialog, setDetailDialog] = useState(false);
+  const [suspendDialog, setSuspendDialog] = useState(false);
+  const [reactivateDialog, setReactivateDialog] = useState(false);
+  const [suspensionReason, setSuspensionReason] = useState("");
 
-  // TODO: Replace with tRPC query
-  // Expected API: trpc.customers.getAll.useQuery()
-  // Input: { search?: string, status?: string }
-  // Output: Customer[]
-  const dummyCustomers: Customer[] = [
-    {
-      id: "1",
-      name: "Ahmad Fauzi",
-      email: "ahmad.fauzi@email.com",
-      phone: "081234567890",
-      registeredDate: "2024-01-15T10:30:00Z",
-      totalOrders: 15,
-      totalSpent: 12500000,
-      status: "active",
-      address: {
-        street: "Jl. Merdeka No. 123",
-        city: "Jakarta Pusat",
-        province: "DKI Jakarta",
-        postalCode: "10110",
-      },
-      lastOrderDate: "2025-04-05T14:20:00Z",
-    },
-    {
-      id: "2",
-      name: "Siti Nurhaliza",
-      email: "siti.nur@email.com",
-      phone: "082345678901",
-      registeredDate: "2024-02-20T09:15:00Z",
-      totalOrders: 8,
-      totalSpent: 6750000,
-      status: "active",
-      address: {
-        street: "Jl. Sudirman No. 45",
-        city: "Bandung",
-        province: "Jawa Barat",
-        postalCode: "40123",
-      },
-      lastOrderDate: "2025-03-28T11:45:00Z",
-    },
-    {
-      id: "3",
-      name: "Budi Santoso",
-      email: "budi.santoso@email.com",
-      phone: "083456789012",
-      registeredDate: "2024-03-10T14:00:00Z",
-      totalOrders: 22,
-      totalSpent: 18900000,
-      status: "active",
-      address: {
-        street: "Jl. Diponegoro No. 67",
-        city: "Surabaya",
-        province: "Jawa Timur",
-        postalCode: "60241",
-      },
-      lastOrderDate: "2025-04-08T16:30:00Z",
-    },
-    {
-      id: "4",
-      name: "Dewi Lestari",
-      email: "dewi.lestari@email.com",
-      phone: "084567890123",
-      registeredDate: "2024-05-12T11:20:00Z",
-      totalOrders: 5,
-      totalSpent: 3200000,
-      status: "active",
-      address: {
-        street: "Jl. Gatot Subroto No. 89",
-        city: "Semarang",
-        province: "Jawa Tengah",
-        postalCode: "50132",
-      },
-      lastOrderDate: "2025-03-15T10:00:00Z",
-    },
-    {
-      id: "5",
-      name: "Eko Prasetyo",
-      email: "eko.prasetyo@email.com",
-      phone: "085678901234",
-      registeredDate: "2023-11-08T08:45:00Z",
-      totalOrders: 2,
-      totalSpent: 850000,
-      status: "inactive",
-      address: {
-        street: "Jl. Ahmad Yani No. 12",
-        city: "Yogyakarta",
-        province: "DI Yogyakarta",
-        postalCode: "55161",
-      },
-      lastOrderDate: "2024-06-20T13:30:00Z",
-    },
-    {
-      id: "6",
-      name: "Rina Wijaya",
-      email: "rina.wijaya@email.com",
-      phone: "086789012345",
-      registeredDate: "2024-06-25T15:10:00Z",
-      totalOrders: 0,
-      totalSpent: 0,
-      status: "inactive",
-      address: {
-        street: "Jl. Veteran No. 34",
-        city: "Malang",
-        province: "Jawa Timur",
-        postalCode: "65119",
-      },
-    },
-  ];
+  const utils = trpc.useContext();
 
-  // Filter customers based on search and status
-  const filteredCustomers = dummyCustomers.filter((customer) => {
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery);
-
-    const matchesStatus =
-      statusFilter === "all" || customer.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+  // Fetch customers from database
+  const { data: customersData, isLoading } = trpc.users.getAllCustomers.useQuery({
+    search: searchQuery || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
   });
 
-  // Calculate stats
-  const totalCustomers = dummyCustomers.length;
-  const activeCustomers = dummyCustomers.filter((c) => c.status === "active").length;
-  const inactiveCustomers = dummyCustomers.filter((c) => c.status === "inactive").length;
-  const totalRevenue = dummyCustomers.reduce((sum, c) => sum + c.totalSpent, 0);
+  // Fetch statistics
+  const { data: statsData } = trpc.users.getCustomerStats.useQuery();
+
+  // Fetch customer order stats (only when customer is selected)
+  const { data: orderStatsData } = trpc.users.getCustomerOrderStats.useQuery(
+    { userId: selectedCustomer?._id || "" },
+    { enabled: !!selectedCustomer?._id }
+  );
+
+  // Suspend customer mutation
+  const suspendMutation = trpc.users.suspendCustomer.useMutation({
+    onSuccess: () => {
+      toast.success("Customer Berhasil Dinonaktifkan!", {
+        description: "Customer tidak dapat login ke sistem.",
+      });
+      utils.users.getAllCustomers.invalidate();
+      utils.users.getCustomerStats.invalidate();
+      setSuspendDialog(false);
+      setDetailDialog(false);
+      setSuspensionReason("");
+    },
+    onError: (error) => {
+      toast.error("Gagal Menonaktifkan Customer", {
+        description: error.message,
+      });
+    },
+  });
+
+  // Reactivate customer mutation
+  const reactivateMutation = trpc.users.reactivateCustomer.useMutation({
+    onSuccess: () => {
+      toast.success("Customer Berhasil Diaktifkan!", {
+        description: "Customer dapat login kembali ke sistem.",
+      });
+      utils.users.getAllCustomers.invalidate();
+      utils.users.getCustomerStats.invalidate();
+      setReactivateDialog(false);
+      setDetailDialog(false);
+    },
+    onError: (error) => {
+      toast.error("Gagal Mengaktifkan Customer", {
+        description: error.message,
+      });
+    },
+  });
+
+
+
+  // Use real data from database
+  const customers = (customersData?.customers || []) as Customer[];
+
+  // Calculate stats from database
+  const totalCustomers = statsData?.totalCustomers || 0;
+  const activeCustomers = statsData?.activeCustomers || 0;
+  const inactiveCustomers = statsData?.inactiveCustomers || 0;
+
+  const handleSuspend = () => {
+    if (!selectedCustomer || !suspensionReason.trim()) return;
+    suspendMutation.mutate({
+      userId: selectedCustomer._id,
+      reason: suspensionReason,
+    });
+  };
+
+  const handleReactivate = () => {
+    if (!selectedCustomer) return;
+    reactivateMutation.mutate({ userId: selectedCustomer._id });
+  };
+
+  const handleWhatsApp = (phone: string) => {
+    // Remove leading 0 and add +62
+    const formattedPhone = phone.startsWith("0") ? `62${phone.slice(1)}` : `62${phone}`;
+    window.open(`https://wa.me/${formattedPhone}`, "_blank");
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -212,7 +189,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -248,20 +225,6 @@ export default function CustomersPage() {
             </div>
           </div>
         </Card>
-
-        <Card className="p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-              <h3 className="text-2xl font-bold text-orange-600">
-                {formatCurrency(totalRevenue)}
-              </h3>
-            </div>
-            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-              <ShoppingBag className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* Filters */}
@@ -279,7 +242,7 @@ export default function CustomersPage() {
           </div>
 
           {/* Status Filter */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
             <SelectTrigger className="w-full md:w-[200px]">
               <SelectValue placeholder="Filter Status" />
             </SelectTrigger>
@@ -307,19 +270,29 @@ export default function CustomersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCustomers.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : customers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   Tidak ada data pelanggan yang ditemukan
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCustomers.map((customer) => (
-                <TableRow key={customer.id}>
+              customers.map((customer) => (
+                <TableRow key={customer._id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium text-gray-900">{customer.name}</p>
-                      <p className="text-sm text-gray-500">{customer.address.city}</p>
+                      <p className="font-medium text-gray-900">{customer.fullName}</p>
+                      <p className="text-sm text-gray-500">
+                        {customer.addresses[0]?.city || "-"}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -329,7 +302,7 @@ export default function CustomersPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-gray-600">
-                    {formatDate(customer.registeredDate)}
+                    {formatDate(customer.createdAt)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -341,7 +314,7 @@ export default function CustomersPage() {
                     {formatCurrency(customer.totalSpent)}
                   </TableCell>
                   <TableCell>
-                    {customer.status === "active" ? (
+                    {customer.isActive ? (
                       <Badge className="bg-green-100 text-green-800">Aktif</Badge>
                     ) : (
                       <Badge className="bg-gray-100 text-gray-800">Tidak Aktif</Badge>
@@ -384,11 +357,11 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Nama Lengkap</p>
-                    <p className="font-medium text-gray-900">{selectedCustomer.name}</p>
+                    <p className="font-medium text-gray-900">{selectedCustomer.fullName}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Status</p>
-                    {selectedCustomer.status === "active" ? (
+                    {selectedCustomer.isActive ? (
                       <Badge className="bg-green-100 text-green-800">Aktif</Badge>
                     ) : (
                       <Badge className="bg-gray-100 text-gray-800">Tidak Aktif</Badge>
@@ -405,18 +378,42 @@ export default function CustomersPage() {
                 </div>
               </div>
 
+              {/* Suspension Info (if suspended) */}
+              {!selectedCustomer.isActive && selectedCustomer.suspensionReason && (
+                <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-start gap-2">
+                    <Ban className="h-5 w-5 text-gray-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Alasan Penonaktifan:</p>
+                      <p className="text-sm text-gray-700">{selectedCustomer.suspensionReason}</p>
+                      {selectedCustomer.suspendedAt && (
+                        <p className="text-xs text-gray-600 mt-2">
+                          Dinonaktifkan pada: {formatDate(selectedCustomer.suspendedAt)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Address */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-gray-900 border-b pb-2">
                   Alamat Pengiriman
                 </h3>
-                <div>
-                  <p className="text-gray-900">{selectedCustomer.address.street}</p>
-                  <p className="text-gray-900">
-                    {selectedCustomer.address.city}, {selectedCustomer.address.province}
-                  </p>
-                  <p className="text-gray-900">{selectedCustomer.address.postalCode}</p>
-                </div>
+                {selectedCustomer.addresses && selectedCustomer.addresses.length > 0 ? (
+                  <div>
+                    <p className="text-gray-900">{selectedCustomer.addresses[0].fullAddress}</p>
+                    <p className="text-gray-900">
+                      {selectedCustomer.addresses[0].district}, {selectedCustomer.addresses[0].city}
+                    </p>
+                    <p className="text-gray-900">
+                      {selectedCustomer.addresses[0].province} - {selectedCustomer.addresses[0].postalCode}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Belum ada alamat terdaftar</p>
+                )}
               </div>
 
               {/* Order Statistics */}
@@ -425,42 +422,43 @@ export default function CustomersPage() {
                   Statistik Pesanan
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
                     <div className="flex items-center gap-2 mb-2">
-                      <ShoppingBag className="h-5 w-5 text-blue-600" />
-                      <p className="text-sm text-blue-600 font-medium">Total Pesanan</p>
+                      <ShoppingBag className="h-5 w-5 text-gray-600" />
+                      <p className="text-sm text-gray-600 font-medium">Total Pesanan</p>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900">
-                      {selectedCustomer.totalOrders}
+                    <p className="text-2xl font-bold text-gray-900">
+                      {orderStatsData?.totalOrders || 0}
                     </p>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
                     <div className="flex items-center gap-2 mb-2">
-                      <ShoppingBag className="h-5 w-5 text-green-600" />
-                      <p className="text-sm text-green-600 font-medium">Total Belanja</p>
+                      <ShoppingBag className="h-5 w-5 text-gray-600" />
+                      <p className="text-sm text-gray-600 font-medium">Total Belanja</p>
                     </div>
-                    <p className="text-2xl font-bold text-green-900">
-                      {formatCurrency(selectedCustomer.totalSpent)}
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(orderStatsData?.totalSpent || 0)}
                     </p>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
                     <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                      <p className="text-sm text-purple-600 font-medium">Tgl Registrasi</p>
+                      <Calendar className="h-5 w-5 text-gray-600" />
+                      <p className="text-sm text-gray-600 font-medium">Tgl Registrasi</p>
                     </div>
-                    <p className="text-sm font-medium text-purple-900">
-                      {formatDate(selectedCustomer.registeredDate)}
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatDate(selectedCustomer.createdAt)}
                     </p>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
                     <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-5 w-5 text-orange-600" />
-                      <p className="text-sm text-orange-600 font-medium">Pesanan Terakhir</p>
+                      <Calendar className="h-5 w-5 text-gray-600" />
+                      <p className="text-sm text-gray-600 font-medium">Pesanan Terakhir</p>
                     </div>
-                    <p className="text-sm font-medium text-orange-900">
-                      {selectedCustomer.lastOrderDate
-                        ? formatDate(selectedCustomer.lastOrderDate)
-                        : "Belum ada pesanan"}
+                    <p className="text-sm font-medium text-gray-900">
+                      {orderStatsData?.lastOrderDate 
+                        ? formatDate(orderStatsData.lastOrderDate)
+                        : "Belum ada pesanan"
+                      }
                     </p>
                   </div>
                 </div>
@@ -468,11 +466,178 @@ export default function CustomersPage() {
             </div>
           )}
 
-          <div className="flex justify-end">
+          {/* Action Buttons */}
+          <div className="flex justify-between">
+            <div className="flex gap-2">
+              {/* WhatsApp Button */}
+              {selectedCustomer && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleWhatsApp(selectedCustomer.phone)}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  WhatsApp
+                </Button>
+              )}
+              
+              {/* Suspend/Reactivate Button */}
+              {selectedCustomer && (
+                <>
+                  {selectedCustomer.isActive ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSuspendDialog(true)}
+                      className="text-red-700 hover:bg-red-50"
+                    >
+                      <Ban className="h-4 w-4 mr-2" />
+                      Nonaktifkan
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => setReactivateDialog(true)}
+                      className="text-green-700 hover:bg-green-50"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Aktifkan Kembali
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+            
             <Button variant="outline" onClick={() => setDetailDialog(false)}>
               Tutup
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend Customer Dialog */}
+      <Dialog open={suspendDialog} onOpenChange={setSuspendDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-red-700">Nonaktifkan Customer</DialogTitle>
+            <DialogDescription>
+              Customer tidak akan dapat login ke sistem setelah dinonaktifkan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="suspension-reason">Alasan Penonaktifan *</Label>
+              <Textarea
+                id="suspension-reason"
+                rows={4}
+                value={suspensionReason}
+                onChange={(e) => setSuspensionReason(e.target.value)}
+                placeholder="Masukkan alasan penonaktifan customer... (minimal 10 karakter)"
+                className="resize-none"
+              />
+            </div>
+
+            {selectedCustomer && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <strong>Customer:</strong> {selectedCustomer.fullName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Email:</strong> {selectedCustomer.email}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSuspendDialog(false);
+                setSuspensionReason("");
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleSuspend}
+              disabled={suspensionReason.trim().length < 10 || suspendMutation.isPending}
+            >
+              {suspendMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Menonaktifkan...
+                </>
+              ) : (
+                <>
+                  <Ban className="h-4 w-4 mr-2" />
+                  Nonaktifkan Customer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate Customer Dialog */}
+      <Dialog open={reactivateDialog} onOpenChange={setReactivateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-green-700">Aktifkan Kembali Customer</DialogTitle>
+            <DialogDescription>
+              Customer akan dapat login kembali ke sistem setelah diaktifkan.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCustomer && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <strong>Customer:</strong> {selectedCustomer.fullName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Email:</strong> {selectedCustomer.email}
+                </p>
+              </div>
+
+              {selectedCustomer.suspensionReason && (
+                <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-red-800 mb-1">Alasan Penonaktifan:</p>
+                  <p className="text-sm text-red-700">{selectedCustomer.suspensionReason}</p>
+                </div>
+              )}
+
+              <p className="text-sm text-gray-600">
+                Apakah Anda yakin ingin mengaktifkan kembali customer ini?
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setReactivateDialog(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleReactivate}
+              disabled={reactivateMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {reactivateMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Mengaktifkan...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Aktifkan Kembali
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>

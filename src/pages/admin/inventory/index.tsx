@@ -19,185 +19,92 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, ArrowUpCircle, ArrowDownCircle, Package, Calendar } from "lucide-react";
-
-// TODO: Replace with tRPC query
-// Expected API: trpc.inventory.getStockMovements.useQuery()
-// Input: { type?: 'in' | 'out' | 'all', startDate?: string, endDate?: string, search?: string }
-// Output: StockMovement[]
-
-interface StockMovement {
-  id: string;
-  date: string;
-  time: string;
-  productId: string;
-  productName: string;
-  sku: string;
-  type: "in" | "out";
-  quantity: number;
-  stockBefore: number;
-  stockAfter: number;
-  source: string; // e.g., "Penjualan", "Pembelian", "Retur Customer", "Retur Supplier"
-  referenceId: string; // e.g., Order ID, PO ID
-  notes?: string;
-  performedBy: string;
-}
-
-const dummyStockMovements: StockMovement[] = [
-  {
-    id: "1",
-    date: "2025-01-10",
-    time: "14:30",
-    productId: "prod1",
-    productName: "Semen Gresik 50kg",
-    sku: "SGR-50",
-    type: "in",
-    quantity: 100,
-    stockBefore: 150,
-    stockAfter: 250,
-    source: "Pembelian",
-    referenceId: "PO-2025-001",
-    notes: "Pembelian rutin dari supplier",
-    performedBy: "Admin",
-  },
-  {
-    id: "2",
-    date: "2025-01-10",
-    time: "15:45",
-    productId: "prod2",
-    productName: "Cat Avian 5L",
-    sku: "AVI-5L",
-    type: "out",
-    quantity: 10,
-    stockBefore: 55,
-    stockAfter: 45,
-    source: "Penjualan",
-    referenceId: "ORD-2025-123",
-    notes: "Order dari customer A",
-    performedBy: "System",
-  },
-  {
-    id: "3",
-    date: "2025-01-09",
-    time: "10:20",
-    productId: "prod3",
-    productName: "Besi Beton 10mm",
-    sku: "BES-10",
-    type: "out",
-    quantity: 50,
-    stockBefore: 300,
-    stockAfter: 250,
-    source: "Penjualan",
-    referenceId: "ORD-2025-120",
-    notes: "Order proyek konstruksi",
-    performedBy: "System",
-  },
-  {
-    id: "4",
-    date: "2025-01-09",
-    time: "09:15",
-    productId: "prod4",
-    productName: "Pipa PVC 3 inch",
-    sku: "PVC-3",
-    type: "in",
-    quantity: 200,
-    stockBefore: 80,
-    stockAfter: 280,
-    source: "Pembelian",
-    referenceId: "PO-2025-002",
-    notes: "Restok pipa PVC",
-    performedBy: "Admin",
-  },
-  {
-    id: "5",
-    date: "2025-01-08",
-    time: "16:00",
-    productId: "prod2",
-    productName: "Cat Avian 5L",
-    sku: "AVI-5L",
-    type: "in",
-    quantity: 5,
-    stockBefore: 50,
-    stockAfter: 55,
-    source: "Retur Customer",
-    referenceId: "RET-2025-005",
-    notes: "Retur barang tidak sesuai",
-    performedBy: "Admin",
-  },
-  {
-    id: "6",
-    date: "2025-01-08",
-    time: "11:30",
-    productId: "prod5",
-    productName: "Keramik Platinum 40x40",
-    sku: "PLT-40",
-    type: "out",
-    quantity: 30,
-    stockBefore: 150,
-    stockAfter: 120,
-    source: "Penjualan",
-    referenceId: "ORD-2025-118",
-    notes: "Order renovasi rumah",
-    performedBy: "System",
-  },
-  {
-    id: "7",
-    date: "2025-01-07",
-    time: "13:45",
-    productId: "prod1",
-    productName: "Semen Gresik 50kg",
-    sku: "SGR-50",
-    type: "out",
-    quantity: 20,
-    stockBefore: 170,
-    stockAfter: 150,
-    source: "Penjualan",
-    referenceId: "ORD-2025-115",
-    notes: "Order toko bangunan",
-    performedBy: "System",
-  },
-  {
-    id: "8",
-    date: "2025-01-07",
-    time: "10:00",
-    productId: "prod6",
-    productName: "Genteng Metal",
-    sku: "GEN-MTL",
-    type: "in",
-    quantity: 150,
-    stockBefore: 50,
-    stockAfter: 200,
-    source: "Pembelian",
-    referenceId: "PO-2025-003",
-    notes: "Stok baru genteng metal",
-    performedBy: "Admin",
-  },
-];
+import { trpc } from "@/utils/trpc";
 
 export default function StockMovementsPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("all");
 
-  // Filter data
-  const filteredMovements = dummyStockMovements.filter((movement) => {
-    const matchType = filterType === "all" || movement.type === filterType;
-    const matchSearch =
-      movement.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      movement.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      movement.referenceId.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchType && matchSearch;
+  // Calculate date range based on filter
+  const getDateRange = () => {
+    const now = new Date();
+    let dateFrom: string | undefined;
+
+    switch (dateFilter) {
+      case "today":
+        dateFrom = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+        break;
+      case "week":
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        dateFrom = weekAgo.toISOString();
+        break;
+      case "month":
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        dateFrom = monthAgo.toISOString();
+        break;
+      default:
+        dateFrom = undefined;
+    }
+
+    return { dateFrom };
+  };
+
+  // Get stock movements from database
+  const { data: movementsData, isLoading } = trpc.stockMovements.getAll.useQuery({
+    movementType: filterType === "all" ? undefined : (filterType as "in" | "out"),
+    productCode: searchQuery || undefined,
+    dateFrom: getDateRange().dateFrom,
+    limit: 100,
+    offset: 0,
   });
 
-  // Calculate stats
-  const totalIn = dummyStockMovements
-    .filter((m) => m.type === "in")
-    .reduce((sum, m) => sum + m.quantity, 0);
-  const totalOut = dummyStockMovements
-    .filter((m) => m.type === "out")
-    .reduce((sum, m) => sum + m.quantity, 0);
+  // Get summary statistics
+  const { data: summaryData } = trpc.stockMovements.getSummary.useQuery({
+    dateFrom: getDateRange().dateFrom,
+  });
+
+  const movements = movementsData?.movements || [];
+  const totalIn = summaryData?.totalInQuantity || 0;
+  const totalOut = summaryData?.totalOutQuantity || 0;
 
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat("id-ID").format(value);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Map reason to Indonesian label
+  const getSourceLabel = (referenceType: string, reason: string) => {
+    switch (referenceType) {
+      case "order":
+        return "Penjualan";
+      case "return":
+        return "Pembatalan Pesanan";
+      case "adjustment":
+        return "Penyesuaian Manual";
+      case "initial":
+        return "Stok Awal";
+      default:
+        return reason;
+    }
   };
 
   return (
@@ -313,68 +220,79 @@ export default function StockMovementsPage() {
               <TableHead className="text-right">Stock After</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Reference</TableHead>
-              <TableHead>Notes</TableHead>
+              <TableHead>Performed By</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMovements.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2 text-gray-500">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                    <span>Memuat data...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : movements.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                   Tidak ada data pergerakan stok
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMovements.map((movement) => (
-                <TableRow key={movement.id}>
+              movements.map((movement) => (
+                <TableRow key={(movement._id as unknown as import('mongoose').Types.ObjectId).toString()}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="font-medium">{movement.date}</p>
-                        <p className="text-sm text-gray-600">{movement.time}</p>
+                        <p className="font-medium">{formatDate(movement.createdAt)}</p>
+                        <p className="text-sm text-gray-600">{formatTime(movement.createdAt)}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{movement.productName}</p>
-                      <p className="text-sm text-gray-600">{movement.sku}</p>
+                      <p className="text-sm text-gray-600">{movement.productCode}</p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge
                       className={
-                        movement.type === "in"
+                        movement.movementType === "in"
                           ? "bg-green-100 text-green-800 hover:bg-green-100"
                           : "bg-red-100 text-red-800 hover:bg-red-100"
                       }
                     >
-                      {movement.type === "in" ? (
+                      {movement.movementType === "in" ? (
                         <ArrowDownCircle className="h-3 w-3 mr-1" />
                       ) : (
                         <ArrowUpCircle className="h-3 w-3 mr-1" />
                       )}
-                      {movement.type === "in" ? "IN" : "OUT"}
+                      {movement.movementType === "in" ? "IN" : "OUT"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     <span
                       className={
-                        movement.type === "in" ? "text-green-600" : "text-red-600"
+                        movement.movementType === "in" ? "text-green-600" : "text-red-600"
                       }
                     >
-                      {movement.type === "in" ? "+" : "-"}
-                      {formatNumber(movement.quantity)}
+                      {movement.movementType === "in" ? "+" : "-"}
+                      {formatNumber(movement.quantity)} {movement.unit}
                     </span>
                   </TableCell>
                   <TableCell className="text-right text-gray-600">
-                    {formatNumber(movement.stockBefore)}
+                    {formatNumber(movement.previousStock)}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    {formatNumber(movement.stockAfter)}
+                    {formatNumber(movement.newStock)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{movement.source}</Badge>
+                    <Badge variant="outline">
+                      {getSourceLabel(movement.referenceType, movement.reason)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <code className="text-sm bg-gray-100 px-2 py-1 rounded">
@@ -383,7 +301,7 @@ export default function StockMovementsPage() {
                   </TableCell>
                   <TableCell className="max-w-xs">
                     <p className="text-sm text-gray-600 truncate">
-                      {movement.notes || "-"}
+                      {movement.performedByName}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -398,11 +316,16 @@ export default function StockMovementsPage() {
         <div className="flex items-start gap-3">
           <Package className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Stock movements tercatat otomatis</p>
-            <p>
-              Data pergerakan stok direkam secara otomatis dari transaksi penjualan,
-              pembelian, retur customer, dan retur supplier. Tidak perlu input manual.
+            <p className="font-medium mb-1">📋 Stock movements tercatat otomatis</p>
+            <p className="mb-2">
+              Data pergerakan stok direkam secara otomatis dari berbagai aktivitas:
             </p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li><strong>Penjualan:</strong> Stock OUT saat pesanan diproses</li>
+              <li><strong>Pembatalan Pesanan:</strong> Stock IN saat pesanan dibatalkan</li>
+              <li><strong>Penyesuaian Manual:</strong> Admin menambah/mengurangi stok produk</li>
+              <li><strong>Stok Awal:</strong> Produk baru ditambahkan dengan stok awal</li>
+            </ul>
           </div>
         </div>
       </Card>

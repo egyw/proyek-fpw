@@ -31,110 +31,162 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Ticket } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/utils/trpc";
+import { z } from "zod";
 
-interface Voucher {
-  id: string;
+// Voucher interface from backend
+interface IVoucher {
+  _id: string;
   code: string;
   name: string;
+  description: string;
   type: "percentage" | "fixed";
   value: number;
   minPurchase: number;
   maxDiscount?: number;
   usageLimit: number;
   usedCount: number;
-  validFrom: string;
-  validUntil: string;
-  status: "active" | "inactive" | "expired";
-  description?: string;
+  isActive: boolean;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// Voucher form validation schema
+const voucherSchema = z.object({
+  code: z.string().min(3, "Kode minimal 3 karakter").max(20, "Kode maksimal 20 karakter").toUpperCase(),
+  name: z.string().min(3, "Nama minimal 3 karakter"),
+  description: z.string().min(10, "Deskripsi minimal 10 karakter"),
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number().positive("Nilai harus lebih dari 0"),
+  minPurchase: z.number().min(0, "Minimal pembelian tidak boleh negatif"),
+  maxDiscount: z.number().positive().optional(),
+  usageLimit: z.number().int().min(1, "Batas penggunaan minimal 1"),
+  startDate: z.string().min(1, "Tanggal mulai harus diisi"),
+  endDate: z.string().min(1, "Tanggal akhir harus diisi"),
+});
+
+type VoucherFormValues = z.infer<typeof voucherSchema>;
 
 export default function VouchersPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "expired">("all");
+  const [filterType, setFilterType] = useState<"all" | "percentage" | "fixed">("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<IVoucher | null>(null);
 
-  // Dummy data voucher
-  const [vouchers] = useState<Voucher[]>([
-    {
-      id: "1",
-      code: "WELCOME50",
-      name: "Voucher Selamat Datang",
+  // Form state
+  const [formData, setFormData] = useState<Partial<VoucherFormValues>>({
+    code: "",
+    name: "",
+    description: "",
+    type: "percentage",
+    value: 0,
+    minPurchase: 0,
+    maxDiscount: undefined,
+    usageLimit: 100,
+    startDate: "",
+    endDate: "",
+  });
+
+  // tRPC queries
+  const utils = trpc.useContext();
+  
+  const { data: vouchersData, isLoading: isLoadingVouchers } = trpc.vouchers.getAll.useQuery({
+    search: searchQuery || undefined,
+    status: filterStatus === "all" ? undefined : filterStatus,
+    type: filterType === "all" ? undefined : filterType,
+    page: currentPage,
+    limit: 10,
+  });
+
+  const { data: statsData } = trpc.vouchers.getStats.useQuery();
+
+  // Mutations
+  const createVoucherMutation = trpc.vouchers.create.useMutation({
+    onSuccess: () => {
+      utils.vouchers.getAll.invalidate();
+      utils.vouchers.getStats.invalidate();
+      toast.success("Voucher Ditambahkan!", {
+        description: "Voucher baru berhasil dibuat.",
+      });
+      setShowAddDialog(false);
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Gagal Menambahkan Voucher", {
+        description: error.message,
+      });
+    },
+  });
+
+  const updateVoucherMutation = trpc.vouchers.update.useMutation({
+    onSuccess: () => {
+      utils.vouchers.getAll.invalidate();
+      utils.vouchers.getStats.invalidate();
+      toast.success("Voucher Diperbarui!", {
+        description: "Perubahan voucher berhasil disimpan.",
+      });
+      setShowEditDialog(false);
+      setSelectedVoucher(null);
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Gagal Memperbarui Voucher", {
+        description: error.message,
+      });
+    },
+  });
+
+  // TODO: Add toggle status mutation when implementing quick activate/deactivate button
+  // const toggleStatusMutation = trpc.vouchers.toggleStatus.useMutation({
+  //   onSuccess: (data) => {
+  //     utils.vouchers.getAll.invalidate();
+  //     utils.vouchers.getStats.invalidate();
+  //     toast.success("Status Diubah!", { description: `Voucher ${data.voucher.isActive ? "diaktifkan" : "dinonaktifkan"}.` });
+  //   },
+  //   onError: (error) => { toast.error("Gagal Mengubah Status", { description: error.message }); }
+  // });
+
+  const deleteVoucherMutation = trpc.vouchers.delete.useMutation({
+    onSuccess: () => {
+      utils.vouchers.getAll.invalidate();
+      utils.vouchers.getStats.invalidate();
+      toast.success("Voucher Dihapus!", {
+        description: `Voucher ${selectedVoucher?.code} berhasil dihapus.`,
+      });
+      setShowDeleteDialog(false);
+      setSelectedVoucher(null);
+    },
+    onError: (error) => {
+      toast.error("Gagal Menghapus Voucher", {
+        description: error.message,
+      });
+    },
+  });
+
+  const pagination = vouchersData?.pagination;
+
+  // Helper functions
+  const resetForm = () => {
+    setFormData({
+      code: "",
+      name: "",
+      description: "",
       type: "percentage",
-      value: 50,
-      minPurchase: 100000,
-      maxDiscount: 50000,
+      value: 0,
+      minPurchase: 0,
+      maxDiscount: undefined,
       usageLimit: 100,
-      usedCount: 45,
-      validFrom: "2025-01-01",
-      validUntil: "2025-12-31",
-      status: "active",
-      description: "Diskon 50% untuk pelanggan baru",
-    },
-    {
-      id: "2",
-      code: "HEMAT100K",
-      name: "Hemat 100 Ribu",
-      type: "fixed",
-      value: 100000,
-      minPurchase: 500000,
-      usageLimit: 50,
-      usedCount: 30,
-      validFrom: "2025-01-01",
-      validUntil: "2025-06-30",
-      status: "active",
-      description: "Potongan langsung Rp 100.000",
-    },
-    {
-      id: "3",
-      code: "RAMADAN2025",
-      name: "Voucher Ramadan",
-      type: "percentage",
-      value: 25,
-      minPurchase: 200000,
-      maxDiscount: 100000,
-      usageLimit: 200,
-      usedCount: 150,
-      validFrom: "2025-03-01",
-      validUntil: "2025-04-30",
-      status: "expired",
-      description: "Diskon spesial bulan Ramadan",
-    },
-    {
-      id: "4",
-      code: "BUILDER30",
-      name: "Builder Special",
-      type: "percentage",
-      value: 30,
-      minPurchase: 1000000,
-      maxDiscount: 300000,
-      usageLimit: 20,
-      usedCount: 5,
-      validFrom: "2025-01-01",
-      validUntil: "2025-12-31",
-      status: "active",
-      description: "Untuk pembelian material bangunan",
-    },
-    {
-      id: "5",
-      code: "FLASHSALE",
-      name: "Flash Sale",
-      type: "percentage",
-      value: 40,
-      minPurchase: 300000,
-      maxDiscount: 150000,
-      usageLimit: 50,
-      usedCount: 50,
-      validFrom: "2025-10-01",
-      validUntil: "2025-10-31",
-      status: "inactive",
-      description: "Flash sale Oktober",
-    },
-  ]);
+      startDate: "",
+      endDate: "",
+    });
+  };
 
-  // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -143,7 +195,6 @@ export default function VouchersPage() {
     }).format(amount);
   };
 
-  // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("id-ID", {
@@ -153,17 +204,13 @@ export default function VouchersPage() {
     });
   };
 
-  // Status badge
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string }> = {
+  const getStatusBadge = (status: "active" | "inactive" | "expired") => {
+    const variants = {
       active: { label: "Aktif", className: "bg-green-100 text-green-800" },
-      inactive: {
-        label: "Tidak Aktif",
-        className: "bg-gray-100 text-gray-800",
-      },
+      inactive: { label: "Tidak Aktif", className: "bg-gray-100 text-gray-800" },
       expired: { label: "Kadaluarsa", className: "bg-red-100 text-red-800" },
     };
-    const variant = variants[status] || variants.active;
+    const variant = variants[status];
     return (
       <Badge className={variant.className} variant="secondary">
         {variant.label}
@@ -171,34 +218,66 @@ export default function VouchersPage() {
     );
   };
 
-  // Filter vouchers
-  const filteredVouchers = vouchers.filter((voucher) => {
-    const matchesSearch =
-      voucher.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      voucher.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      filterStatus === "all" || voucher.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
   // Handle actions
-  const handleEdit = (voucher: Voucher) => {
+  const handleEdit = (voucher: IVoucher) => {
     setSelectedVoucher(voucher);
+    setFormData({
+      code: voucher.code,
+      name: voucher.name,
+      description: voucher.description || "",
+      type: voucher.type,
+      value: voucher.value,
+      minPurchase: voucher.minPurchase,
+      maxDiscount: voucher.maxDiscount,
+      usageLimit: voucher.usageLimit,
+      startDate: voucher.startDate.split("T")[0], // Convert ISO to YYYY-MM-DD
+      endDate: voucher.endDate.split("T")[0],
+    });
     setShowEditDialog(true);
   };
 
-  const handleDelete = (voucher: Voucher) => {
+  const handleDelete = (voucher: IVoucher) => {
     setSelectedVoucher(voucher);
     setShowDeleteDialog(true);
   };
 
+  const handleSubmitAdd = () => {
+    try {
+      const validated = voucherSchema.parse(formData);
+      createVoucherMutation.mutate(validated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const firstError = error.issues[0];
+        toast.error("Validasi Gagal", {
+          description: firstError ? firstError.message : "Data tidak valid",
+        });
+      }
+    }
+  };
+
+  const handleSubmitEdit = () => {
+    if (!selectedVoucher) return;
+    
+    try {
+      const validated = voucherSchema.parse(formData);
+      updateVoucherMutation.mutate({
+        id: selectedVoucher._id,
+        ...validated,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const firstError = error.issues[0];
+        toast.error("Validasi Gagal", {
+          description: firstError ? firstError.message : "Data tidak valid",
+        });
+      }
+    }
+  };
+
   const confirmDelete = () => {
-    // TODO: Implement tRPC mutation
-    toast.success("Voucher Dihapus!", {
-      description: `Voucher ${selectedVoucher?.code} berhasil dihapus.`,
-    });
-    setShowDeleteDialog(false);
-    setSelectedVoucher(null);
+    if (selectedVoucher) {
+      deleteVoucherMutation.mutate({ id: selectedVoucher._id });
+    }
   };
 
   return (
@@ -215,27 +294,35 @@ export default function VouchersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
         <Card className="p-6">
           <p className="text-sm text-gray-600 mb-1">Total Voucher</p>
-          <h3 className="text-2xl font-bold text-gray-900">{vouchers.length}</h3>
+          <h3 className="text-2xl font-bold text-gray-900">
+            {statsData?.totalVouchers || 0}
+          </h3>
         </Card>
         <Card className="p-6">
           <p className="text-sm text-gray-600 mb-1">Voucher Aktif</p>
           <h3 className="text-2xl font-bold text-green-600">
-            {vouchers.filter((v) => v.status === "active").length}
+            {statsData?.activeVouchers || 0}
           </h3>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Terpakai</p>
-          <h3 className="text-2xl font-bold text-blue-600">
-            {vouchers.reduce((sum, v) => sum + v.usedCount, 0)}
+          <p className="text-sm text-gray-600 mb-1">Tidak Aktif</p>
+          <h3 className="text-2xl font-bold text-gray-600">
+            {statsData?.inactiveVouchers || 0}
           </h3>
         </Card>
         <Card className="p-6">
           <p className="text-sm text-gray-600 mb-1">Kadaluarsa</p>
           <h3 className="text-2xl font-bold text-red-600">
-            {vouchers.filter((v) => v.status === "expired").length}
+            {statsData?.expiredVouchers || 0}
+          </h3>
+        </Card>
+        <Card className="p-6">
+          <p className="text-sm text-gray-600 mb-1">Total Terpakai</p>
+          <h3 className="text-2xl font-bold text-blue-600">
+            {statsData?.totalUsage || 0}
           </h3>
         </Card>
       </div>
@@ -255,8 +342,8 @@ export default function VouchersPage() {
           </div>
 
           {/* Status Filter */}
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full md:w-[200px]">
+          <Select value={filterStatus} onValueChange={(value: string) => setFilterStatus(value as typeof filterStatus)}>
+            <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Filter Status" />
             </SelectTrigger>
             <SelectContent>
@@ -264,6 +351,18 @@ export default function VouchersPage() {
               <SelectItem value="active">Aktif</SelectItem>
               <SelectItem value="inactive">Tidak Aktif</SelectItem>
               <SelectItem value="expired">Kadaluarsa</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Type Filter */}
+          <Select value={filterType} onValueChange={(value: string) => setFilterType(value as typeof filterType)}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Filter Tipe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Tipe</SelectItem>
+              <SelectItem value="percentage">Persentase</SelectItem>
+              <SelectItem value="fixed">Nominal</SelectItem>
             </SelectContent>
           </Select>
 
@@ -292,7 +391,16 @@ export default function VouchersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredVouchers.length === 0 ? (
+            {isLoadingVouchers ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <p className="ml-3 text-gray-600">Memuat data voucher...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : vouchersData?.vouchers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8">
                   <div className="text-gray-500">
@@ -302,8 +410,17 @@ export default function VouchersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredVouchers.map((voucher) => (
-                <TableRow key={voucher.id}>
+              (vouchersData?.vouchers as IVoucher[] | undefined)?.map((voucher) => {
+                const status = (() => {
+                  if (!voucher.isActive) return "inactive";
+                  const now = new Date().toISOString();
+                  if (voucher.endDate < now) return "expired";
+                  if (voucher.startDate > now) return "inactive";
+                  return "active";
+                })() as "active" | "inactive" | "expired";
+                
+                return (
+                <TableRow key={voucher._id}>
                   <TableCell>
                     <code className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono">
                       {voucher.code}
@@ -354,9 +471,10 @@ export default function VouchersPage() {
                         <div
                           className="bg-blue-500 h-1.5 rounded-full"
                           style={{
-                            width: `${
-                              (voucher.usedCount / voucher.usageLimit) * 100
-                            }%`,
+                            width: `${Math.min(
+                              (voucher.usedCount / voucher.usageLimit) * 100,
+                              100
+                            )}%`,
                           }}
                         ></div>
                       </div>
@@ -364,13 +482,13 @@ export default function VouchersPage() {
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>
-                      <p>{formatDate(voucher.validFrom)}</p>
+                      <p>{formatDate(voucher.startDate)}</p>
                       <p className="text-gray-500">
-                        s/d {formatDate(voucher.validUntil)}
+                        s/d {formatDate(voucher.endDate)}
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell>{getStatusBadge(voucher.status)}</TableCell>
+                  <TableCell>{getStatusBadge(status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -390,14 +508,48 @@ export default function VouchersPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
       </Card>
 
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-600">
+            Menampilkan {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, pagination.total)} dari {pagination.total} voucher
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Sebelumnya
+            </Button>
+            <span className="text-sm text-gray-600">
+              Halaman {currentPage} dari {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+              disabled={currentPage === pagination.totalPages}
+            >
+              Selanjutnya
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Add Voucher Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => {
+        setShowAddDialog(open);
+        if (!open) resetForm();
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">Tambah Voucher Baru</DialogTitle>
@@ -409,7 +561,11 @@ export default function VouchersPage() {
             {/* Kode Voucher */}
             <div className="space-y-2">
               <Label>Kode Voucher *</Label>
-              <Input placeholder="Contoh: WELCOME50" />
+              <Input
+                placeholder="Contoh: WELCOME50"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              />
               <p className="text-xs text-gray-500">
                 Gunakan huruf kapital, tanpa spasi
               </p>
@@ -418,14 +574,18 @@ export default function VouchersPage() {
             {/* Nama Voucher */}
             <div className="space-y-2">
               <Label>Nama Voucher *</Label>
-              <Input placeholder="Contoh: Voucher Selamat Datang" />
+              <Input
+                placeholder="Contoh: Voucher Selamat Datang"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
 
             {/* Tipe & Nilai */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipe Diskon *</Label>
-                <Select>
+                <Select value={formData.type} onValueChange={(value: "percentage" | "fixed") => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih tipe" />
                   </SelectTrigger>
@@ -437,7 +597,12 @@ export default function VouchersPage() {
               </div>
               <div className="space-y-2">
                 <Label>Nilai Diskon *</Label>
-                <Input type="number" placeholder="50" />
+                <Input
+                  type="number"
+                  placeholder="50"
+                  value={formData.value || ""}
+                  onChange={(e) => setFormData({ ...formData, value: Number(e.target.value) })}
+                />
               </div>
             </div>
 
@@ -445,11 +610,22 @@ export default function VouchersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Min. Pembelian (Rp) *</Label>
-                <Input type="number" placeholder="100000" />
+                <Input
+                  type="number"
+                  placeholder="100000"
+                  value={formData.minPurchase || ""}
+                  onChange={(e) => setFormData({ ...formData, minPurchase: Number(e.target.value) })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Max. Diskon (Rp)</Label>
-                <Input type="number" placeholder="50000" />
+                <Input
+                  type="number"
+                  placeholder="50000"
+                  value={formData.maxDiscount || ""}
+                  onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value ? Number(e.target.value) : undefined })}
+                  disabled={formData.type === "fixed"}
+                />
                 <p className="text-xs text-gray-500">Opsional, untuk % diskon</p>
               </div>
             </div>
@@ -457,7 +633,12 @@ export default function VouchersPage() {
             {/* Usage Limit */}
             <div className="space-y-2">
               <Label>Batas Penggunaan *</Label>
-              <Input type="number" placeholder="100" />
+              <Input
+                type="number"
+                placeholder="100"
+                value={formData.usageLimit || ""}
+                onChange={(e) => setFormData({ ...formData, usageLimit: Number(e.target.value) })}
+              />
               <p className="text-xs text-gray-500">
                 Jumlah maksimal voucher dapat digunakan
               </p>
@@ -467,20 +648,30 @@ export default function VouchersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Berlaku Dari *</Label>
-                <Input type="date" />
+                <Input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Berlaku Hingga *</Label>
-                <Input type="date" />
+                <Input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                />
               </div>
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <Label>Deskripsi</Label>
+              <Label>Deskripsi *</Label>
               <Textarea
                 rows={3}
-                placeholder="Deskripsi voucher (opsional)"
+                placeholder="Deskripsi voucher (minimal 10 karakter)"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
           </div>
@@ -492,22 +683,23 @@ export default function VouchersPage() {
               Batal
             </Button>
             <Button
-              onClick={() => {
-                // TODO: Implement tRPC mutation
-                toast.success("Voucher Ditambahkan!", {
-                  description: "Voucher baru berhasil dibuat.",
-                });
-                setShowAddDialog(false);
-              }}
+              onClick={handleSubmitAdd}
+              disabled={createVoucherMutation.isPending}
             >
-              Simpan Voucher
+              {createVoucherMutation.isPending ? "Menyimpan..." : "Simpan Voucher"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog - Similar to Add Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open);
+        if (!open) {
+          setSelectedVoucher(null);
+          resetForm();
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">Edit Voucher</DialogTitle>
@@ -516,10 +708,102 @@ export default function VouchersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Same form fields as Add Dialog */}
-            <p className="text-sm text-gray-500">
-              Form edit akan sama dengan form tambah, dengan data ter-populate
-            </p>
+            {/* Form fields populated with formData from selectedVoucher */}
+            <div className="space-y-2">
+              <Label>Kode Voucher *</Label>
+              <Input
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nama Voucher *</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipe Diskon *</Label>
+                <Select value={formData.type} onValueChange={(value: "percentage" | "fixed") => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Persentase (%)</SelectItem>
+                    <SelectItem value="fixed">Nominal (Rp)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nilai Diskon *</Label>
+                <Input
+                  type="number"
+                  value={formData.value || ""}
+                  onChange={(e) => setFormData({ ...formData, value: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Min. Pembelian (Rp) *</Label>
+                <Input
+                  type="number"
+                  value={formData.minPurchase || ""}
+                  onChange={(e) => setFormData({ ...formData, minPurchase: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max. Diskon (Rp)</Label>
+                <Input
+                  type="number"
+                  value={formData.maxDiscount || ""}
+                  onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value ? Number(e.target.value) : undefined })}
+                  disabled={formData.type === "fixed"}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Batas Penggunaan *</Label>
+              <Input
+                type="number"
+                value={formData.usageLimit || ""}
+                onChange={(e) => setFormData({ ...formData, usageLimit: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Berlaku Dari *</Label>
+                <Input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Berlaku Hingga *</Label>
+                <Input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Deskripsi</Label>
+              <Textarea
+                rows={3}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -529,15 +813,10 @@ export default function VouchersPage() {
               Batal
             </Button>
             <Button
-              onClick={() => {
-                // TODO: Implement tRPC mutation
-                toast.success("Voucher Diperbarui!", {
-                  description: `Voucher ${selectedVoucher?.code} berhasil diperbarui.`,
-                });
-                setShowEditDialog(false);
-              }}
+              onClick={handleSubmitEdit}
+              disabled={updateVoucherMutation.isPending}
             >
-              Simpan Perubahan
+              {updateVoucherMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
           </DialogFooter>
         </DialogContent>

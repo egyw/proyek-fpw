@@ -27,6 +27,8 @@ export interface IUser extends Document {
   phone: string;
   addresses: IAddress[]; // Changed from single object to array
   isActive: boolean;
+  suspendedAt?: Date;
+  suspensionReason?: string;
   lastLogin: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -141,6 +143,15 @@ const UserSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    suspendedAt: {
+      type: Date,
+      required: false,
+    },
+    suspensionReason: {
+      type: String,
+      required: false,
+      trim: true,
     },
     lastLogin: {
       type: Date,

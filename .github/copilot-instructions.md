@@ -2867,6 +2867,260 @@ const formatCurrency = (amount: number) => {
 - Handle optional fields (lastOrderDate) with fallback text
 - Use Lucide icons consistently (NO emoji icons in admin pages)
 
+### Admin Vouchers Management (COMPLETED)
+
+**Status**: ✅ Production-ready, fully integrated with database, soft delete
+
+**Location**: `src/pages/admin/vouchers/index.tsx`
+
+**Purpose**: Complete voucher management system for admin to create, edit, activate/deactivate, and delete discount vouchers.
+
+**Key Features**:
+
+- **5 Stats Cards** with real-time data:
+  - Total Voucher (blue, Ticket) - All vouchers in system
+  - Voucher Aktif (green, Ticket) - Currently active vouchers
+  - Tidak Aktif (gray, Ticket) - Inactive vouchers (soft deleted)
+  - Kadaluarsa (red, Ticket) - Expired vouchers (endDate < now)
+  - Total Terpakai (orange, Ticket) - Sum of all usedCount
+- **Filters**:
+  - Search Input - Search by code or name (case-insensitive)
+  - Status Select - All / Active / Inactive / Expired
+  - Type Select - All / Percentage / Fixed
+- **Vouchers Table**: 9 columns
+  - Kode (code badge with monospace font)
+  - Nama (name + description)
+  - Tipe (Badge: Persentase/Nominal)
+  - Nilai (formatted discount value)
+  - Min. Belanja (formatted currency)
+  - Maks. Diskon (formatted currency or "-")
+  - Penggunaan (used/limit with progress indicator)
+  - Status (dynamic badge: Aktif/Tidak Aktif/Kadaluarsa)
+  - Aksi (Edit + Delete buttons)
+
+**IVoucher Interface** (15 fields):
+
+```typescript
+interface IVoucher {
+  _id: string;
+  code: string;              // Unique voucher code (uppercase)
+  name: string;              // Display name
+  description: string;       // Detailed description (min 10 chars)
+  type: "percentage" | "fixed"; // Discount type
+  value: number;             // Discount value (% or Rp)
+  minPurchase: number;       // Minimum purchase amount (Rp)
+  maxDiscount?: number;      // Max discount for percentage type (Rp)
+  usageLimit: number;        // Max times voucher can be used
+  usedCount: number;         // Current usage count
+  isActive: boolean;         // Soft delete flag
+  startDate: string;         // ISO date string
+  endDate: string;           // ISO date string
+  createdAt: string;         // ISO date string
+  updatedAt: string;         // ISO date string
+}
+```
+
+**Zod Validation Schema**:
+
+```typescript
+const voucherSchema = z.object({
+  code: z.string().min(3).max(20).toUpperCase(),
+  name: z.string().min(3),
+  description: z.string().min(10),  // Required field
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number().positive(),
+  minPurchase: z.number().min(0),
+  maxDiscount: z.number().positive().optional(),
+  usageLimit: z.number().int().min(1),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+});
+```
+
+**tRPC Router** (`src/server/routers/voucher.ts` - 8 procedures):
+
+1. **getAll** - Fetch vouchers with filters, search, pagination
+   ```typescript
+   input: { search?, status?, type?, page, limit }
+   returns: { vouchers[], pagination }
+   ```
+
+2. **getStats** - Real-time statistics for dashboard cards
+   ```typescript
+   returns: { totalVouchers, activeVouchers, inactiveVouchers, expiredVouchers, totalUsage }
+   ```
+
+3. **create** - Create new voucher (admin only)
+   ```typescript
+   input: { code, name, description, type, value, minPurchase, maxDiscount?, usageLimit, startDate, endDate }
+   checks: Duplicate code, date validation (endDate > startDate)
+   ```
+
+4. **update** - Edit existing voucher (admin only)
+   ```typescript
+   input: { id, ...voucherFields }
+   checks: Duplicate code (excluding self), date validation
+   ```
+
+5. **toggleStatus** - Quick activate/deactivate (admin only)
+   ```typescript
+   input: { id }
+   toggles: isActive flag
+   ```
+
+6. **delete** - Soft delete voucher (admin only)
+   ```typescript
+   input: { id }
+   action: Sets isActive = false (NOT deleted from DB)
+   ```
+
+7. **validate** - Validate voucher for checkout
+   ```typescript
+   input: { code, subtotal }
+   checks: Active, not expired, min purchase, usage limit
+   returns: { valid, discount, message }
+   ```
+
+8. **apply** - Apply voucher to order (increments usedCount)
+   ```typescript
+   input: { code }
+   action: usedCount++
+   ```
+
+**Add/Edit Dialog Features**:
+
+- **Form Fields** (All controlled with formData state):
+  - Kode Voucher * (auto-uppercase on change)
+  - Nama Voucher *
+  - Deskripsi * (Textarea, 3 rows, min 10 chars)
+  - Tipe Diskon * (Select: Percentage/Fixed)
+  - Nilai Diskon *
+  - Minimal Pembelian *
+  - Maksimal Diskon (disabled when type="fixed")
+  - Batas Penggunaan *
+  - Berlaku Dari * (date input)
+  - Berlaku Hingga * (date input)
+  
+- **Validation**:
+  - Client-side: Zod schema with error.issues[0].message
+  - Server-side: Duplicate code check, date validation
+  - Toast notifications for success/error
+  
+- **Loading States**: 
+  - Mutation isPending → disable submit button
+  - Show spinner during data fetch
+
+**Delete Dialog**:
+
+```tsx
+<Dialog open={showDeleteDialog}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Hapus Voucher?</DialogTitle>
+      <DialogDescription>
+        Yakin ingin menghapus voucher <strong>{selectedVoucher?.code}</strong>?
+        Voucher akan dinonaktifkan dan tidak dapat digunakan lagi.
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter>
+      <Button variant="outline" onClick={...}>Batal</Button>
+      <Button variant="destructive" onClick={handleDelete}>
+        <Trash2 className="h-4 w-4 mr-2" />
+        Hapus Voucher
+      </Button>
+    </DialogFooter>
+  </Dialog>
+</DialogContent>
+```
+
+**Status Calculation** (Dynamic per voucher):
+
+```typescript
+const status = (() => {
+  if (!voucher.isActive) return "inactive";
+  const now = new Date().toISOString();
+  if (voucher.endDate < now) return "expired";
+  if (voucher.startDate > now) return "inactive";
+  return "active";
+})() as "active" | "inactive" | "expired";
+```
+
+**Pagination Pattern**:
+
+```typescript
+const pagination = vouchersData?.pagination;
+// Shows: "Menampilkan 1 - 10 dari 25 voucher"
+// Previous/Next buttons with disabled states
+// Hidden when totalPages <= 1
+```
+
+**Important Patterns**:
+
+- ✅ **Soft Delete**: isActive flag, NOT database deletion
+- ✅ **Type Safety**: IVoucher interface, no `any` types
+- ✅ **Error Handling**: Zod error.issues (NOT error.errors)
+- ✅ **Null Safety**: Check selectedVoucher before mutations
+- ✅ **Date Format**: ISO strings for MongoDB compatibility
+- ✅ **Query Invalidation**: Refresh both getAll and getStats after mutations
+- ✅ **Code Uppercase**: Auto-convert on input change
+- ✅ **Conditional Fields**: maxDiscount disabled when type="fixed"
+- ✅ **Real-time Stats**: Stats cards update after every mutation
+
+**Database Schema** (`src/models/Voucher.ts`):
+
+```typescript
+const VoucherSchema = new Schema({
+  code: { type: String, required: true, unique: true, uppercase: true },
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  type: { type: String, enum: ['percentage', 'fixed'], required: true },
+  value: { type: Number, required: true },
+  minPurchase: { type: Number, default: 0 },
+  maxDiscount: { type: Number },
+  usageLimit: { type: Number, required: true },
+  usedCount: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  startDate: { type: String, required: true },
+  endDate: { type: String, required: true },
+  createdAt: { type: String, required: true },
+  updatedAt: { type: String, required: true },
+});
+
+VoucherSchema.index({ code: 1 });
+VoucherSchema.index({ isActive: 1 });
+VoucherSchema.index({ startDate: 1, endDate: 1 });
+```
+
+**Seed Data** (`database/proyekFPW.vouchers.json`):
+
+- 10 realistic dummy vouchers
+- Mix of percentage and fixed discounts
+- Various usage limits and date ranges
+- 1 expired voucher (for testing filters)
+- Ready for MongoDB import
+
+**Testing Checklist**:
+
+✅ Create voucher → Form validation works  
+✅ Duplicate code → Backend rejects with error toast  
+✅ Edit voucher → Pre-fills form correctly  
+✅ Delete voucher → Soft delete (isActive = false)  
+✅ Search → Filters by code/name  
+✅ Filter status → Shows active/inactive/expired  
+✅ Filter type → Shows percentage/fixed  
+✅ Pagination → Navigate between pages  
+✅ Stats cards → Update after mutations  
+✅ Date validation → endDate must be after startDate  
+
+**Future Enhancements** (Optional):
+
+- [ ] Toggle status button in table (quick activate/deactivate)
+- [ ] Bulk actions (multi-select, bulk activate/deactivate)
+- [ ] Voucher usage history (which orders used this voucher)
+- [ ] Duplicate voucher feature (clone with new code)
+- [ ] Export vouchers to CSV/Excel
+- [ ] Voucher analytics (most used, conversion rate)
+
 ### Dynamic Shipping Cost Calculator (COMPLETED)
 
 **Status**: ✅ Production-ready, Komerce API integration, accordion UI
@@ -3852,7 +4106,420 @@ src/
 
 ## Recent Features & Patterns (November 2025)
 
-### 0. Cloudinary Upload Flow - Deferred Upload Pattern (November 10, 2025)
+### 0. Soft Delete Pattern - Product & Customer Management (November 11, 2025)
+
+**Status**: ✅ Production-ready, consistent across Product and Customer entities
+
+**Purpose**: Implement soft delete (archive) pattern instead of hard delete to preserve data integrity, order history, and enable restoration capability.
+
+**Why Soft Delete?**
+
+The problem with hard delete:
+```
+❌ HARD DELETE: User clicks delete → findByIdAndDelete()
+   → Product/Customer permanently removed from database
+   → Order history references broken (null product IDs)
+   → Cloudinary images deleted (requires re-upload if restored)
+   → No audit trail or recovery option
+```
+
+The solution with soft delete:
+```
+✅ SOFT DELETE: User clicks delete → findByIdAndUpdate({ isActive: false })
+   → Product/Customer remains in database with flag
+   → Order history references intact (product data preserved)
+   → Cloudinary images preserved (no re-upload needed)
+   → Easy restoration by setting isActive: true
+   → Audit trail via updatedAt timestamp
+```
+
+**Architecture: isActive Flag System**
+
+Both Product and Customer models use the same pattern:
+
+```typescript
+// MongoDB Schema (Product & User models)
+{
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  updatedAt: {
+    type: String,  // ISO date string
+    required: true
+  }
+}
+```
+
+**Key Implementation Points**:
+
+1. **Product Soft Delete** (`src/server/routers/products.ts`):
+   ```typescript
+   // deleteProduct mutation (Lines 773-819)
+   // BEFORE (Hard Delete):
+   const product = await Product.findById(input.id);
+   // ... Cloudinary image deletion with cloudinary.uploader.destroy()
+   await Product.findByIdAndDelete(input.id);
+   
+   // AFTER (Soft Delete):
+   const product = await Product.findByIdAndUpdate(
+     input.id,
+     { 
+       isActive: false,
+       updatedAt: new Date().toISOString()
+     },
+     { new: true }
+   );
+   // ⭐ NOTE: We do NOT delete images from Cloudinary
+   // Reason: Product can be restored, and we want to keep images
+   
+   return {
+     success: true,
+     message: 'Product archived successfully (soft delete)',
+   };
+   ```
+
+2. **Customer Soft Delete** (`src/server/routers/users.ts`):
+   ```typescript
+   // suspendCustomer mutation
+   suspendCustomer: protectedProcedure
+     .input(z.object({ 
+       userId: z.string(), 
+       reason: z.string().min(10) 
+     }))
+     .mutation(async ({ ctx, input }) => {
+       const user = await User.findByIdAndUpdate(
+         input.userId,
+         { 
+           isActive: false,
+           suspensionReason: input.reason,
+           suspendedAt: new Date().toISOString(),
+           updatedAt: new Date().toISOString()
+         },
+         { new: true }
+       );
+       
+       return { success: true, user };
+     })
+   
+   // reactivateCustomer mutation
+   reactivateCustomer: protectedProcedure
+     .input(z.object({ userId: z.string() }))
+     .mutation(async ({ ctx, input }) => {
+       const user = await User.findByIdAndUpdate(
+         input.userId,
+         { 
+           isActive: true,
+           suspensionReason: null,
+           suspendedAt: null,
+           updatedAt: new Date().toISOString()
+         },
+         { new: true }
+       );
+       
+       return { success: true, user };
+     })
+   ```
+
+3. **Admin UI Stats Dashboard Enhancement**:
+
+   **Products Page** (`src/pages/admin/products/index.tsx`):
+   ```tsx
+   {/* Stats Summary - 5 cards */}
+   <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+     {/* Card 1: Total Produk */}
+     <Card className="p-4">
+       <p className="text-sm text-gray-600 mb-1">Total Produk</p>
+       <p className="text-2xl font-bold text-gray-900">
+         {productsData?.stats?.total || 0}
+       </p>
+     </Card>
+     
+     {/* Card 2: Produk Aktif */}
+     <Card className="p-4">
+       <p className="text-sm text-gray-600 mb-1">Produk Aktif</p>
+       <p className="text-2xl font-bold text-green-600">
+         {productsData?.stats?.active || 0}
+       </p>
+     </Card>
+     
+     {/* Card 3: Produk Tidak Aktif - NEW ⭐ */}
+     <Card className="p-4">
+       <p className="text-sm text-gray-600 mb-1">Produk Tidak Aktif</p>
+       <p className="text-2xl font-bold text-gray-600">
+         {productsData?.stats?.inactive || 0}
+       </p>
+     </Card>
+     
+     {/* Card 4: Stok Rendah */}
+     <Card className="p-4">
+       <p className="text-sm text-gray-600 mb-1">Stok Rendah</p>
+       <p className="text-2xl font-bold text-yellow-600">
+         {productsData?.stats?.lowStock || 0}
+       </p>
+     </Card>
+     
+     {/* Card 5: Stok Habis */}
+     <Card className="p-4">
+       <p className="text-sm text-gray-600 mb-1">Stok Habis</p>
+       <p className="text-2xl font-bold text-red-600">
+         {productsData?.stats?.outOfStock || 0}
+       </p>
+     </Card>
+   </div>
+   ```
+   
+   **Backend Stats Calculation** (`src/server/routers/products.ts`):
+   ```typescript
+   // getAdminAll query (Lines 540-565)
+   const allProducts = await Product.find(query).lean();
+   const totalProducts = allProducts.length;
+   const activeProducts = allProducts.filter(p => p.isActive).length;
+   const inactiveProducts = allProducts.filter(p => !p.isActive).length; // ⭐ NEW
+   const lowStockProducts = allProducts.filter(p => p.stock <= p.minStock).length;
+   const outOfStockProducts = allProducts.filter(p => p.stock === 0).length;
+   
+   return {
+     products,
+     pagination: { /* ... */ },
+     stats: {
+       total: totalProducts,
+       active: activeProducts,
+       inactive: inactiveProducts,  // ⭐ NEW FIELD
+       lowStock: lowStockProducts,
+       outOfStock: outOfStockProducts,
+     },
+   };
+   ```
+
+   **Customers Page** (`src/pages/admin/customers/index.tsx`):
+   ```tsx
+   {/* Stats Cards - 3 cards */}
+   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+     <Card className="p-6">
+       <div className="flex items-start justify-between">
+         <div>
+           <p className="text-sm text-gray-600 mb-1">Total Pelanggan</p>
+           <h3 className="text-2xl font-bold text-gray-900">{totalCustomers}</h3>
+         </div>
+         <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+           <UserCheck className="h-6 w-6 text-blue-600" />
+         </div>
+       </div>
+     </Card>
+
+     <Card className="p-6">
+       <div className="flex items-start justify-between">
+         <div>
+           <p className="text-sm text-gray-600 mb-1">Pelanggan Aktif</p>
+           <h3 className="text-2xl font-bold text-green-600">{activeCustomers}</h3>
+         </div>
+         <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+           <UserCheck className="h-6 w-6 text-green-600" />
+         </div>
+       </div>
+     </Card>
+
+     <Card className="p-6">
+       <div className="flex items-start justify-between">
+         <div>
+           <p className="text-sm text-gray-600 mb-1">Pelanggan Tidak Aktif</p>
+           <h3 className="text-2xl font-bold text-gray-600">{inactiveCustomers}</h3>
+         </div>
+         <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+           <UserX className="h-6 w-6 text-gray-600" />
+         </div>
+       </div>
+     </Card>
+   </div>
+   ```
+
+4. **Customer Suspension with Reason** (Enhanced Pattern):
+   
+   **Database Fields**:
+   ```typescript
+   interface User {
+     isActive: boolean;
+     suspensionReason?: string;    // ⭐ Why customer suspended
+     suspendedAt?: string;          // ⭐ When suspended (ISO date)
+     updatedAt: string;
+   }
+   ```
+   
+   **Admin UI Dialogs**:
+   ```tsx
+   {/* Suspend Customer Dialog */}
+   <Dialog open={suspendDialog} onOpenChange={setSuspendDialog}>
+     <DialogContent className="max-w-md">
+       <DialogHeader>
+         <DialogTitle className="text-xl text-red-700">Nonaktifkan Customer</DialogTitle>
+         <DialogDescription>
+           Customer tidak akan dapat login ke sistem setelah dinonaktifkan.
+         </DialogDescription>
+       </DialogHeader>
+
+       <div className="space-y-4">
+         <div className="space-y-2">
+           <Label htmlFor="suspension-reason">Alasan Penonaktifan *</Label>
+           <Textarea
+             id="suspension-reason"
+             rows={4}
+             value={suspensionReason}
+             onChange={(e) => setSuspensionReason(e.target.value)}
+             placeholder="Masukkan alasan penonaktifan customer... (minimal 10 karakter)"
+             className="resize-none"
+           />
+         </div>
+       </div>
+
+       <DialogFooter>
+         <Button variant="outline" onClick={() => setSuspendDialog(false)}>
+           Batal
+         </Button>
+         <Button
+           variant="destructive"
+           onClick={handleSuspend}
+           disabled={suspensionReason.trim().length < 10}
+         >
+           <Ban className="h-4 w-4 mr-2" />
+           Nonaktifkan Customer
+         </Button>
+       </DialogFooter>
+     </DialogContent>
+   </Dialog>
+   
+   {/* Reactivate Customer Dialog */}
+   <Dialog open={reactivateDialog} onOpenChange={setReactivateDialog}>
+     <DialogContent className="max-w-md">
+       <DialogHeader>
+         <DialogTitle className="text-xl text-green-700">Aktifkan Kembali Customer</DialogTitle>
+       </DialogHeader>
+
+       {selectedCustomer?.suspensionReason && (
+         <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+           <p className="text-sm font-medium text-red-800 mb-1">Alasan Penonaktifan:</p>
+           <p className="text-sm text-red-700">{selectedCustomer.suspensionReason}</p>
+         </div>
+       )}
+
+       <DialogFooter>
+         <Button variant="outline" onClick={() => setReactivateDialog(false)}>
+           Batal
+         </Button>
+         <Button onClick={handleReactivate} className="bg-green-600 hover:bg-green-700">
+           <CheckCircle className="h-4 w-4 mr-2" />
+           Aktifkan Kembali
+         </Button>
+       </DialogFooter>
+     </DialogContent>
+   </Dialog>
+   ```
+   
+   **Customer Detail View** (Shows suspension info):
+   ```tsx
+   {/* Suspension Info (if suspended) */}
+   {!selectedCustomer.isActive && selectedCustomer.suspensionReason && (
+     <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+       <div className="flex items-start gap-2">
+         <Ban className="h-5 w-5 text-gray-600 mt-0.5" />
+         <div>
+           <p className="text-sm font-medium text-gray-900 mb-1">Alasan Penonaktifan:</p>
+           <p className="text-sm text-gray-700">{selectedCustomer.suspensionReason}</p>
+           {selectedCustomer.suspendedAt && (
+             <p className="text-xs text-gray-600 mt-2">
+               Dinonaktifkan pada: {formatDate(selectedCustomer.suspendedAt)}
+             </p>
+           )}
+         </div>
+       </div>
+     </div>
+   )}
+   ```
+
+5. **Status Filter & Badge System**:
+
+   Both Products and Customers pages have consistent filter dropdowns:
+   ```tsx
+   <Select value={statusFilter} onValueChange={setStatusFilter}>
+     <SelectTrigger className="w-full md:w-[200px]">
+       <SelectValue placeholder="Filter Status" />
+     </SelectTrigger>
+     <SelectContent>
+       <SelectItem value="all">Semua Status</SelectItem>
+       <SelectItem value="active">Aktif</SelectItem>
+       <SelectItem value="inactive">Tidak Aktif</SelectItem>
+     </SelectContent>
+   </Select>
+   ```
+   
+   Status badges in table:
+   ```tsx
+   {entity.isActive ? (
+     <Badge className="bg-green-100 text-green-800">Aktif</Badge>
+   ) : (
+     <Badge className="bg-gray-100 text-gray-800">Tidak Aktif</Badge>
+   )}
+   ```
+
+**Benefits**:
+
+✅ **Data Integrity** - Order history remains valid (product/customer references intact)  
+✅ **Easy Restoration** - Set `isActive: true` to restore (no data loss)  
+✅ **Audit Trail** - Track when and why entities were deactivated  
+✅ **Cloudinary Efficiency** - Images preserved, no re-upload needed  
+✅ **Consistent Pattern** - Same implementation for Products and Customers  
+✅ **Better UX** - Admin sees complete lifecycle (active vs inactive counts)  
+✅ **Security** - Suspended customers prevented from login (TODO: implement in NextAuth)  
+
+**Pending Enhancements**:
+
+1. **Product Restore Functionality** (MEDIUM PRIORITY):
+   ```typescript
+   restoreProduct: protectedProcedure
+     .input(z.object({ id: z.string() }))
+     .mutation(async ({ input }) => {
+       await Product.findByIdAndUpdate(input.id, { 
+         isActive: true,
+         updatedAt: new Date().toISOString()
+       });
+     })
+   ```
+   Add "Restore" button in admin UI when viewing inactive products.
+
+2. **Customer Login Prevention** (HIGH PRIORITY - SECURITY):
+   ```typescript
+   // src/pages/api/auth/[...nextauth].ts
+   callbacks: {
+     async signIn({ user }) {
+       const dbUser = await User.findById(user.id);
+       if (!dbUser?.isActive) {
+         throw new Error('Akun Anda telah dinonaktifkan. Hubungi admin.');
+       }
+       return true;
+     }
+   }
+   ```
+
+3. **Cloudinary Cleanup Job** (LOW PRIORITY - OPTIMIZATION):
+   - Scheduled job to delete images for products inactive > 6 months
+   - Optional hard delete for very old inactive products
+   - Storage cost optimization
+
+**Testing Checklist**:
+
+✅ Delete product → Status changes to "Tidak Aktif", not removed from DB  
+✅ Check MongoDB → Product exists with `isActive: false`  
+✅ Cloudinary images → Still accessible at original URLs  
+✅ Order history → Product data still displays correctly  
+✅ Filter "Tidak Aktif" → Shows soft-deleted products  
+✅ Stats card "Produk Tidak Aktif" → Increments correctly  
+✅ Suspend customer → Customer saved with `suspensionReason` and `suspendedAt`  
+✅ Reactivate customer → Customer restored, suspension fields cleared  
+✅ Customer detail view → Shows suspension info if suspended  
+
+---
+
+### 0.1. Cloudinary Upload Flow - Deferred Upload Pattern (November 10, 2025)
 
 **Status**: ✅ Production-ready, no orphan images, proper folder routing
 
@@ -5017,3 +5684,7 @@ If you have dynamic data in session (like addresses), remove it:
 33. **Never ignore rate limits** (implement caching or upgrade plan if 429 errors)
 34. **Never skip weight validation** (ensure totalWeight > 0 before API call)
 35. **Never force unnecessary API calls** (pass destinationCityId prop to skip searchCity when address already selected)
+36. **Never use hard delete for products or customers** (use soft delete with isActive flag)
+37. **Never delete Cloudinary images on product soft delete** (preserve for restore capability)
+38. **Never skip stats card for inactive entities** (always show total, active, inactive counts)
+39. **Never forget suspension reason for customers** (require minimum 10 characters explanation)

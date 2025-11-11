@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
+import Product from '@/models/Product';
+import StockMovement from '@/models/StockMovement';
 import { createSnapToken } from '@/lib/midtrans';
 
 // Generate unique order ID
@@ -586,6 +588,47 @@ export const ordersRouter = router({
           });
         }
 
+        // ⭐ Phase 1: Record stock OUT for each order item
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const item of (order as any).items) {
+          // Get product details
+          const product = await Product.findById(item.productId);
+          if (product) {
+            // Update product stock
+            const previousStock = product.stock;
+            const newStock = previousStock - item.quantity;
+            
+            if (newStock < 0) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: `Insufficient stock for product: ${product.name}`,
+              });
+            }
+
+            product.stock = newStock;
+            product.sold = (product.sold || 0) + item.quantity;
+            await product.save();
+
+            // Record stock movement
+            await StockMovement.create({
+              productId: product._id,
+              productName: product.name,
+              productCode: product.slug,
+              movementType: 'out',
+              quantity: item.quantity,
+              unit: product.unit,
+              reason: `Pesanan customer - ${input.orderId}`,
+              referenceType: 'order',
+              referenceId: input.orderId,
+              performedBy: ctx.user.id,
+              performedByName: ctx.user.name,
+              previousStock,
+              newStock,
+              notes: `Order diproses oleh ${ctx.user.name}`,
+            });
+          }
+        }
+
         return { success: true, order };
       } catch (error) {
         console.error('[processOrder] Error:', error);
@@ -684,6 +727,24 @@ export const ordersRouter = router({
 
         await connectDB();
 
+        // Get order first to check status
+        const existingOrder = await Order.findOne({ orderId: input.orderId });
+        if (!existingOrder) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found',
+          });
+        }
+
+        if (!['paid', 'processing'].includes(existingOrder.orderStatus)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Order cannot be cancelled',
+          });
+        }
+
+        const wasProcessing = existingOrder.orderStatus === 'processing';
+
         const order = await Order.findOneAndUpdate(
           {
             orderId: input.orderId,
@@ -701,6 +762,40 @@ export const ordersRouter = router({
             code: 'NOT_FOUND',
             message: 'Order not found or cannot be cancelled',
           });
+        }
+
+        // ⭐ Phase 1: Restore stock if order was already processing (stock was reduced)
+        if (wasProcessing) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const item of (order as any).items) {
+            const product = await Product.findById(item.productId);
+            if (product) {
+              const previousStock = product.stock;
+              const newStock = previousStock + item.quantity;
+
+              product.stock = newStock;
+              product.sold = Math.max(0, (product.sold || 0) - item.quantity);
+              await product.save();
+
+              // Record stock movement (return/restore)
+              await StockMovement.create({
+                productId: product._id,
+                productName: product.name,
+                productCode: product.slug,
+                movementType: 'in',
+                quantity: item.quantity,
+                unit: product.unit,
+                reason: `Pesanan dibatalkan - ${input.orderId}`,
+                referenceType: 'return',
+                referenceId: input.orderId,
+                performedBy: ctx.user.id,
+                performedByName: ctx.user.name,
+                previousStock,
+                newStock,
+                notes: `Alasan pembatalan: ${input.cancelReason}`,
+              });
+            }
+          }
         }
 
         return { success: true, order };
