@@ -84,11 +84,196 @@ export default function CategorySalesReport() {
     return null;
   };
 
-  // Handle export
-  const handleExport = (type: 'pdf' | 'excel') => {
-    toast.info(`Export ${type.toUpperCase()}`, {
-      description: `Fitur export ${type.toUpperCase()} akan segera tersedia`,
-    });
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!reportData || !reportData.categories || reportData.categories.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text('Laporan Penjualan per Kategori', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+      doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+      
+      // Date range and export date
+      doc.setFontSize(9);
+      const dateRangeText = reportData.dateRange 
+        ? `Periode: ${new Date(reportData.dateRange.start).toLocaleDateString('id-ID')} - ${new Date(reportData.dateRange.end).toLocaleDateString('id-ID')}`
+        : 'Periode: Semua waktu';
+      doc.text(dateRangeText, 105, 45, { align: 'center' });
+      doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}`, 105, 50, { align: 'center' });
+
+      // Summary Stats
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ringkasan', 20, 62);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Kategori: ${reportData.totalCategories || 0}`, 20, 70);
+      doc.text(`Kategori Tertinggi: ${highestCategory?.category || '-'} (${highestCategory ? formatCurrencyFull(highestCategory.revenue) : '-'})`, 20, 76);
+      doc.text(`Kategori Terendah: ${lowestCategory?.category || '-'} (${lowestCategory ? formatCurrencyFull(lowestCategory.revenue) : '-'})`, 20, 82);
+
+      // Table Header
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Detail Penjualan per Kategori', 20, 95);
+
+      // Table
+      let startY = 105;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Kategori', 20, startY);
+      doc.text('Penjualan', 70, startY);
+      doc.text('%', 120, startY);
+      doc.text('Order', 140, startY);
+      doc.text('Produk', 170, startY);
+
+      // Draw header line
+      doc.line(20, startY + 2, 190, startY + 2);
+
+      // Table rows
+      startY += 8;
+      doc.setFont('helvetica', 'normal');
+      
+      reportData.categories.forEach((item: { category: string; revenue: number; percentage: number; orderCount: number; productsSold: number }) => {
+        if (startY > 270) {
+          doc.addPage();
+          startY = 20;
+        }
+
+        const category = String(item.category || '-');
+        const revenue = formatCurrencyFull(item.revenue || 0);
+        const percentage = `${(item.percentage || 0).toFixed(1)}%`;
+        const orderCount = String(item.orderCount || 0);
+        const productsSold = String(item.productsSold || 0);
+
+        doc.text(category.substring(0, 15), 20, startY);
+        doc.text(revenue, 70, startY);
+        doc.text(percentage, 120, startY);
+        doc.text(orderCount, 140, startY);
+        doc.text(productsSold, 170, startY);
+
+        startY += 6;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          'Laporan ini dibuat secara otomatis oleh sistem',
+          105,
+          285,
+          { align: 'center' }
+        );
+        doc.text(`Halaman ${i} dari ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      // Save PDF
+      const fileName = `Laporan-Kategori-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      toast.success('PDF Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Gagal mengekspor PDF', {
+        description: 'Terjadi kesalahan saat membuat file PDF',
+      });
+    }
+  };
+
+  // Export to Excel
+  const exportToExcel = async () => {
+    if (!reportData || !reportData.categories || reportData.categories.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      // Sheet 1: Category Sales Data
+      const categoryData = reportData.categories.map((item: { category: string; revenue: number; percentage: number; orderCount: number; productsSold: number }, index: number) => ({
+        '#': index + 1,
+        'Kategori': item.category || '-',
+        'Total Penjualan': item.revenue || 0,
+        'Total Penjualan (Format)': formatCurrencyFull(item.revenue || 0),
+        'Persentase': `${(item.percentage || 0).toFixed(1)}%`,
+        'Jumlah Order': item.orderCount || 0,
+        'Produk Terjual': item.productsSold || 0,
+      }));
+
+      const ws1 = XLSX.utils.json_to_sheet(categoryData);
+      ws1['!cols'] = [
+        { wch: 5 },  // #
+        { wch: 15 }, // Kategori
+        { wch: 15 }, // Total Penjualan
+        { wch: 20 }, // Total Penjualan (Format)
+        { wch: 12 }, // Persentase
+        { wch: 12 }, // Jumlah Order
+        { wch: 15 }, // Produk Terjual
+      ];
+
+      // Sheet 2: Summary
+      const dateRangeText = reportData.dateRange 
+        ? `${new Date(reportData.dateRange.start).toLocaleDateString('id-ID')} - ${new Date(reportData.dateRange.end).toLocaleDateString('id-ID')}`
+        : 'Semua waktu';
+
+      const summaryData = [
+        { 'Metrik': 'Total Kategori', 'Nilai': reportData.totalCategories || 0 },
+        { 'Metrik': 'Kategori Tertinggi', 'Nilai': highestCategory?.category || '-' },
+        { 'Metrik': 'Pendapatan Tertinggi', 'Nilai': highestCategory ? formatCurrencyFull(highestCategory.revenue) : '-' },
+        { 'Metrik': 'Kategori Terendah', 'Nilai': lowestCategory?.category || '-' },
+        { 'Metrik': 'Pendapatan Terendah', 'Nilai': lowestCategory ? formatCurrencyFull(lowestCategory.revenue) : '-' },
+        { 'Metrik': 'Periode Laporan', 'Nilai': dateRangeText },
+        { 'Metrik': 'Tanggal Export', 'Nilai': new Date().toLocaleDateString('id-ID', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) },
+      ];
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [
+        { wch: 25 }, // Metrik
+        { wch: 40 }, // Nilai
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Data Kategori');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+      // Save Excel
+      const fileName = `Laporan-Kategori-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Gagal mengekspor Excel', {
+        description: 'Terjadi kesalahan saat membuat file Excel',
+      });
+    }
   };
 
   // Clear date filter
@@ -160,13 +345,13 @@ export default function CategorySalesReport() {
               Reset Filter
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
-            PDF
+            Export PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport('excel')}>
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
             <Download className="h-4 w-4 mr-2" />
-            Excel
+            Export Excel
           </Button>
         </div>
       </div>

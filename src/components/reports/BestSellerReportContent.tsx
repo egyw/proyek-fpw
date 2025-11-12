@@ -93,6 +93,209 @@ export default function BestSellerReportContent() {
   const totalQuantitySold = products.reduce((sum: number, p: BestSellerProduct) => sum + p.totalQuantity, 0);
   const totalRevenue = products.reduce((sum: number, p: BestSellerProduct) => sum + p.totalValue, 0);
 
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!products || products.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text('Laporan Produk Terlaris', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+      doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+      
+      // Period and date
+      const periodLabels: Record<string, string> = {
+        '7days': '7 Hari Terakhir',
+        '30days': '30 Hari Terakhir',
+        '90days': '90 Hari Terakhir',
+        '6months': '6 Bulan Terakhir',
+        '1year': '1 Tahun Terakhir',
+      };
+      doc.setFontSize(9);
+      doc.text(`Periode: ${periodLabels[period] || period}`, 105, 45, { align: 'center' });
+      doc.text(`Urutan: ${sortBy === 'quantity' ? 'Kuantitas Terjual' : 'Nilai Penjualan'}`, 105, 50, { align: 'center' });
+      doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}`, 105, 55, { align: 'center' });
+
+      // Summary Stats
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ringkasan', 20, 67);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Unit Terjual: ${totalQuantitySold.toLocaleString('id-ID')} unit`, 20, 75);
+      doc.text(`Total Pendapatan: ${formatCurrency(totalRevenue)}`, 20, 81);
+
+      // Table Header
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Daftar Produk Terlaris (Top 20)', 20, 93);
+
+      // Table
+      let startY = 103;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('#', 20, startY);
+      doc.text('Nama Produk', 30, startY);
+      doc.text('Kategori', 100, startY);
+      doc.text('Qty', 130, startY);
+      doc.text('Total', 155, startY);
+
+      // Draw header line
+      doc.line(20, startY + 2, 190, startY + 2);
+
+      // Table rows (max 20 products to fit in PDF)
+      startY += 8;
+      doc.setFont('helvetica', 'normal');
+      
+      products.slice(0, 20).forEach((product: BestSellerProduct, index: number) => {
+        if (startY > 270) {
+          doc.addPage();
+          startY = 20;
+        }
+
+        const rank = String(index + 1);
+        const name = String(product.productName || '-').substring(0, 35);
+        const category = String(product.category || '-');
+        const qty = `${(product.totalQuantity || 0).toLocaleString('id-ID')}`;
+        const total = formatCurrency(product.totalValue || 0);
+
+        doc.text(rank, 20, startY);
+        doc.text(name, 30, startY);
+        doc.text(category, 100, startY);
+        doc.text(qty, 130, startY);
+        doc.text(total, 155, startY);
+
+        startY += 6;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          'Laporan ini dibuat secara otomatis oleh sistem',
+          105,
+          285,
+          { align: 'center' }
+        );
+        doc.text(`Halaman ${i} dari ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      // Save PDF
+      const fileName = `Laporan-Produk-Terlaris-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      toast.success('PDF Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Gagal mengekspor PDF', {
+        description: 'Terjadi kesalahan saat membuat file PDF',
+      });
+    }
+  };
+
+  // Export to Excel
+  const exportToExcel = async () => {
+    if (!products || products.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      // Sheet 1: Best Sellers Data
+      const productsData = products.map((product: BestSellerProduct, index: number) => ({
+        'Rank': index + 1,
+        'Nama Produk': product.productName || '-',
+        'Kategori': product.category || '-',
+        'Qty Terjual': product.totalQuantity || 0,
+        'Harga Rata-rata': product.averagePrice || 0,
+        'Harga Rata-rata (Format)': formatCurrency(product.averagePrice || 0),
+        'Total Pendapatan': product.totalValue || 0,
+        'Total Pendapatan (Format)': formatCurrency(product.totalValue || 0),
+        'Jumlah Order': product.salesCount || 0,
+      }));
+
+      const ws1 = XLSX.utils.json_to_sheet(productsData);
+      ws1['!cols'] = [
+        { wch: 6 },  // Rank
+        { wch: 35 }, // Nama Produk
+        { wch: 15 }, // Kategori
+        { wch: 12 }, // Qty Terjual
+        { wch: 15 }, // Harga Rata-rata
+        { wch: 20 }, // Harga Rata-rata (Format)
+        { wch: 15 }, // Total Pendapatan
+        { wch: 20 }, // Total Pendapatan (Format)
+        { wch: 12 }, // Jumlah Order
+      ];
+
+      // Sheet 2: Summary
+      const periodLabels: Record<string, string> = {
+        '7days': '7 Hari Terakhir',
+        '30days': '30 Hari Terakhir',
+        '90days': '90 Hari Terakhir',
+        '6months': '6 Bulan Terakhir',
+        '1year': '1 Tahun Terakhir',
+      };
+
+      const summaryData = [
+        { 'Metrik': 'Total Unit Terjual', 'Nilai': `${totalQuantitySold.toLocaleString('id-ID')} unit` },
+        { 'Metrik': 'Total Pendapatan', 'Nilai': formatCurrency(totalRevenue) },
+        { 'Metrik': 'Jumlah Produk', 'Nilai': products.length },
+        { 'Metrik': 'Periode Laporan', 'Nilai': periodLabels[period] || period },
+        { 'Metrik': 'Urutan', 'Nilai': sortBy === 'quantity' ? 'Kuantitas Terjual' : 'Nilai Penjualan' },
+        { 'Metrik': 'Tanggal Export', 'Nilai': new Date().toLocaleDateString('id-ID', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) },
+      ];
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [
+        { wch: 25 }, // Metrik
+        { wch: 40 }, // Nilai
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Produk Terlaris');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+      // Save Excel
+      const fileName = `Laporan-Produk-Terlaris-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Gagal mengekspor Excel', {
+        description: 'Terjadi kesalahan saat membuat file Excel',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -170,13 +373,13 @@ export default function BestSellerReportContent() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
             Export PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
           </Button>
         </div>
       </div>

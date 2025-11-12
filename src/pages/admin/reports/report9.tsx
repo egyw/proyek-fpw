@@ -1,5 +1,5 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
-import PlaceholderReport from "@/components/reports/PlaceholderReport";
+import NewCustomersReportContent from "@/components/reports/NewCustomersReportContent";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
@@ -17,11 +17,8 @@ export default function Report9Page() {
         </Link>
       </div>
 
-      {/* Report 9 Content */}
-      <PlaceholderReport
-        title="Laporan 9"
-        description="Konten laporan 9 sedang dalam pengembangan"
-      />
+      {/* Report 9 Content - Laporan Pendaftaran Pelanggan Baru */}
+      <NewCustomersReportContent />
     </AdminLayout>
   );
 }

@@ -1,0 +1,76 @@
+[
+  {
+    "_id": {
+      "$oid": "68b8400001788dc4d9e60001"
+    },
+    "returnNumber": "RET-20251112-0001",
+    "orderId": {
+      "$oid": "68b8342bd2788dc4d9e60900"
+    },
+    "orderNumber": "ORD-20251112-4637",
+    "customerId": {
+      "$oid": "68b82d09d2788dc4d9e60877"
+    },
+    "customerName": "budi budiman",
+    "customerEmail": "budi@example.com",
+    "customerPhone": "081234567892",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608c8"
+        },
+        "productName": "Fumato Pipa PVC AW 1 inc",
+        "quantity": 2,
+        "price": 47000,
+        "reason": "Produk rusak saat diterima, ada retak di bagian tengah pipa",
+        "condition": "damaged"
+      }
+    ],
+    "totalAmount": 94000,
+    "reason": "Barang rusak saat pengiriman",
+    "status": "approved",
+    "requestDate": "2025-11-10T08:30:00.000Z",
+    "approvedDate": "2025-11-10T14:20:00.000Z",
+    "completedDate": "2025-11-11T10:15:00.000Z",
+    "notes": "Pengembalian dana sudah diproses ke rekening customer",
+    "createdAt": "2025-11-10T08:30:00.000Z",
+    "updatedAt": "2025-11-11T10:15:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "68b8400001788dc4d9e60002"
+    },
+    "returnNumber": "RET-20251111-0002",
+    "orderId": {
+      "$oid": "68b8342bd2788dc4d9e60901"
+    },
+    "orderNumber": "ORD-20251111-5811",
+    "customerId": {
+      "$oid": "68b82d09d2788dc4d9e60878"
+    },
+    "customerName": "siti nurhaliza",
+    "customerEmail": "siti@example.com",
+    "customerPhone": "081234567893",
+    "items": [
+      {
+        "productId": {
+          "$oid": "68b8342bd2788dc4d9e608d0"
+        },
+        "productName": "Conch Semen Portland Tipe I 50kg",
+        "quantity": 1,
+        "price": 65000,
+        "reason": "Kemasan sobek dan semen sudah mengeras sebagian",
+        "condition": "damaged"
+      }
+    ],
+    "totalAmount": 65000,
+    "reason": "Produk cacat/rusak",
+    "status": "completed",
+    "requestDate": "2025-11-09T15:45:00.000Z",
+    "approvedDate": "2025-11-09T18:30:00.000Z",
+    "completedDate": "2025-11-10T09:00:00.000Z",
+    "notes": "Produk sudah diganti dengan yang baru",
+    "createdAt": "2025-11-09T15:45:00.000Z",
+    "updatedAt": "2025-11-10T09:00:00.000Z"
+  }
+]

@@ -83,6 +83,244 @@ export default function SlowMovingReportContent() {
   const deadStockCount = products.filter((p: SlowMovingProduct) => p.status === 'dead').length;
   const totalProducts = products.length;
 
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!filteredData || filteredData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor', {
+        description: 'Tidak ada produk slow-moving yang tersedia untuk diekspor',
+      });
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text('Laporan Stok Kurang Laku', 105, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+      doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+      doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 105, 40, { align: 'center' });
+
+      // Period label
+      const periodLabels: Record<string, string> = {
+        '30days': '30 Hari Terakhir',
+        '60days': '60 Hari Terakhir',
+        '90days': '90 Hari Terakhir',
+        '6months': '6 Bulan Terakhir',
+      };
+      doc.setFontSize(9);
+      doc.text(`Periode: ${periodLabels[period] || 'Semua Periode'}`, 105, 45, { align: 'center' });
+
+      // Summary
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ringkasan', 20, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      let startY = 62;
+      doc.text(`Total Produk Lambat:`, 20, startY);
+      doc.text(`${totalProducts}`, 70, startY);
+      startY += 6;
+      doc.text(`Stok Mati (90+ hari):`, 20, startY);
+      doc.text(`${deadStockCount}`, 70, startY);
+      startY += 6;
+      const verySlowCount = filteredData.filter((p: SlowMovingProduct) => p.status === 'very_slow').length;
+      doc.text(`Sangat Lambat (60-89 hari):`, 20, startY);
+      doc.text(`${verySlowCount}`, 70, startY);
+      startY += 6;
+      const slowCount = filteredData.filter((p: SlowMovingProduct) => p.status === 'slow').length;
+      doc.text(`Lambat (30-59 hari):`, 20, startY);
+      doc.text(`${slowCount}`, 70, startY);
+
+      // Table
+      startY += 10;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Daftar Produk Kurang Laku', 20, startY);
+      doc.setFont('helvetica', 'normal');
+
+      startY += 8;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nama Produk', 20, startY);
+      doc.text('Kategori', 75, startY);
+      doc.text('Hari', 105, startY, { align: 'center' });
+      doc.text('Stok', 125, startY, { align: 'right' });
+      doc.text('Nilai Stok', 150, startY, { align: 'right' });
+      doc.text('Status', 180, startY);
+      doc.setFont('helvetica', 'normal');
+
+      startY += 2;
+      doc.line(20, startY, 190, startY);
+
+      startY += 6;
+
+      filteredData.forEach((product: SlowMovingProduct) => {
+        if (startY > 270) {
+          doc.addPage();
+          startY = 20;
+        }
+
+        const productName = product.productName.substring(0, 25);
+        const category = product.category.substring(0, 12);
+        const statusLabels: Record<string, string> = {
+          dead: 'Stok Mati',
+          very_slow: 'Sangat Lambat',
+          slow: 'Lambat',
+        };
+
+        doc.text(productName, 20, startY);
+        doc.text(category, 75, startY);
+        doc.text(`${product.daysNotSold}`, 105, startY, { align: 'center' });
+        doc.text(`${product.currentStock} ${product.unit}`, 125, startY, { align: 'right' });
+        doc.text(formatCurrency(product.stockValue), 150, startY, { align: 'right' });
+        doc.text(statusLabels[product.status || 'slow'] || '-', 180, startY);
+
+        startY += 6;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          'Laporan ini dibuat secara otomatis oleh sistem',
+          105,
+          285,
+          { align: 'center' }
+        );
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Halaman ${i} dari ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      const fileName = `Laporan-Stok-Kurang-Laku-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      toast.success('PDF Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Gagal mengekspor PDF', {
+        description: 'Terjadi kesalahan saat membuat file PDF',
+      });
+    }
+  };
+
+  // Export to Excel
+  const exportToExcel = async () => {
+    if (!filteredData || filteredData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor', {
+        description: 'Tidak ada produk slow-moving yang tersedia untuk diekspor',
+      });
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      // Period label
+      const periodLabels: Record<string, string> = {
+        '30days': '30 Hari Terakhir',
+        '60days': '60 Hari Terakhir',
+        '90days': '90 Hari Terakhir',
+        '6months': '6 Bulan Terakhir',
+      };
+
+      // Status labels
+      const statusLabels: Record<string, string> = {
+        dead: 'Stok Mati',
+        very_slow: 'Sangat Lambat',
+        slow: 'Lambat',
+      };
+
+      // Sheet 1: Slow Moving Products
+      const dataForExcel = filteredData.map((product: SlowMovingProduct, index: number) => ({
+        '#': index + 1,
+        'Nama Produk': product.productName,
+        'Kategori': product.category,
+        'Status': statusLabels[product.status || 'slow'] || '-',
+        'Stok Tersisa': product.currentStock,
+        'Satuan': product.unit,
+        'Total Terjual': product.totalSold,
+        'Hari Tidak Terjual': product.daysNotSold,
+        'Harga Satuan': product.price,
+        'Harga Format': formatCurrency(product.price),
+        'Nilai Stok': product.stockValue,
+        'Nilai Format': formatCurrency(product.stockValue),
+        'Terakhir Terjual': product.lastSoldDate || '-',
+      }));
+
+      const ws1 = XLSX.utils.json_to_sheet(dataForExcel);
+      ws1['!cols'] = [
+        { wch: 5 },  // #
+        { wch: 35 }, // Nama Produk
+        { wch: 15 }, // Kategori
+        { wch: 15 }, // Status
+        { wch: 12 }, // Stok Tersisa
+        { wch: 10 }, // Satuan
+        { wch: 12 }, // Total Terjual
+        { wch: 15 }, // Hari Tidak Terjual
+        { wch: 12 }, // Harga Satuan
+        { wch: 18 }, // Harga Format
+        { wch: 15 }, // Nilai Stok
+        { wch: 18 }, // Nilai Format
+        { wch: 18 }, // Terakhir Terjual
+      ];
+
+      // Sheet 2: Ringkasan
+      const verySlowCount = filteredData.filter((p: SlowMovingProduct) => p.status === 'very_slow').length;
+      const slowCount = filteredData.filter((p: SlowMovingProduct) => p.status === 'slow').length;
+      const totalStockValue = filteredData.reduce((sum: number, p: SlowMovingProduct) => sum + p.stockValue, 0);
+
+      const summaryData = [
+        { 'Keterangan': 'Periode', 'Nilai': periodLabels[period] || 'Semua Periode' },
+        { 'Keterangan': 'Tanggal Ekspor', 'Nilai': new Date().toLocaleDateString('id-ID') },
+        { 'Keterangan': '', 'Nilai': '' },
+        { 'Keterangan': 'Total Produk Lambat', 'Nilai': totalProducts },
+        { 'Keterangan': 'Stok Mati (90+ hari)', 'Nilai': deadStockCount },
+        { 'Keterangan': 'Sangat Lambat (60-89 hari)', 'Nilai': verySlowCount },
+        { 'Keterangan': 'Lambat (30-59 hari)', 'Nilai': slowCount },
+        { 'Keterangan': '', 'Nilai': '' },
+        { 'Keterangan': 'Total Nilai Stok Lambat', 'Nilai': formatCurrency(totalStockValue) },
+      ];
+
+      // Add filter info
+      if (categoryFilter !== 'all') {
+        summaryData.push({ 'Keterangan': 'Filter Kategori', 'Nilai': categoryFilter });
+      }
+      if (statusFilter !== 'all') {
+        summaryData.push({ 'Keterangan': 'Filter Status', 'Nilai': statusLabels[statusFilter] || statusFilter });
+      }
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [{ wch: 30 }, { wch: 30 }];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Stok Kurang Laku');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+      const fileName = `Laporan-Stok-Kurang-Laku-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Gagal mengekspor Excel', {
+        description: 'Terjadi kesalahan saat membuat file Excel',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -200,13 +438,13 @@ export default function SlowMovingReportContent() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
             Export PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
           </Button>
         </div>
       </div>

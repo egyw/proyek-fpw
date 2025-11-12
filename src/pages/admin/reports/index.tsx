@@ -6,46 +6,12 @@ import PaymentMethodReport from "@/components/reports/PaymentMethodReport";
 import BestSellerReportContent from "@/components/reports/BestSellerReportContent";
 import LowStockReportContent from "@/components/reports/LowStockReportContent";
 import SlowMovingReportContent from "@/components/reports/SlowMovingReportContent";
-import PlaceholderReport from "@/components/reports/PlaceholderReport";
+import ReturnReportContent from "@/components/reports/ReturnReportContent";
+import TopCustomersReportContent from "@/components/reports/TopCustomersReportContent";
+import NewCustomersReportContent from "@/components/reports/NewCustomersReportContent";
+import OrderStatusSummaryReportContent from "@/components/reports/OrderStatusSummaryReportContent";
 
 export default function ReportsPage() {
-  const placeholderReports = [
-    {
-      value: "report7",
-      title: "Laporan 7",
-      description: "Konten laporan 7 sedang dalam pengembangan",
-    },
-    {
-      value: "report8",
-      title: "Laporan 8",
-      description: "Konten laporan 8 sedang dalam pengembangan",
-    },
-    {
-      value: "report9",
-      title: "Laporan 9",
-      description: "Konten laporan 9 sedang dalam pengembangan",
-    },
-    {
-      value: "report7",
-      title: "Laporan 7",
-      description: "Konten laporan 7 sedang dalam pengembangan",
-    },
-    {
-      value: "report8",
-      title: "Laporan 8",
-      description: "Konten laporan 8 sedang dalam pengembangan",
-    },
-    {
-      value: "report9",
-      title: "Laporan 9",
-      description: "Konten laporan 9 sedang dalam pengembangan",
-    },
-    {
-      value: "report10",
-      title: "Laporan 10",
-      description: "Konten laporan 10 sedang dalam pengembangan",
-    },
-  ];
 
   return (
     <AdminLayout>
@@ -78,17 +44,17 @@ export default function ReportsPage() {
           <TabsTrigger value="slow-moving" className="data-[state=active]:bg-white">
             Stok Kurang Laku
           </TabsTrigger>
-          <TabsTrigger value="report7" className="data-[state=active]:bg-white">
-            Laporan 7
+          <TabsTrigger value="return" className="data-[state=active]:bg-white">
+            Retur Barang
           </TabsTrigger>
-          <TabsTrigger value="report8" className="data-[state=active]:bg-white">
-            Laporan 8
+          <TabsTrigger value="top-customers" className="data-[state=active]:bg-white">
+            Pelanggan Teratas
           </TabsTrigger>
-          <TabsTrigger value="report9" className="data-[state=active]:bg-white">
-            Laporan 9
+          <TabsTrigger value="new-customers" className="data-[state=active]:bg-white">
+            Pelanggan Baru
           </TabsTrigger>
-          <TabsTrigger value="report10" className="data-[state=active]:bg-white">
-            Laporan 10
+          <TabsTrigger value="order-status" className="data-[state=active]:bg-white">
+            Status Pesanan
           </TabsTrigger>
         </TabsList>
 
@@ -122,12 +88,25 @@ export default function ReportsPage() {
           <SlowMovingReportContent />
         </TabsContent>
 
-        {/* Placeholder Reports */}
-        {placeholderReports.map((report) => (
-          <TabsContent key={report.value} value={report.value}>
-            <PlaceholderReport title={report.title} description={report.description} />
-          </TabsContent>
-        ))}
+        {/* Report 7: Return Report */}
+        <TabsContent value="return">
+          <ReturnReportContent />
+        </TabsContent>
+
+        {/* Report 8: Top Customers */}
+        <TabsContent value="top-customers">
+          <TopCustomersReportContent />
+        </TabsContent>
+
+        {/* Report 9: New Customers Registration */}
+        <TabsContent value="new-customers">
+          <NewCustomersReportContent />
+        </TabsContent>
+
+        {/* Report 10: Order Status Summary */}
+        <TabsContent value="order-status">
+          <OrderStatusSummaryReportContent />
+        </TabsContent>
       </Tabs>
     </AdminLayout>
   );

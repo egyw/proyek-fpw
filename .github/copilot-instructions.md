@@ -4734,7 +4734,101 @@ const handleAddDialogClose = (open: boolean) => {
 
 ---
 
-### 0.1. Shipping Calculator Accordion UI + Komerce API (November 8, 2025)
+### 0.1.1. Admin Reports Export Standardization (November 12, 2025)
+
+**Status**: ✅ Production-ready, all 7 reports fully standardized
+
+**Purpose**: Standardize export button placement, labels, and toast notifications across all admin reports for consistent UX.
+
+**Standardized Reports** (7 total):
+
+1. **PeriodicSalesReport** - Laporan Penjualan Periodik
+2. **CategorySalesReport** - Laporan Penjualan per Kategori
+3. **BestSellerReportContent** - Laporan Produk Terlaris
+4. **TopCustomersReportContent** - Laporan Top Customers
+5. **LowStockReportContent** - Laporan Stok Rendah
+6. **SlowMovingReportContent** - Laporan Stok Kurang Laku
+7. **PaymentMethodReport** - Laporan Metode Pembayaran
+
+**Three Standardization Rules**:
+
+1. **Button Order**: PDF button ALWAYS left, Excel button right
+2. **Button Labels**: Use "Export PDF" and "Export Excel" (NOT just "PDF"/"Excel")
+3. **Toast Notifications**: Use full format with description (NOT simple format)
+
+**Standard Button Pattern**:
+
+```tsx
+// ✅ CORRECT: PDF left, Excel right, full labels
+<div className="flex gap-2">
+  <Button variant="outline" size="sm" onClick={exportToPDF}>
+    <FileText className="h-4 w-4 mr-2" />
+    Export PDF
+  </Button>
+  <Button variant="outline" size="sm" onClick={exportToExcel}>
+    <Download className="h-4 w-4 mr-2" />
+    Export Excel
+  </Button>
+</div>
+
+// ❌ WRONG: Excel first (wrong order)
+<Button onClick={exportToExcel}>Excel</Button>
+<Button onClick={exportToPDF}>PDF</Button>
+
+// ❌ WRONG: Short labels (inconsistent)
+<Button onClick={exportToPDF}>PDF</Button>
+<Button onClick={exportToExcel}>Excel</Button>
+```
+
+**Standard Toast Pattern**:
+
+```tsx
+// ✅ CORRECT: Full format with description
+toast.success('PDF Berhasil Diunduh!', {
+  description: `File ${fileName} telah berhasil diunduh`,
+});
+
+toast.error('Gagal mengekspor PDF', {
+  description: 'Terjadi kesalahan saat membuat file PDF',
+});
+
+// ❌ WRONG: Simple format without description
+toast.success('PDF berhasil diunduh!');
+toast.error('Gagal export PDF');
+```
+
+**Key Points**:
+
+- **Description Text**: MUST use "telah **berhasil** diunduh" (NOT just "telah diunduh")
+- **Error Message**: Use "Gagal **mengekspor**" (NOT "Gagal export")
+- **Filename Format**: Use ISO date `YYYY-MM-DD` (NOT timestamp)
+- **Icons**: FileText for PDF, Download for Excel
+
+**Changes Made**:
+
+- **Button Order**: Fixed 3 reports (BestSeller, LowStock, SlowMoving) - swapped from (Excel, PDF) to (PDF, Excel)
+- **Button Labels**: Fixed 3 reports (PeriodicSales, CategorySales, PaymentMethod) - changed from "PDF"/"Excel" to "Export PDF"/"Export Excel"
+- **Toast Format**: Updated TopCustomersReport from simple to full format with descriptions
+- **Description Text**: Fixed all 7 reports to use "telah berhasil diunduh" consistently
+
+**Benefits**:
+
+✅ **Consistent UX** - All reports have identical export experience  
+✅ **Better Feedback** - Descriptions tell users exactly what happened  
+✅ **Professional UI** - Full labels improve accessibility and clarity  
+✅ **Standardized Code** - Easier to maintain and extend  
+
+**Testing Checklist**:
+
+✅ All 7 reports have PDF button on left, Excel on right  
+✅ All 7 reports use "Export PDF" and "Export Excel" labels  
+✅ All 7 reports show full toast format with description  
+✅ All 7 reports use "telah berhasil diunduh" in success message  
+✅ All 7 reports use ISO date format for filenames  
+
+---
+
+### 0.1.2. Shipping Calculator Accordion UI + Komerce API (November 8, 2025)
 
 **Location**: `src/components/ShippingCalculator.tsx`
 
@@ -5390,6 +5484,8 @@ useEffect(() => {
 8. **Error Handling**: All tRPC procedures have try-catch with TRPCError
 9. **Loading States**: All queries show loading spinners
 10. **Role-based Access**: Proper authentication guards on admin pages
+11. **Export Buttons**: PDF left, Excel right with "Export PDF"/"Export Excel" labels
+12. **Export Toasts**: Full format with description ("telah berhasil diunduh")
 
 ### Authentication & Security DO's ✅
 
@@ -5411,6 +5507,9 @@ useEffect(() => {
 7. **Check shadcn availability** before creating custom UI components
 8. **Use hold-to-show for password fields** - onMouseDown/Up/Leave + onTouchStart/End
 9. **Place helper links below inputs** - e.g., "Lupa password?" below password field, right-aligned
+10. **Export buttons in reports** - ALWAYS PDF left (FileText icon), Excel right (Download icon)
+11. **Export button labels** - Use "Export PDF" and "Export Excel" (full labels, NOT just "PDF"/"Excel")
+12. **Export toast notifications** - Full format with description: `toast.success('PDF Berhasil Diunduh!', { description: 'File ${fileName} telah berhasil diunduh' })`
 
 ### Database & Environment DO's ✅
 
@@ -5688,3 +5787,8 @@ If you have dynamic data in session (like addresses), remove it:
 37. **Never delete Cloudinary images on product soft delete** (preserve for restore capability)
 38. **Never skip stats card for inactive entities** (always show total, active, inactive counts)
 39. **Never forget suspension reason for customers** (require minimum 10 characters explanation)
+40. **Never place Excel button before PDF button** (always PDF left, Excel right)
+41. **Never use short labels for export buttons** (use "Export PDF" and "Export Excel", NOT just "PDF"/"Excel")
+42. **Never use simple toast format for exports** (always include description with filename)
+43. **Never use "telah diunduh" without "berhasil"** (must be "telah berhasil diunduh")
+44. **Never use "Gagal export"** (use "Gagal mengekspor" for proper Indonesian)

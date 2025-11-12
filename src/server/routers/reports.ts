@@ -988,4 +988,559 @@ export const reportsRouter = router({
         });
       }
     }),
+
+  /**
+   * Laporan Retur Barang (Report 7)
+   * Mencatat semua transaksi retur yang telah divalidasi
+   */
+  getReturnReport: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+        status: z.enum(['all', 'pending', 'approved', 'rejected', 'completed']).optional(),
+        productId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Check admin/staff role
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin dan staff yang dapat mengakses laporan ini',
+          });
+        }
+
+        await connectDB();
+
+        const startDateObj = new Date(input.startDate);
+        const endDateObj = new Date(input.endDate);
+
+        // Build query
+        const query: Record<string, unknown> = {
+          requestDate: {
+            $gte: startDateObj.toISOString(),
+            $lte: endDateObj.toISOString(),
+          },
+        };
+
+        if (input.status && input.status !== 'all') {
+          query.status = input.status;
+        }
+
+        // Get returns from database
+        const Return = (await import('@/models/Return')).default;
+        const returns = await Return.find(query)
+          .sort({ requestDate: -1 })
+          .lean();
+
+        // Filter by product if specified
+        let filteredReturns = returns;
+        if (input.productId) {
+          filteredReturns = returns.filter((ret) =>
+            ret.items.some(
+              (item: { productId: { toString: () => string } }) => 
+                item.productId.toString() === input.productId
+            )
+          );
+        }
+
+        // Aggregate return statistics
+        const stats = {
+          totalReturns: filteredReturns.length,
+          totalAmount: filteredReturns.reduce((sum, ret) => sum + ret.totalAmount, 0),
+          pending: filteredReturns.filter((r) => r.status === 'pending').length,
+          approved: filteredReturns.filter((r) => r.status === 'approved').length,
+          rejected: filteredReturns.filter((r) => r.status === 'rejected').length,
+          completed: filteredReturns.filter((r) => r.status === 'completed').length,
+        };
+
+        // Aggregate by product to find most returned products
+        const productReturns: Record<
+          string,
+          {
+            productId: string;
+            productName: string;
+            totalQuantity: number;
+            totalReturns: number;
+            totalAmount: number;
+            reasons: Array<{ reason: string; condition: string; count: number }>;
+          }
+        > = {};
+
+        filteredReturns.forEach((ret) => {
+          ret.items.forEach((item: {
+            productId: { toString: () => string };
+            productName: string;
+            quantity: number;
+            price: number;
+            reason: string;
+            condition: string;
+          }) => {
+            const key = item.productId.toString();
+
+            if (!productReturns[key]) {
+              productReturns[key] = {
+                productId: key,
+                productName: item.productName,
+                totalQuantity: 0,
+                totalReturns: 0,
+                totalAmount: 0,
+                reasons: [],
+              };
+            }
+
+            productReturns[key].totalQuantity += item.quantity;
+            productReturns[key].totalReturns += 1;
+            productReturns[key].totalAmount += item.price * item.quantity;
+
+            // Track reasons
+            const existingReason = productReturns[key].reasons.find(
+              (r) => r.reason === item.reason && r.condition === item.condition
+            );
+            if (existingReason) {
+              existingReason.count += 1;
+            } else {
+              productReturns[key].reasons.push({
+                reason: item.reason,
+                condition: item.condition,
+                count: 1,
+              });
+            }
+          });
+        });
+
+        // Convert to array and sort by total returns
+        const productReturnsArray = Object.values(productReturns).sort(
+          (a, b) => b.totalReturns - a.totalReturns
+        );
+
+        return {
+          returns: filteredReturns,
+          stats,
+          productReturns: productReturnsArray,
+        };
+      } catch (error) {
+        console.error('[getReturnReport] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal mengambil data laporan retur',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Laporan Pelanggan Teratas (Report 8)
+   * Top Spenders - Pelanggan dengan total belanja tertinggi
+   */
+  getTopCustomers: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+        limit: z.number().default(20),
+        sortBy: z.enum(['totalSpent', 'orderCount']).default('totalSpent'),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Check admin/staff role
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin dan staff yang dapat mengakses laporan ini',
+          });
+        }
+
+        await connectDB();
+
+        const startDateObj = new Date(input.startDate);
+        const endDateObj = new Date(input.endDate);
+
+        // Get orders in date range with paid status (any orderStatus except cancelled)
+        const Order = (await import('@/models/Order')).default;
+        const orders = await Order.find({
+          createdAt: {
+            $gte: startDateObj.toISOString(),
+            $lte: endDateObj.toISOString(),
+          },
+          paymentStatus: 'paid', // Only count paid orders
+          orderStatus: { $ne: 'cancelled' }, // Exclude cancelled orders
+        }).lean();
+
+        // Aggregate by customer
+        const customerStats: Record<
+          string,
+          {
+            customerId: string;
+            customerName: string;
+            customerEmail: string;
+            customerPhone: string;
+            totalSpent: number;
+            orderCount: number;
+            averageOrderValue: number;
+            firstOrderDate: string;
+            lastOrderDate: string;
+          }
+        > = {};
+
+        orders.forEach((order) => {
+          const key = order.userId.toString();
+
+          if (!customerStats[key]) {
+            customerStats[key] = {
+              customerId: key,
+              customerName: order.shippingAddress.recipientName,
+              customerEmail: order.customerEmail || '',
+              customerPhone: order.shippingAddress.phoneNumber,
+              totalSpent: 0,
+              orderCount: 0,
+              averageOrderValue: 0,
+              firstOrderDate: order.createdAt,
+              lastOrderDate: order.createdAt,
+            };
+          }
+
+          customerStats[key].totalSpent += order.total;
+          customerStats[key].orderCount += 1;
+
+          // Update first/last order dates
+          if (order.createdAt < customerStats[key].firstOrderDate) {
+            customerStats[key].firstOrderDate = order.createdAt;
+          }
+          if (order.createdAt > customerStats[key].lastOrderDate) {
+            customerStats[key].lastOrderDate = order.createdAt;
+          }
+        });
+
+        // Convert to array and calculate average
+        const customersArray = Object.values(customerStats).map((customer) => ({
+          ...customer,
+          averageOrderValue: customer.totalSpent / customer.orderCount,
+        }));
+
+        // Sort by selected metric
+        if (input.sortBy === 'totalSpent') {
+          customersArray.sort((a, b) => b.totalSpent - a.totalSpent);
+        } else {
+          customersArray.sort((a, b) => b.orderCount - a.orderCount);
+        }
+
+        // Limit results
+        const topCustomers = customersArray.slice(0, input.limit);
+
+        // Calculate summary stats
+        const stats = {
+          totalCustomers: customersArray.length,
+          totalRevenue: customersArray.reduce((sum, c) => sum + c.totalSpent, 0),
+          totalOrders: customersArray.reduce((sum, c) => sum + c.orderCount, 0),
+          averageSpentPerCustomer:
+            customersArray.reduce((sum, c) => sum + c.totalSpent, 0) /
+            customersArray.length,
+        };
+
+        return {
+          customers: topCustomers,
+          stats,
+        };
+      } catch (error) {
+        console.error('[getTopCustomers] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal mengambil data laporan pelanggan teratas',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * PROCEDURE 9: Get New Customers Registration Report
+   * 
+   * Returns new customer registration statistics
+   * Used for: Laporan Pendaftaran Pelanggan Baru
+   * 
+   * Input:
+   * - startDate: ISO date string
+   * - endDate: ISO date string
+   * - groupBy: 'day' | 'week' | 'month'
+   * 
+   * Output:
+   * - stats: { totalNewCustomers, growthRate, previousPeriodTotal, averagePerDay }
+   * - chartData: Array of { date, label, count }
+   * - customers: Array of new customer records
+   */
+  getNewCustomersReport: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+        groupBy: z.enum(['day', 'week', 'month']),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Check admin/staff role
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin dan staff yang dapat mengakses laporan ini',
+          });
+        }
+
+        await connectDB();
+
+        const startDateObj = new Date(input.startDate);
+        const endDateObj = new Date(input.endDate);
+
+        // Import User model
+        const User = (await import('@/models/User')).default;
+
+        // Get new customers in date range
+        const newCustomers = await User.find({
+          createdAt: {
+            $gte: startDateObj.toISOString(),
+            $lte: endDateObj.toISOString(),
+          },
+          role: 'user', // Only customer role
+          isActive: true,
+        })
+          .select('_id fullName username phone email createdAt')
+          .sort({ createdAt: -1 })
+          .lean();
+
+        // Calculate previous period for growth rate
+        const periodDiff = endDateObj.getTime() - startDateObj.getTime();
+        const prevStartDate = new Date(startDateObj.getTime() - periodDiff);
+        const prevEndDate = new Date(endDateObj.getTime() - periodDiff);
+
+        const previousPeriodCustomers = await User.countDocuments({
+          createdAt: {
+            $gte: prevStartDate.toISOString(),
+            $lte: prevEndDate.toISOString(),
+          },
+          role: 'user',
+          isActive: true,
+        });
+
+        // Calculate stats
+        const totalNewCustomers = newCustomers.length;
+        const growthRate =
+          previousPeriodCustomers > 0
+            ? ((totalNewCustomers - previousPeriodCustomers) / previousPeriodCustomers) * 100
+            : 100;
+
+        const daysDiff = Math.ceil(periodDiff / (1000 * 60 * 60 * 24));
+        const averagePerDay = totalNewCustomers / daysDiff;
+
+        // Group data for chart
+        const chartData: Array<{ date: string; label: string; count: number }> = [];
+        const groupedData: Record<string, number> = {};
+
+        newCustomers.forEach((customer) => {
+          const date = new Date(customer.createdAt);
+          let key = '';
+
+          if (input.groupBy === 'day') {
+            key = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          } else if (input.groupBy === 'week') {
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay());
+            key = weekStart.toISOString().split('T')[0];
+          } else {
+            // month
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          }
+
+          groupedData[key] = (groupedData[key] || 0) + 1;
+        });
+
+        // Convert to chart data array
+        Object.keys(groupedData)
+          .sort()
+          .forEach((key) => {
+            let label = key;
+            if (input.groupBy === 'month') {
+              const [year, month] = key.split('-');
+              const monthNames = [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'Mei',
+                'Jun',
+                'Jul',
+                'Agt',
+                'Sep',
+                'Okt',
+                'Nov',
+                'Des',
+              ];
+              label = `${monthNames[parseInt(month) - 1]} ${year}`;
+            } else if (input.groupBy === 'week') {
+              const date = new Date(key);
+              label = `Minggu ${date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`;
+            } else {
+              const date = new Date(key);
+              label = date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+            }
+
+            chartData.push({
+              date: key,
+              label,
+              count: groupedData[key],
+            });
+          });
+
+        return {
+          stats: {
+            totalNewCustomers,
+            growthRate,
+            previousPeriodTotal: previousPeriodCustomers,
+            averagePerDay,
+          },
+          chartData,
+          customers: newCustomers,
+        };
+      } catch (error) {
+        console.error('[getNewCustomersReport] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal mengambil data laporan pelanggan baru',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * PROCEDURE 10: Get Order Status Summary Report
+   * 
+   * Returns order status distribution and summary
+   * Used for: Laporan Ringkasan Status Pesanan
+   * 
+   * Input:
+   * - startDate: ISO date string
+   * - endDate: ISO date string
+   * 
+   * Output:
+   * - statusSummary: Array of { status, count, percentage }
+   * - recentOrders: Array of recent order records
+   * - totalOrders: Total order count
+   * - totalRevenue: Total revenue
+   */
+  getOrderStatusSummary: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Check admin/staff role
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin dan staff yang dapat mengakses laporan ini',
+          });
+        }
+
+        await connectDB();
+
+        const startDateObj = new Date(input.startDate);
+        const endDateObj = new Date(input.endDate);
+
+        // Get all orders in date range
+        const Order = (await import('@/models/Order')).default;
+        const orders = await Order.find({
+          createdAt: {
+            $gte: startDateObj.toISOString(),
+            $lte: endDateObj.toISOString(),
+          },
+        })
+          .select(
+            '_id orderNumber userId customerEmail paymentStatus orderStatus total createdAt shippingAddress'
+          )
+          .sort({ createdAt: -1 })
+          .lean();
+
+        // Count by order status
+        const statusCounts: Record<string, number> = {
+          awaiting_payment: 0,
+          processing: 0,
+          shipped: 0,
+          delivered: 0,
+          completed: 0,
+          cancelled: 0,
+        };
+
+        orders.forEach((order) => {
+          const status = order.orderStatus;
+          if (statusCounts[status] !== undefined) {
+            statusCounts[status]++;
+          }
+        });
+
+        // Calculate percentages
+        const totalOrders = orders.length;
+        const statusSummary = Object.keys(statusCounts).map((status) => ({
+          status,
+          count: statusCounts[status],
+          percentage: totalOrders > 0 ? (statusCounts[status] / totalOrders) * 100 : 0,
+        }));
+
+        // Calculate total revenue (only completed orders)
+        const totalRevenue = orders
+          .filter((order) => order.orderStatus === 'completed')
+          .reduce((sum, order) => sum + order.total, 0);
+
+        // Format recent orders with customer name from shipping address
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const recentOrders = orders.slice(0, 50).map((order: any) => ({
+          _id: order._id.toString(),
+          orderNumber: order.orderNumber || 'N/A',
+          customerName: order.shippingAddress?.recipientName || 'Unknown Customer',
+          customerPhone: order.shippingAddress?.phoneNumber || '-',
+          customerEmail: order.customerEmail || '-',
+          orderStatus: order.orderStatus || 'awaiting_payment',
+          total: order.total || 0,
+          createdAt: order.createdAt || new Date().toISOString(),
+        }));
+
+        return {
+          statusSummary,
+          recentOrders,
+          totalOrders,
+          totalRevenue,
+        };
+      } catch (error) {
+        console.error('[getOrderStatusSummary] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal mengambil data laporan status pesanan',
+          cause: error,
+        });
+      }
+    }),
 });

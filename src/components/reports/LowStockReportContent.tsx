@@ -86,6 +86,194 @@ export default function LowStockReportContent() {
   const criticalCount = reportData?.stats?.critical || 0;
   const warningCount = reportData?.stats?.warning || 0;
 
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!filteredData || filteredData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text('Laporan Stok Menipis', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+      doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+      
+      doc.setFontSize(9);
+      doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}`, 105, 45, { align: 'center' });
+
+      // Summary Stats
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ringkasan', 20, 57);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Produk Stok Kritis: ${criticalCount}`, 20, 65);
+      doc.text(`Produk Stok Rendah: ${warningCount}`, 20, 71);
+      doc.text(`Total Produk: ${filteredData.length}`, 20, 77);
+
+      // Table Header
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Daftar Produk Stok Menipis', 20, 89);
+
+      // Table
+      let startY = 99;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Produk', 20, startY);
+      doc.text('Stok', 90, startY);
+      doc.text('Min', 110, startY);
+      doc.text('%', 130, startY);
+      doc.text('Status', 145, startY);
+
+      // Draw header line
+      doc.line(20, startY + 2, 190, startY + 2);
+
+      // Table rows
+      startY += 8;
+      doc.setFont('helvetica', 'normal');
+      
+      filteredData.forEach((product: LowStockProduct) => {
+        if (startY > 270) {
+          doc.addPage();
+          startY = 20;
+        }
+
+        const name = String(product.productName || '-').substring(0, 35);
+        const stock = `${product.currentStock || 0} ${product.unit || ''}`;
+        const minStock = `${product.minStock || 0}`;
+        const percentage = `${Math.round((product.currentStock / product.minStock) * 100)}%`;
+        const status = product.priority === 'critical' ? 'KRITIS' : product.priority === 'warning' ? 'Peringatan' : 'Rendah';
+
+        doc.text(name, 20, startY);
+        doc.text(stock, 90, startY);
+        doc.text(minStock, 110, startY);
+        doc.text(percentage, 130, startY);
+        doc.text(status, 145, startY);
+
+        startY += 6;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          'Laporan ini dibuat secara otomatis oleh sistem',
+          105,
+          285,
+          { align: 'center' }
+        );
+        doc.text(`Halaman ${i} dari ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      // Save PDF
+      const fileName = `Laporan-Stok-Menipis-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      toast.success('PDF Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Gagal mengekspor PDF', {
+        description: 'Terjadi kesalahan saat membuat file PDF',
+      });
+    }
+  };
+
+  // Export to Excel
+  const exportToExcel = async () => {
+    if (!filteredData || filteredData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      // Sheet 1: Low Stock Products
+      const productsData = filteredData.map((product: LowStockProduct, index: number) => ({
+        '#': index + 1,
+        'Nama Produk': product.productName || '-',
+        'Kategori': product.category || '-',
+        'Stok Saat Ini': product.currentStock || 0,
+        'Min. Stok': product.minStock || 0,
+        'Satuan': product.unit || '-',
+        '% Stok': `${Math.round((product.currentStock / product.minStock) * 100)}%`,
+        'Status': product.priority === 'critical' ? 'KRITIS' : product.priority === 'warning' ? 'Peringatan' : 'Rendah',
+        'Harga': product.price || 0,
+        'Harga (Format)': formatCurrency(product.price || 0),
+      }));
+
+      const ws1 = XLSX.utils.json_to_sheet(productsData);
+      ws1['!cols'] = [
+        { wch: 5 },  // #
+        { wch: 35 }, // Nama Produk
+        { wch: 15 }, // Kategori
+        { wch: 12 }, // Stok Saat Ini
+        { wch: 10 }, // Min. Stok
+        { wch: 8 },  // Satuan
+        { wch: 8 },  // % Stok
+        { wch: 12 }, // Status
+        { wch: 12 }, // Harga
+        { wch: 18 }, // Harga (Format)
+      ];
+
+      // Sheet 2: Summary
+      const summaryData = [
+        { 'Metrik': 'Produk Stok Kritis', 'Nilai': criticalCount },
+        { 'Metrik': 'Produk Stok Rendah', 'Nilai': warningCount },
+        { 'Metrik': 'Total Produk', 'Nilai': filteredData.length },
+        { 'Metrik': 'Filter Kategori', 'Nilai': categoryFilter === 'all' ? 'Semua Kategori' : categoryFilter },
+        { 'Metrik': 'Filter Status', 'Nilai': statusFilter === 'all' ? 'Semua Status' : statusFilter },
+        { 'Metrik': 'Tanggal Export', 'Nilai': new Date().toLocaleDateString('id-ID', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) },
+      ];
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [
+        { wch: 25 }, // Metrik
+        { wch: 40 }, // Nilai
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Stok Menipis');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+      // Save Excel
+      const fileName = `Laporan-Stok-Menipis-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Gagal mengekspor Excel', {
+        description: 'Terjadi kesalahan saat membuat file Excel',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -182,13 +370,13 @@ export default function LowStockReportContent() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
             Export PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
           </Button>
         </div>
       </div>

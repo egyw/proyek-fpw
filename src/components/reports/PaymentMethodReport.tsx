@@ -116,13 +116,6 @@ export default function PaymentMethodReport() {
     return null;
   };
 
-  // Handle export
-  const handleExport = (type: 'pdf' | 'excel') => {
-    toast.info(`Export ${type.toUpperCase()}`, {
-      description: `Fitur export ${type.toUpperCase()} akan segera tersedia`,
-    });
-  };
-
   // Clear date filter
   const handleClearFilter = () => {
     setStartDate('');
@@ -131,6 +124,224 @@ export default function PaymentMethodReport() {
 
   // Find most used payment method
   const mostUsedMethod = reportData?.methods[0];
+
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!reportData?.methods || reportData.methods.length === 0) {
+      toast.error('Tidak ada data untuk diekspor', {
+        description: 'Tidak ada data metode pembayaran yang tersedia untuk diekspor',
+      });
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text('Laporan Metode Pembayaran', 105, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+      doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+      doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 105, 40, { align: 'center' });
+
+      // Date range
+      doc.setFontSize(9);
+      const dateRangeText = reportData.dateRange 
+        ? `Periode: ${new Date(reportData.dateRange.start).toLocaleDateString('id-ID')} - ${new Date(reportData.dateRange.end).toLocaleDateString('id-ID')}`
+        : 'Periode: Semua waktu';
+      doc.text(dateRangeText, 105, 45, { align: 'center' });
+
+      // Summary
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ringkasan', 20, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      let startY = 62;
+      doc.text(`Total Metode Pembayaran:`, 20, startY);
+      doc.text(`${reportData.methods.length}`, 80, startY);
+      startY += 6;
+      doc.text(`Total Transaksi:`, 20, startY);
+      doc.text(`${reportData.totalTransactions}`, 80, startY);
+      startY += 6;
+      doc.text(`Total Nilai:`, 20, startY);
+      doc.text(formatCurrencyFull(reportData.totalAmount), 80, startY);
+      startY += 6;
+      if (mostUsedMethod) {
+        doc.text(`Metode Terpopuler:`, 20, startY);
+        const methodName = PAYMENT_METHOD_NAMES[mostUsedMethod.method] || mostUsedMethod.method;
+        doc.text(`${methodName} (${mostUsedMethod.count} transaksi)`, 80, startY);
+      }
+
+      // Table
+      startY += 10;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Detail Metode Pembayaran', 20, startY);
+      doc.setFont('helvetica', 'normal');
+
+      startY += 8;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Metode', 20, startY);
+      doc.text('Transaksi', 90, startY, { align: 'right' });
+      doc.text('%', 110, startY, { align: 'right' });
+      doc.text('Total Nilai', 145, startY, { align: 'right' });
+      doc.text('Rata-rata', 180, startY, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+
+      startY += 2;
+      doc.line(20, startY, 190, startY);
+
+      startY += 6;
+
+      reportData.methods.forEach((method) => {
+        if (startY > 270) {
+          doc.addPage();
+          startY = 20;
+        }
+
+        const methodName = (PAYMENT_METHOD_NAMES[method.method] || method.method).substring(0, 30);
+
+        doc.text(methodName, 20, startY);
+        doc.text(`${method.count}`, 90, startY, { align: 'right' });
+        doc.text(`${method.percentage.toFixed(1)}%`, 110, startY, { align: 'right' });
+        doc.text(formatCurrencyFull(method.totalAmount).substring(0, 18), 145, startY, { align: 'right' });
+        doc.text(formatCurrencyFull(method.averageAmount).substring(0, 18), 180, startY, { align: 'right' });
+
+        startY += 6;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          'Laporan ini dibuat secara otomatis oleh sistem',
+          105,
+          285,
+          { align: 'center' }
+        );
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Halaman ${i} dari ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      const fileName = `Laporan-Metode-Pembayaran-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      toast.success('PDF Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Gagal mengekspor PDF', {
+        description: 'Terjadi kesalahan saat membuat file PDF',
+      });
+    }
+  };
+
+  // Export to Excel
+  const exportToExcel = async () => {
+    if (!reportData?.methods || reportData.methods.length === 0) {
+      toast.error('Tidak ada data untuk diekspor', {
+        description: 'Tidak ada data metode pembayaran yang tersedia untuk diekspor',
+      });
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      // Sheet 1: Payment Methods Data
+      const dataForExcel = reportData.methods.map((method, index: number) => ({
+        '#': index + 1,
+        'Metode Pembayaran': PAYMENT_METHOD_NAMES[method.method] || method.method,
+        'Kode': method.method,
+        'Jumlah Transaksi': method.count,
+        'Persentase': `${method.percentage.toFixed(1)}%`,
+        'Persentase Angka': method.percentage,
+        'Total Nilai': method.totalAmount,
+        'Total Nilai Format': formatCurrencyFull(method.totalAmount),
+        'Rata-rata': method.averageAmount,
+        'Rata-rata Format': formatCurrencyFull(method.averageAmount),
+      }));
+
+      const ws1 = XLSX.utils.json_to_sheet(dataForExcel);
+      ws1['!cols'] = [
+        { wch: 5 },  // #
+        { wch: 30 }, // Metode Pembayaran
+        { wch: 20 }, // Kode
+        { wch: 18 }, // Jumlah Transaksi
+        { wch: 12 }, // Persentase
+        { wch: 15 }, // Persentase Angka
+        { wch: 15 }, // Total Nilai
+        { wch: 20 }, // Total Nilai Format
+        { wch: 15 }, // Rata-rata
+        { wch: 20 }, // Rata-rata Format
+      ];
+
+      // Sheet 2: Ringkasan
+      const summaryData = [
+        { 'Keterangan': 'Tanggal Ekspor', 'Nilai': new Date().toLocaleDateString('id-ID') },
+        { 'Keterangan': 'Periode', 'Nilai': reportData.dateRange 
+          ? `${new Date(reportData.dateRange.start).toLocaleDateString('id-ID')} - ${new Date(reportData.dateRange.end).toLocaleDateString('id-ID')}`
+          : 'Semua waktu'
+        },
+        { 'Keterangan': '', 'Nilai': '' },
+        { 'Keterangan': 'Total Metode Pembayaran', 'Nilai': reportData.methods.length },
+        { 'Keterangan': 'Total Transaksi', 'Nilai': reportData.totalTransactions },
+        { 'Keterangan': 'Total Nilai Transaksi', 'Nilai': formatCurrencyFull(reportData.totalAmount) },
+        { 'Keterangan': '', 'Nilai': '' },
+      ];
+
+      // Add most used method
+      if (mostUsedMethod) {
+        const methodName = PAYMENT_METHOD_NAMES[mostUsedMethod.method] || mostUsedMethod.method;
+        summaryData.push(
+          { 'Keterangan': 'Metode Terpopuler', 'Nilai': methodName },
+          { 'Keterangan': 'Jumlah Transaksi Terpopuler', 'Nilai': mostUsedMethod.count },
+          { 'Keterangan': 'Persentase Terpopuler', 'Nilai': `${mostUsedMethod.percentage.toFixed(1)}%` },
+          { 'Keterangan': 'Total Nilai Terpopuler', 'Nilai': formatCurrencyFull(mostUsedMethod.totalAmount) }
+        );
+      }
+
+      // Add top 3 methods
+      summaryData.push({ 'Keterangan': '', 'Nilai': '' });
+      summaryData.push({ 'Keterangan': 'Top 3 Metode Pembayaran', 'Nilai': '' });
+      reportData.methods.slice(0, 3).forEach((method, index) => {
+        const methodName = PAYMENT_METHOD_NAMES[method.method] || method.method;
+        summaryData.push({
+          'Keterangan': `${index + 1}. ${methodName}`,
+          'Nilai': `${method.count} transaksi (${method.percentage.toFixed(1)}%)`
+        });
+      });
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [{ wch: 35 }, { wch: 40 }];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Metode Pembayaran');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+      const fileName = `Laporan-Metode-Pembayaran-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Gagal mengekspor Excel', {
+        description: 'Terjadi kesalahan saat membuat file Excel',
+      });
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -191,13 +402,13 @@ export default function PaymentMethodReport() {
               Reset Filter
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
-            PDF
+            Export PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport('excel')}>
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
             <Download className="h-4 w-4 mr-2" />
-            Excel
+            Export Excel
           </Button>
         </div>
       </div>

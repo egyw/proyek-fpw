@@ -96,11 +96,177 @@ export default function PeriodicSalesReport() {
     return null;
   };
 
-  // Handle export (ready for backend implementation)
-  const handleExport = (type: 'pdf' | 'excel') => {
-    toast.info(`Export ${type.toUpperCase()}`, {
-      description: `Fitur export ${type.toUpperCase()} akan segera tersedia`,
-    });
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!reportData || !reportData.chartData || reportData.chartData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text('Laporan Penjualan Periodik', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.text('Toko Pelita Bangunan', 105, 30, { align: 'center' });
+      doc.text('Jl. Raya Bangunan No. 123, Makassar', 105, 35, { align: 'center' });
+      
+      // Period and date
+      doc.setFontSize(9);
+      doc.text(`Periode: ${reportData.periodLabel || '-'}`, 105, 45, { align: 'center' });
+      doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}`, 105, 50, { align: 'center' });
+
+      // Summary Stats
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ringkasan Penjualan', 20, 62);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Pendapatan: ${formatCurrencyFull(reportData.totalRevenue || 0)}`, 20, 70);
+      doc.text(`Total Pesanan: ${reportData.totalOrders || 0}`, 20, 76);
+      doc.text(`Produk Terjual: ${reportData.totalProductsSold || 0} unit`, 20, 82);
+
+      // Table Header
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data Penjualan per Periode', 20, 95);
+
+      // Table
+      let startY = 105;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Periode', 20, startY);
+      doc.text('Pendapatan', 90, startY);
+      doc.text('Pesanan', 150, startY);
+
+      // Draw header line
+      doc.line(20, startY + 2, 190, startY + 2);
+
+      // Table rows
+      startY += 8;
+      doc.setFont('helvetica', 'normal');
+      
+      reportData.chartData.forEach((item: { period: string; revenue: number; orders: number }) => {
+        if (startY > 270) {
+          doc.addPage();
+          startY = 20;
+        }
+
+        const period = String(item.period || '-');
+        const revenue = formatCurrencyFull(item.revenue || 0);
+        const orders = String(item.orders || 0);
+
+        doc.text(period, 20, startY);
+        doc.text(revenue, 90, startY);
+        doc.text(orders, 150, startY);
+
+        startY += 6;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          'Laporan ini dibuat secara otomatis oleh sistem',
+          105,
+          285,
+          { align: 'center' }
+        );
+        doc.text(`Halaman ${i} dari ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      // Save PDF
+      const fileName = `Laporan-Penjualan-Periodik-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      toast.success('PDF Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Gagal mengekspor PDF', {
+        description: 'Terjadi kesalahan saat membuat file PDF',
+      });
+    }
+  };
+
+  // Export to Excel
+  const exportToExcel = async () => {
+    if (!reportData || !reportData.chartData || reportData.chartData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+
+      // Sheet 1: Sales Data
+      const salesData = reportData.chartData.map((item: { period: string; revenue: number; orders: number }, index: number) => ({
+        '#': index + 1,
+        'Periode': item.period || '-',
+        'Pendapatan': item.revenue || 0,
+        'Pendapatan (Format)': formatCurrencyFull(item.revenue || 0),
+        'Jumlah Pesanan': item.orders || 0,
+      }));
+
+      const ws1 = XLSX.utils.json_to_sheet(salesData);
+      ws1['!cols'] = [
+        { wch: 5 },  // #
+        { wch: 20 }, // Periode
+        { wch: 15 }, // Pendapatan
+        { wch: 20 }, // Pendapatan (Format)
+        { wch: 15 }, // Jumlah Pesanan
+      ];
+
+      // Sheet 2: Summary
+      const summaryData = [
+        { 'Metrik': 'Total Pendapatan', 'Nilai': formatCurrencyFull(reportData.totalRevenue || 0) },
+        { 'Metrik': 'Total Pesanan', 'Nilai': reportData.totalOrders || 0 },
+        { 'Metrik': 'Produk Terjual', 'Nilai': `${reportData.totalProductsSold || 0} unit` },
+        { 'Metrik': 'Periode Laporan', 'Nilai': reportData.periodLabel || '-' },
+        { 'Metrik': 'Tanggal Export', 'Nilai': new Date().toLocaleDateString('id-ID', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }) },
+      ];
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [
+        { wch: 20 }, // Metrik
+        { wch: 30 }, // Nilai
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Data Penjualan');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+
+      // Save Excel
+      const fileName = `Laporan-Penjualan-Periodik-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel Berhasil Diunduh!', {
+        description: `File ${fileName} telah berhasil diunduh`,
+      });
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Gagal mengekspor Excel', {
+        description: 'Terjadi kesalahan saat membuat file Excel',
+      });
+    }
   };
 
   // Loading state
@@ -178,13 +344,13 @@ export default function PeriodicSalesReport() {
 
         {/* Export Buttons */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+          <Button variant="outline" size="sm" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
-            PDF
+            Export PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport('excel')}>
+          <Button variant="outline" size="sm" onClick={exportToExcel}>
             <Download className="h-4 w-4 mr-2" />
-            Excel
+            Export Excel
           </Button>
         </div>
       </div>
