@@ -5,7 +5,7 @@ import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
 import Product from '@/models/Product';
 import StockMovement from '@/models/StockMovement';
-import { createSnapToken } from '@/lib/midtrans';
+import { createSnapToken, getTransactionStatus } from '@/lib/midtrans';
 
 // Generate unique order ID
 function generateOrderId(): string {
@@ -431,9 +431,20 @@ export const ordersRouter = router({
         order.paymentStatus = 'paid';
         order.orderStatus = 'processing';
         order.paidAt = new Date();
+        
+        // Fetch payment_type from Midtrans API
+        try {
+          const midtransResponse = await getTransactionStatus(order.orderId);
+          
+          if (midtransResponse.payment_type) {
+            order.paymentType = midtransResponse.payment_type;
+          }
+        } catch (error) {
+          console.error('[simulatePaymentSuccess] Failed to fetch payment_type:', error);
+          // Continue anyway - payment status update is more important
+        }
+        
         await order.save();
-
-        console.log(`[simulatePaymentSuccess] Order ${input.orderId} marked as paid`);
 
         return { success: true, order };
       } catch (error) {

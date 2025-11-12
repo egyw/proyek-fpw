@@ -1,9 +1,9 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
-import SalesReportContent from "@/components/reports/SalesReportContent";
+import PeriodicSalesReport from "@/components/reports/PeriodicSalesReport";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-export default function SalesReportPage() {
+export default function PeriodicSalesReportPage() {
   return (
     <AdminLayout>
       {/* Breadcrumb */}
@@ -17,8 +17,8 @@ export default function SalesReportPage() {
         </Link>
       </div>
 
-      {/* Sales Report Content Component */}
-      <SalesReportContent />
+      {/* Periodic Sales Report Component */}
+      <PeriodicSalesReport />
     </AdminLayout>
   );
 }

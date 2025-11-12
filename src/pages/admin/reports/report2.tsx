@@ -1,9 +1,9 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
-import PlaceholderReport from "@/components/reports/PlaceholderReport";
+import CategorySalesReport from "@/components/reports/CategorySalesReport";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-export default function Report2Page() {
+export default function CategorySalesReportPage() {
   return (
     <AdminLayout>
       {/* Breadcrumb */}
@@ -17,11 +17,8 @@ export default function Report2Page() {
         </Link>
       </div>
 
-      {/* Report 2 Content */}
-      <PlaceholderReport
-        title="Laporan 2"
-        description="Konten laporan 2 sedang dalam pengembangan"
-      />
+      {/* Category Sales Report Component */}
+      <CategorySalesReport />
     </AdminLayout>
   );
 }

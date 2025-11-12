@@ -1,9 +1,9 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
-import PlaceholderReport from "@/components/reports/PlaceholderReport";
+import PaymentMethodReport from "@/components/reports/PaymentMethodReport";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-export default function Report3Page() {
+export default function PaymentMethodReportPage() {
   return (
     <AdminLayout>
       {/* Breadcrumb */}
@@ -17,11 +17,8 @@ export default function Report3Page() {
         </Link>
       </div>
 
-      {/* Report 3 Content */}
-      <PlaceholderReport
-        title="Laporan 3"
-        description="Konten laporan 3 sedang dalam pengembangan"
-      />
+      {/* Payment Method Report Component */}
+      <PaymentMethodReport />
     </AdminLayout>
   );
 }

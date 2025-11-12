@@ -87,6 +87,7 @@ interface Order {
   orderStatus: "pending" | "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
   paymentStatus: string;
   paymentMethod: string;
+  paymentType?: string; // ✅ NEW - Specific payment type from Midtrans
   shippingInfo?: {
     courier: string;
     courierName: string;
@@ -598,7 +599,30 @@ export default function AdminOrdersPage() {
                   <h3 className="font-semibold mb-3">Informasi Pembayaran</h3>
                   <p className="text-sm">
                     <span className="text-gray-600">Metode:</span>{" "}
-                    <span className="font-medium">{selectedOrder.paymentMethod}</span>
+                    <span className="font-medium">
+                      {selectedOrder.paymentType ? (
+                        <>
+                          {/* Display user-friendly name */}
+                          {selectedOrder.paymentType === 'credit_card' && 'Kartu Kredit'}
+                          {selectedOrder.paymentType === 'gopay' && 'GoPay'}
+                          {selectedOrder.paymentType === 'shopeepay' && 'ShopeePay'}
+                          {selectedOrder.paymentType === 'qris' && 'QRIS'}
+                          {selectedOrder.paymentType === 'bca_va' && 'BCA Virtual Account'}
+                          {selectedOrder.paymentType === 'bni_va' && 'BNI Virtual Account'}
+                          {selectedOrder.paymentType === 'bri_va' && 'BRI Virtual Account'}
+                          {selectedOrder.paymentType === 'bank_transfer' && 'Transfer Bank'}
+                          {selectedOrder.paymentType === 'echannel' && 'Mandiri Virtual Account'}
+                          {selectedOrder.paymentType === 'permata_va' && 'Permata Virtual Account'}
+                          {selectedOrder.paymentType === 'alfamart' && 'Alfamart'}
+                          {selectedOrder.paymentType === 'indomaret' && 'Indomaret'}
+                          {!['credit_card', 'gopay', 'shopeepay', 'qris', 'bca_va', 'bni_va', 'bri_va', 'bank_transfer', 'echannel', 'permata_va', 'alfamart', 'indomaret'].includes(selectedOrder.paymentType) && selectedOrder.paymentType}
+                          {' '}
+                          <span className="text-gray-500 text-xs">(via Midtrans)</span>
+                        </>
+                      ) : (
+                        selectedOrder.paymentMethod === 'midtrans' ? 'Midtrans' : selectedOrder.paymentMethod
+                      )}
+                    </span>
                   </p>
                 </div>
 

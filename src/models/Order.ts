@@ -35,6 +35,7 @@ export interface IOrder extends Document {
   
   // Payment (auto-update via Midtrans webhook)
   paymentMethod: string; // "midtrans", "cod", etc.
+  paymentType?: string; // Specific payment type from Midtrans (e.g., "gopay", "bank_transfer", "qris", "echannel", "credit_card", "alfamart", "shopeepay")
   paymentStatus: 'pending' | 'paid' | 'failed' | 'expired' | 'cancelled';
   paymentExpiredAt?: Date; // Payment deadline (30 minutes from order creation)
   paidAt?: Date;
@@ -99,6 +100,7 @@ const OrderSchema = new Schema<IOrder>(
     total: { type: Number, required: true },
     
     paymentMethod: { type: String, required: true },
+    paymentType: { type: String }, // Specific payment type from Midtrans
     paymentStatus: { 
       type: String, 
       enum: ['pending', 'paid', 'failed', 'expired', 'cancelled'],

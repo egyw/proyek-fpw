@@ -105,17 +105,13 @@ export default function OrderDetailPage() {
     ) {
       setHasAutoOpened(true);
 
-      console.log('[AUTO_PAY] Triggering auto-payment...');
-      console.log('[AUTO_PAY] Order:', order.orderId);
-      console.log('[AUTO_PAY] Snap Token:', order.snapToken);
-
       // Wait for Midtrans script to load with retry mechanism
       const tryOpenPayment = (retries = 0) => {
         if (window.snap && order.snapToken) {
-          console.log('[AUTO_PAY] Midtrans script loaded, opening popup...');
           window.snap.pay(order.snapToken, {
-            onSuccess: async () => {
-              console.log('[AUTO_PAY] Payment success');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onSuccess: async (result: any) => {
+              console.log('[AUTO_PAY] Payment success:', result);
               
               try {
                 // ⭐ Update payment status in backend (for Sandbox)
@@ -141,13 +137,15 @@ export default function OrderDetailPage() {
                 });
               }
             },
-            onPending: () => {
-              console.log('[AUTO_PAY] Payment pending');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onPending: (result: any) => {
+              console.log('[AUTO_PAY] Payment pending:', result);
               // No toast notification for pending - user chose async payment method
               router.replace(`/orders/${orderId}`, undefined, { shallow: true });
             },
-            onError: () => {
-              console.log('[AUTO_PAY] Payment error');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onError: (result: any) => {
+              console.log('[AUTO_PAY] Payment error:', result);
               toast.error('Pembayaran Gagal', {
                 description: 'Terjadi kesalahan saat memproses pembayaran.',
               });

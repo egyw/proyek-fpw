@@ -1,20 +1,12 @@
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SalesReportContent from "@/components/reports/SalesReportContent";
+import PeriodicSalesReport from "@/components/reports/PeriodicSalesReport";
+import CategorySalesReport from "@/components/reports/CategorySalesReport";
+import PaymentMethodReport from "@/components/reports/PaymentMethodReport";
 import PlaceholderReport from "@/components/reports/PlaceholderReport";
 
 export default function ReportsPage() {
   const placeholderReports = [
-    {
-      value: "report2",
-      title: "Laporan 2",
-      description: "Konten laporan 2 sedang dalam pengembangan",
-    },
-    {
-      value: "report3",
-      title: "Laporan 3",
-      description: "Konten laporan 3 sedang dalam pengembangan",
-    },
     {
       value: "report4",
       title: "Laporan 4",
@@ -63,16 +55,16 @@ export default function ReportsPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs defaultValue="sales" className="space-y-6">
+      <Tabs defaultValue="periodic" className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-2 bg-gray-100 p-2 rounded-lg">
-          <TabsTrigger value="sales" className="data-[state=active]:bg-white">
-            Laporan Penjualan
+          <TabsTrigger value="periodic" className="data-[state=active]:bg-white">
+            Penjualan Periodik
           </TabsTrigger>
-          <TabsTrigger value="report2" className="data-[state=active]:bg-white">
-            Laporan 2
+          <TabsTrigger value="category" className="data-[state=active]:bg-white">
+            Per Kategori
           </TabsTrigger>
-          <TabsTrigger value="report3" className="data-[state=active]:bg-white">
-            Laporan 3
+          <TabsTrigger value="payment" className="data-[state=active]:bg-white">
+            Metode Pembayaran
           </TabsTrigger>
           <TabsTrigger value="report4" className="data-[state=active]:bg-white">
             Laporan 4
@@ -97,9 +89,19 @@ export default function ReportsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Sales Report Content */}
-        <TabsContent value="sales">
-          <SalesReportContent />
+        {/* Report 1: Periodic Sales */}
+        <TabsContent value="periodic">
+          <PeriodicSalesReport />
+        </TabsContent>
+
+        {/* Report 2: Category Sales */}
+        <TabsContent value="category">
+          <CategorySalesReport />
+        </TabsContent>
+
+        {/* Report 3: Payment Methods */}
+        <TabsContent value="payment">
+          <PaymentMethodReport />
         </TabsContent>
 
         {/* Placeholder Reports */}

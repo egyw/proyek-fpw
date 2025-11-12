@@ -25,6 +25,7 @@ export default async function handler(
       orderId: notification.order_id,
       transactionStatus: notification.transaction_status,
       fraudStatus: notification.fraud_status,
+      paymentType: notification.payment_type,
     });
 
     // Extract notification data
@@ -35,6 +36,7 @@ export default async function handler(
       status_code: statusCode,
       gross_amount: grossAmount,
       signature_key: signatureKey,
+      payment_type: paymentType, // e.g., "gopay", "bank_transfer", "qris", "echannel", "credit_card"
     } = notification;
 
     // Verify signature to ensure this is really from Midtrans
@@ -70,6 +72,11 @@ export default async function handler(
     // Update order
     order.paymentStatus = paymentStatus;
     order.orderStatus = orderStatus;
+    
+    // Save payment type from Midtrans
+    if (paymentType) {
+      order.paymentType = paymentType;
+    }
 
     // If payment successful, set paidAt timestamp
     if (paymentStatus === 'paid' && !order.paidAt) {
@@ -82,6 +89,7 @@ export default async function handler(
       orderId,
       paymentStatus,
       orderStatus,
+      paymentType,
     });
 
     // Send success response to Midtrans
