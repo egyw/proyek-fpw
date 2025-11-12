@@ -3,24 +3,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PeriodicSalesReport from "@/components/reports/PeriodicSalesReport";
 import CategorySalesReport from "@/components/reports/CategorySalesReport";
 import PaymentMethodReport from "@/components/reports/PaymentMethodReport";
+import BestSellerReportContent from "@/components/reports/BestSellerReportContent";
+import LowStockReportContent from "@/components/reports/LowStockReportContent";
+import SlowMovingReportContent from "@/components/reports/SlowMovingReportContent";
 import PlaceholderReport from "@/components/reports/PlaceholderReport";
 
 export default function ReportsPage() {
   const placeholderReports = [
     {
-      value: "report4",
-      title: "Laporan 4",
-      description: "Konten laporan 4 sedang dalam pengembangan",
+      value: "report7",
+      title: "Laporan 7",
+      description: "Konten laporan 7 sedang dalam pengembangan",
     },
     {
-      value: "report5",
-      title: "Laporan 5",
-      description: "Konten laporan 5 sedang dalam pengembangan",
+      value: "report8",
+      title: "Laporan 8",
+      description: "Konten laporan 8 sedang dalam pengembangan",
     },
     {
-      value: "report6",
-      title: "Laporan 6",
-      description: "Konten laporan 6 sedang dalam pengembangan",
+      value: "report9",
+      title: "Laporan 9",
+      description: "Konten laporan 9 sedang dalam pengembangan",
     },
     {
       value: "report7",
@@ -66,14 +69,14 @@ export default function ReportsPage() {
           <TabsTrigger value="payment" className="data-[state=active]:bg-white">
             Metode Pembayaran
           </TabsTrigger>
-          <TabsTrigger value="report4" className="data-[state=active]:bg-white">
-            Laporan 4
+          <TabsTrigger value="best-seller" className="data-[state=active]:bg-white">
+            Produk Terlaris
           </TabsTrigger>
-          <TabsTrigger value="report5" className="data-[state=active]:bg-white">
-            Laporan 5
+          <TabsTrigger value="low-stock" className="data-[state=active]:bg-white">
+            Stok Rendah
           </TabsTrigger>
-          <TabsTrigger value="report6" className="data-[state=active]:bg-white">
-            Laporan 6
+          <TabsTrigger value="slow-moving" className="data-[state=active]:bg-white">
+            Stok Kurang Laku
           </TabsTrigger>
           <TabsTrigger value="report7" className="data-[state=active]:bg-white">
             Laporan 7
@@ -102,6 +105,21 @@ export default function ReportsPage() {
         {/* Report 3: Payment Methods */}
         <TabsContent value="payment">
           <PaymentMethodReport />
+        </TabsContent>
+
+        {/* Report 4: Best Seller */}
+        <TabsContent value="best-seller">
+          <BestSellerReportContent />
+        </TabsContent>
+
+        {/* Report 5: Low Stock */}
+        <TabsContent value="low-stock">
+          <LowStockReportContent />
+        </TabsContent>
+
+        {/* Report 6: Slow-Moving */}
+        <TabsContent value="slow-moving">
+          <SlowMovingReportContent />
         </TabsContent>
 
         {/* Placeholder Reports */}

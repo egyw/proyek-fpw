@@ -310,25 +310,6 @@ export default function StockMovementsPage() {
           </TableBody>
         </Table>
       </Card>
-
-      {/* Info */}
-      <Card className="p-4 mt-6 bg-blue-50 border-blue-200">
-        <div className="flex items-start gap-3">
-          <Package className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">📋 Stock movements tercatat otomatis</p>
-            <p className="mb-2">
-              Data pergerakan stok direkam secara otomatis dari berbagai aktivitas:
-            </p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li><strong>Penjualan:</strong> Stock OUT saat pesanan diproses</li>
-              <li><strong>Pembatalan Pesanan:</strong> Stock IN saat pesanan dibatalkan</li>
-              <li><strong>Penyesuaian Manual:</strong> Admin menambah/mengurangi stok produk</li>
-              <li><strong>Stok Awal:</strong> Produk baru ditambahkan dengan stok awal</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
     </AdminLayout>
   );
 }
