@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Package, Truck, CheckCircle, XCircle, Star, Clock } from "lucide-react";
+import { Package, Truck, CheckCircle, XCircle, Star, Clock, CheckCircle2, RotateCcw } from "lucide-react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
@@ -62,7 +62,8 @@ interface Order {
   total: number;
   paymentMethod: string;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'expired';
-  orderStatus: 'awaiting_payment' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+  orderStatus: 'awaiting_payment' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'returned';
+  returnStatus?: 'none' | 'requested' | 'approved' | 'rejected' | 'completed';
   shippingDetails?: {
     courierCode: string;
     courierName: string;
@@ -88,19 +89,85 @@ export default function OrdersPage() {
   // Protect page - require authentication
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
 
+  // Get tRPC context for cache invalidation
+  const utils = trpc.useContext();
+
   // Get user's orders from database
   const { data: ordersData, isLoading: ordersLoading } = trpc.orders.getUserOrders.useQuery(
     undefined,
     { enabled: isAuthenticated }
   );
+  
+  // All hooks MUST be declared before any conditional returns
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
-  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
+  const [orderForRating, setOrderForRating] = useState<Order | null>(null);
   const [reviewText, setReviewText] = useState("");
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [returnReason, setReturnReason] = useState("");
+  const [returnCondition, setReturnCondition] = useState<string>("");
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [orderToConfirm, setOrderToConfirm] = useState<Order | null>(null);
+
+  // tRPC mutation for submitting rating (MUST be before early returns)
+  const submitRatingMutation = trpc.orders.submitRating.useMutation({
+    onSuccess: () => {
+      toast.success("Rating Berhasil Dikirim!", {
+        description: "Terima kasih atas rating Anda",
+      });
+      setOrderForRating(null);
+      setSelectedRating(0);
+      setReviewText("");
+      // Invalidate queries to force refetch fresh data
+      utils.orders.getUserOrders.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Gagal Mengirim Rating", {
+        description: error.message,
+      });
+    },
+  });
+
+  // tRPC mutation for confirming order received
+  const confirmOrderMutation = trpc.orders.confirmOrderReceived.useMutation({
+    onSuccess: () => {
+      toast.success("Pesanan Dikonfirmasi!", {
+        description: "Terima kasih telah berbelanja",
+      });
+      setConfirmDialogOpen(false);
+      setOrderToConfirm(null);
+      // Invalidate queries to force refetch fresh data
+      utils.orders.getUserOrders.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Gagal Konfirmasi Pesanan", {
+        description: error.message,
+      });
+    },
+  });
+
+  // tRPC mutation for creating return request
+  const createReturnMutation = trpc.returns.createReturnRequest.useMutation({
+    onSuccess: (data) => {
+      toast.success("Return Request Berhasil!", {
+        description: `Nomor return: ${data.returnNumber}`,
+      });
+      
+      setReturnDialogOpen(false);
+      setSelectedOrder(null);
+      setReturnReason("");
+      setReturnCondition("");
+      // Invalidate queries to force refetch fresh data
+      utils.orders.getUserOrders.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Gagal Ajukan Return", {
+        description: error.message,
+      });
+    },
+  });
 
   const toggleExpandOrder = (orderId: string) => {
     setExpandedOrders((prev) => {
@@ -192,6 +259,11 @@ export default function OrdersPage() {
         className: "bg-red-100 text-red-800",
         icon: <XCircle className="h-3 w-3 mr-1" />,
       },
+      returned: {
+        label: "Dikembalikan",
+        className: "bg-orange-100 text-orange-800",
+        icon: <RotateCcw className="h-3 w-3 mr-1" />,
+      },
     };
 
     const variant = variants[status] || variants.awaiting_payment;
@@ -219,34 +291,49 @@ export default function OrdersPage() {
     });
   };
 
-  const handleReturnRequest = (order: Order) => {
-    // TODO: Implement with tRPC
-    // Expected: trpc.orders.requestReturn.useMutation()
-    toast.info("Fitur pengembalian barang segera hadir");
-    console.log("Return request for order:", order.orderId);
-    console.log("Return reason:", returnReason);
-    setReturnDialogOpen(false);
-    setReturnReason("");
+  const handleReturnRequest = () => {
+    if (!selectedOrder) return;
+
+    // Validate condition
+    if (!returnCondition) {
+      toast.error("Pilih Kondisi", {
+        description: "Pilih kondisi produk yang dikembalikan",
+      });
+      return;
+    }
+
+    // Validate reason
+    if (returnReason.trim().length < 10) {
+      toast.error("Alasan Terlalu Pendek", {
+        description: "Alasan pengembalian minimal 10 karakter",
+      });
+      return;
+    }
+
+    // Create return request with ALL items (no selection needed)
+    createReturnMutation.mutate({
+      orderId: selectedOrder.orderId,
+      items: selectedOrder.items.map((item) => ({
+        productId: item.productId,
+        productName: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        reason: returnReason,
+        condition: returnCondition as "damaged" | "defective" | "wrong_item" | "not_as_described" | "other",
+      })),
+      reason: returnReason,
+    });
   };
 
-  // tRPC mutation for submitting rating
-  const submitRatingMutation = trpc.orders.submitRating.useMutation({
-    onSuccess: () => {
-      toast.success("Rating Berhasil Dikirim!", {
-        description: "Terima kasih atas rating Anda",
+  const handleConfirmOrder = () => {
+    if (orderToConfirm) {
+      confirmOrderMutation.mutate({
+        orderId: orderToConfirm.orderId,
       });
-      setRatingDialogOpen(false);
-      setSelectedRating(0);
-      setReviewText("");
-      // Refetch orders to update UI
-      ordersData && window.location.reload();
-    },
-    onError: (error) => {
-      toast.error("Gagal Mengirim Rating", {
-        description: error.message,
-      });
-    },
-  });
+      setConfirmDialogOpen(false);
+      setOrderToConfirm(null);
+    }
+  };
 
   const handleSubmitRating = (order: Order) => {
     if (selectedRating === 0) {
@@ -255,6 +342,13 @@ export default function OrdersPage() {
       });
       return;
     }
+
+    console.log('[handleSubmitRating] Submitting rating for:', {
+      orderId: order.orderId,
+      orderStatus: order.orderStatus,
+      hasRating: !!order.rating,
+      score: selectedRating,
+    });
 
     submitRatingMutation.mutate({
       orderId: order.orderId,
@@ -324,11 +418,34 @@ export default function OrdersPage() {
                   {/* Order Header */}
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="text-lg font-semibold text-gray-900">
                           {order.orderId}
                         </h3>
                         {getStatusBadge(order.orderStatus)}
+                        {/* Return Status Badge */}
+                        {order.returnStatus && order.returnStatus !== "none" && (
+                          <Badge
+                            className={
+                              order.returnStatus === "requested"
+                                ? "bg-orange-100 text-orange-800"
+                                : order.returnStatus === "approved"
+                                ? "bg-blue-100 text-blue-800"
+                                : order.returnStatus === "rejected"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-green-100 text-green-800"
+                            }
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            {order.returnStatus === "requested"
+                              ? "Pengembalian Diajukan"
+                              : order.returnStatus === "approved"
+                              ? "Pengembalian Disetujui"
+                              : order.returnStatus === "rejected"
+                              ? "Pengembalian Ditolak"
+                              : "Pengembalian Selesai"}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600">
                         Tanggal Pemesanan: {formatDate(order.createdAt)}
@@ -439,40 +556,33 @@ export default function OrdersPage() {
                       </Button>
                     )}
 
-                    {/* Return Button - Show for shipped/delivered status */}
-                    {(order.orderStatus === "shipped" || order.orderStatus === "delivered") && (
-                      <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
+                    {/* Confirm Order Received Button - Show for delivered status and no return request */}
+                    {order.orderStatus === "delivered" && (!order.returnStatus || order.returnStatus === "none" || order.returnStatus === "rejected") && (
+                      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
-                            variant="outline"
-                            className="flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setSelectedOrder(order)}
+                            className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => setOrderToConfirm(order)}
                           >
-                            Ajukan Pengembalian
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Konfirmasi Pesanan Diterima
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-md">
                           <DialogHeader>
-                            <DialogTitle>Ajukan Pengembalian</DialogTitle>
+                            <DialogTitle className="text-xl text-green-700">Konfirmasi Pesanan Diterima</DialogTitle>
                             <DialogDescription>
-                              Anda akan mengajukan pengembalian untuk pesanan{" "}
-                              <span className="font-semibold">{selectedOrder?.orderId}</span>
+                              Apakah Anda sudah menerima pesanan{" "}
+                              <span className="font-semibold">{orderToConfirm?.orderId}</span>?
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="return-reason">
-                                Alasan Pengembalian <span className="text-red-500">*</span>
-                              </Label>
-                              <Textarea
-                                id="return-reason"
-                                placeholder="Jelaskan alasan Anda mengajukan pengembalian barang..."
-                                value={returnReason}
-                                onChange={(e) => setReturnReason(e.target.value)}
-                                className="min-h-[120px]"
-                              />
-                              <p className="text-xs text-gray-500">
-                                Berikan penjelasan detail agar kami dapat memproses pengembalian dengan cepat.
+                          <div className="py-4">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                              <p className="text-sm text-green-800">
+                                ✓ Pesanan akan ditandai sebagai <strong>selesai</strong>
+                              </p>
+                              <p className="text-sm text-green-800 mt-2">
+                                ✓ Anda dapat memberikan rating setelah konfirmasi
                               </p>
                             </div>
                           </div>
@@ -480,17 +590,159 @@ export default function OrdersPage() {
                             <Button
                               variant="outline"
                               onClick={() => {
+                                setConfirmDialogOpen(false);
+                                setOrderToConfirm(null);
+                              }}
+                            >
+                              Batal
+                            </Button>
+                            <Button
+                              onClick={handleConfirmOrder}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Ya, Sudah Diterima
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {/* Return Button - Show for delivered status only and no existing return request */}
+                    {order.orderStatus === "delivered" && (!order.returnStatus || order.returnStatus === "none" || order.returnStatus === "rejected") && (
+                      <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setReturnCondition("");
+                              setReturnReason("");
+                            }}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Ajukan Pengembalian
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Ajukan Pengembalian</DialogTitle>
+                            <DialogDescription>
+                              Semua produk dalam pesanan{" "}
+                              <span className="font-semibold">{selectedOrder?.orderId}</span> akan dikembalikan
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-6 py-4">
+                            {/* Product List (Read-only) */}
+                            <div className="space-y-3">
+                              <Label className="text-base font-semibold">
+                                Produk yang Dikembalikan
+                              </Label>
+                              <div className="space-y-3">
+                                {selectedOrder?.items.map((item) => (
+                                  <div
+                                    key={item.productId}
+                                    className="flex items-start gap-3 border rounded-lg p-4 bg-gray-50"
+                                  >
+                                    <Image
+                                      src={item.image}
+                                      alt={item.name}
+                                      width={64}
+                                      height={64}
+                                      className="w-16 h-16 object-cover rounded-md"
+                                    />
+                                    <div className="flex-1">
+                                      <p className="font-medium text-gray-900">{item.name}</p>
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        {item.quantity} {item.unit} × {formatPrice(item.price)}
+                                      </p>
+                                      <p className="text-sm font-semibold text-gray-900 mt-1">
+                                        Total: {formatPrice(item.quantity * item.price)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Condition Select */}
+                            <div className="space-y-2">
+                              <Label htmlFor="return-condition">
+                                Kondisi Produk <span className="text-red-500">*</span>
+                              </Label>
+                              <Select value={returnCondition} onValueChange={setReturnCondition}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Pilih kondisi produk" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="damaged">Rusak/Cacat</SelectItem>
+                                  <SelectItem value="defective">Tidak Berfungsi</SelectItem>
+                                  <SelectItem value="wrong_item">Salah Kirim</SelectItem>
+                                  <SelectItem value="not_as_described">
+                                    Tidak Sesuai Deskripsi
+                                  </SelectItem>
+                                  <SelectItem value="other">Lainnya</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Reason */}
+                            <div className="space-y-2">
+                              <Label htmlFor="return-reason">
+                                Alasan Pengembalian <span className="text-red-500">*</span>
+                              </Label>
+                              <Textarea
+                                id="return-reason"
+                                placeholder="Jelaskan detail alasan pengembalian... (minimal 10 karakter)"
+                                value={returnReason}
+                                onChange={(e) => setReturnReason(e.target.value)}
+                                className="min-h-[120px] resize-none"
+                              />
+                            </div>
+
+                            {/* Info Box */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <p className="text-sm text-blue-800">
+                                <strong>ℹ️ Kebijakan Pengembalian:</strong>
+                              </p>
+                              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
+                                <li>Pengajuan return maksimal 7 hari setelah pesanan diterima</li>
+                                <li>Produk harus dalam kondisi lengkap dengan kemasan asli</li>
+                                <li>Proses return membutuhkan waktu 3-7 hari kerja</li>
+                              </ul>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
                                 setReturnDialogOpen(false);
+                                setReturnCondition("");
                                 setReturnReason("");
                               }}
                             >
                               Batal
                             </Button>
                             <Button
-                              onClick={() => selectedOrder && handleReturnRequest(selectedOrder)}
-                              disabled={!returnReason.trim()}
+                              onClick={handleReturnRequest}
+                              disabled={
+                                createReturnMutation.isPending ||
+                                !returnCondition ||
+                                returnReason.trim().length < 10
+                              }
                             >
-                              Kirim Pengajuan
+                              {createReturnMutation.isPending ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Memproses...
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Kirim Pengajuan
+                                </>
+                              )}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -520,90 +772,17 @@ export default function OrdersPage() {
 
                     {/* Rating Button - Show for completed orders without rating */}
                     {order.orderStatus === "completed" && !order.rating && (
-                      <Dialog open={ratingDialogOpen} onOpenChange={setRatingDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            className="flex-1 sm:flex-none"
-                            onClick={() => setSelectedOrder(order)}
-                          >
-                            <Star className="h-4 w-4 mr-2" />
-                            Beri Rating
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Beri Rating & Ulasan</DialogTitle>
-                            <DialogDescription>
-                              Bagaimana pengalaman Anda dengan pesanan ini?
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-6 py-4">
-                            {/* Star Rating */}
-                            <div className="flex flex-col items-center gap-4">
-                              <p className="text-sm font-medium text-gray-700">Pilih Rating</p>
-                              <div className="flex gap-2">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Button
-                                    key={star}
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setSelectedRating(star)}
-                                    className="transition-transform hover:scale-110 hover:bg-transparent"
-                                  >
-                                    <Star
-                                      className={`h-8 w-8 ${
-                                        star <= selectedRating
-                                          ? "fill-yellow-400 text-yellow-400"
-                                          : "text-gray-300"
-                                      }`}
-                                    />
-                                  </Button>
-                                ))}
-                              </div>
-                              {selectedRating > 0 && (
-                                <p className="text-sm text-gray-600">
-                                  Anda memberi rating: <span className="font-semibold">{selectedRating} bintang</span>
-                                </p>
-                              )}
-                            </div>
-                            
-                            {/* Review Text */}
-                            <div className="space-y-2">
-                              <Label htmlFor="review-text">
-                                Ulasan (Opsional)
-                              </Label>
-                              <Textarea
-                                id="review-text"
-                                placeholder="Tulis ulasan Anda tentang produk dan layanan kami..."
-                                value={reviewText}
-                                onChange={(e) => setReviewText(e.target.value)}
-                                className="min-h-[100px] resize-none"
-                              />
-                              <p className="text-xs text-gray-500">
-                                Bagikan pengalaman Anda untuk membantu pembeli lain.
-                              </p>
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setRatingDialogOpen(false);
-                                setSelectedRating(0);
-                                setReviewText("");
-                              }}
-                            >
-                              Batal
-                            </Button>
-                            <Button
-                              onClick={() => selectedOrder && handleSubmitRating(selectedOrder)}
-                              disabled={selectedRating === 0 || submitRatingMutation.isPending}
-                            >
-                              {submitRatingMutation.isPending ? "Mengirim..." : "Kirim Rating"}
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        className="flex-1 sm:flex-none"
+                        onClick={() => {
+                          setOrderForRating(order);
+                          setSelectedRating(0);
+                          setReviewText("");
+                        }}
+                      >
+                        <Star className="h-4 w-4 mr-2" />
+                        Beri Rating
+                      </Button>
                     )}
                   </div>
                 </Card>
@@ -612,6 +791,83 @@ export default function OrdersPage() {
           </div>
         </div>
       </div>
+
+      {/* Rating Dialog - Single instance outside loop */}
+      <Dialog open={!!orderForRating} onOpenChange={(open) => !open && setOrderForRating(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Beri Rating & Ulasan</DialogTitle>
+            <DialogDescription>
+              Bagaimana pengalaman Anda dengan pesanan {orderForRating?.orderId}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Star Rating */}
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-sm font-medium text-gray-700">Pilih Rating</p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Button
+                    key={star}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedRating(star)}
+                    className="transition-transform hover:scale-110 hover:bg-transparent"
+                  >
+                    <Star
+                      className={`h-8 w-8 ${
+                        star <= selectedRating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  </Button>
+                ))}
+              </div>
+              {selectedRating > 0 && (
+                <p className="text-sm text-gray-600">
+                  Anda memberi rating: <span className="font-semibold">{selectedRating} bintang</span>
+                </p>
+              )}
+            </div>
+            
+            {/* Review Text */}
+            <div className="space-y-2">
+              <Label htmlFor="review-text">
+                Ulasan (Opsional)
+              </Label>
+              <Textarea
+                id="review-text"
+                placeholder="Tulis ulasan Anda tentang produk dan layanan kami..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="min-h-[100px] resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                Bagikan pengalaman Anda untuk membantu pembeli lain.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOrderForRating(null);
+                setSelectedRating(0);
+                setReviewText("");
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={() => orderForRating && handleSubmitRating(orderForRating)}
+              disabled={selectedRating === 0 || submitRatingMutation.isPending}
+            >
+              {submitRatingMutation.isPending ? "Mengirim..." : "Kirim Rating"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

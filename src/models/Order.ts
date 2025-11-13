@@ -46,7 +46,10 @@ export interface IOrder extends Document {
   transactionId?: string; // Midtrans transaction ID
   
   // Order status (manual update by admin)
-  orderStatus: 'awaiting_payment' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+  orderStatus: 'awaiting_payment' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'returned';
+  
+  // Return status (tracks return process)
+  returnStatus?: 'none' | 'requested' | 'approved' | 'rejected' | 'completed';
   
   // Shipping info (filled by admin after shipping)
   shippingInfo?: {
@@ -125,8 +128,14 @@ const OrderSchema = new Schema<IOrder>(
     
     orderStatus: {
       type: String,
-      enum: ['awaiting_payment', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'],
+      enum: ['awaiting_payment', 'processing', 'shipped', 'delivered', 'completed', 'cancelled', 'returned'],
       default: 'awaiting_payment'
+    },
+    
+    returnStatus: {
+      type: String,
+      enum: ['none', 'requested', 'approved', 'rejected', 'completed'],
+      default: 'none'
     },
     
     shippingInfo: {
@@ -156,5 +165,6 @@ const OrderSchema = new Schema<IOrder>(
 OrderSchema.index({ userId: 1, createdAt: -1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ paymentStatus: 1 });
+OrderSchema.index({ returnStatus: 1 });
 
 export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema, 'orders');

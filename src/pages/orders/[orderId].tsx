@@ -3,6 +3,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -20,6 +38,7 @@ import {
   CreditCard,
   ChevronLeft,
   Download,
+  RotateCcw,
 } from "lucide-react";
 
 // Order item interface
@@ -75,6 +94,80 @@ export default function OrderDetailPage() {
   // Extract order from data (tRPC returns { order: ... })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const order = orderData?.order as any; // TODO: Add proper Order interface type
+
+  // Return request states
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
+  const [returnReason, setReturnReason] = useState('');
+  const [returnCondition, setReturnCondition] = useState<string>('');
+
+  // Check if order has return request
+  const { data: returnCheck } = trpc.returns.checkReturnRequest.useQuery(
+    { orderId: orderId as string },
+    { enabled: !!orderId && order?.orderStatus === 'delivered' }
+  );
+
+  // Create return mutation
+  const createReturnMutation = trpc.returns.createReturnRequest.useMutation({
+    onSuccess: (data) => {
+      toast.success('Pengembalian Berhasil Diajukan!', {
+        description: `Nomor pengembalian: ${data.returnNumber}`,
+      });
+      setReturnDialogOpen(false);
+      setSelectedItems({});
+      setReturnReason('');
+      setReturnCondition('');
+      utils.orders.getOrderById.invalidate();
+      utils.returns.checkReturnRequest.invalidate();
+    },
+    onError: (error) => {
+      toast.error('Gagal Ajukan Pengembalian', {
+        description: error.message || 'Terjadi kesalahan saat mengajukan pengembalian.',
+      });
+    },
+  });
+
+  const handleSubmitReturn = () => {
+    if (!order) return;
+
+    const selectedItemsList = order.items.filter(
+      (item: OrderItem) => selectedItems[item.productId]
+    );
+
+    if (selectedItemsList.length === 0) {
+      toast.error('Pilih Produk', {
+        description: 'Pilih minimal 1 produk untuk dikembalikan.',
+      });
+      return;
+    }
+
+    if (!returnCondition) {
+      toast.error('Pilih Kondisi', {
+        description: 'Pilih kondisi produk yang dikembalikan.',
+      });
+      return;
+    }
+
+    if (!returnReason.trim() || returnReason.trim().length < 10) {
+      toast.error('Alasan Tidak Valid', {
+        description: 'Alasan pengembalian minimal 10 karakter.',
+      });
+      return;
+    }
+
+    createReturnMutation.mutate({
+      orderId: order.orderId,
+      items: selectedItemsList.map((item: OrderItem) => ({
+        productId: item.productId,
+        productName: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        reason: returnReason,
+        condition: returnCondition as 'damaged' | 'defective' | 'wrong_item' | 'not_as_described' | 'other',
+      })),
+      reason: returnReason,
+    });
+  };
 
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [remainingTime, setRemainingTime] = useState<number>(0);
@@ -258,6 +351,34 @@ export default function OrderDetailPage() {
     );
   }
 
+  // Return Status configuration (higher priority than order status)
+  const returnStatusConfig = {
+    requested: {
+      icon: RotateCcw,
+      color: 'text-orange-600 bg-orange-50 border-orange-200',
+      label: 'Pengembalian Diajukan',
+      description: 'Pengajuan pengembalian sedang diproses oleh admin',
+    },
+    approved: {
+      icon: RotateCcw,
+      color: 'text-blue-600 bg-blue-50 border-blue-200',
+      label: 'Pengembalian Disetujui',
+      description: 'Pengembalian telah disetujui, proses pengembalian sedang berlangsung',
+    },
+    rejected: {
+      icon: XCircle,
+      color: 'text-red-600 bg-red-50 border-red-200',
+      label: 'Pengembalian Ditolak',
+      description: 'Pengajuan pengembalian ditolak oleh admin',
+    },
+    completed: {
+      icon: CheckCircle2,
+      color: 'text-green-600 bg-green-50 border-green-200',
+      label: 'Pengembalian Selesai',
+      description: 'Proses pengembalian telah selesai',
+    },
+  };
+
   // Order Status configuration (shows order progress, not payment)
   const orderStatusConfig = {
     awaiting_payment: {
@@ -298,7 +419,10 @@ export default function OrderDetailPage() {
     },
   };
 
-  const currentStatus = orderStatusConfig[order.orderStatus as keyof typeof orderStatusConfig] || orderStatusConfig.awaiting_payment;
+  // ⭐ Priority: returnStatus (if active) > orderStatus
+  const currentStatus = (order.returnStatus && order.returnStatus !== 'none')
+    ? (returnStatusConfig[order.returnStatus as keyof typeof returnStatusConfig] || orderStatusConfig.awaiting_payment)
+    : (orderStatusConfig[order.orderStatus as keyof typeof orderStatusConfig] || orderStatusConfig.awaiting_payment);
   const StatusIcon = currentStatus.icon;
 
   // Format currency
@@ -716,8 +840,8 @@ export default function OrderDetailPage() {
 
 
 
-              {/* Show confirm button if delivered (not yet completed) */}
-              {order.orderStatus === 'delivered' && (
+              {/* Show confirm button if delivered and no return request */}
+              {order.orderStatus === 'delivered' && (!order.returnStatus || order.returnStatus === 'none' || order.returnStatus === 'rejected') && (
                 <Button 
                   className="w-full mb-3 bg-green-600 hover:bg-green-700" 
                   onClick={() => {
@@ -741,6 +865,20 @@ export default function OrderDetailPage() {
                 </Button>
               )}
 
+              {/* Show return button if delivered and no return request yet */}
+              {order.orderStatus === 'delivered' && (!order.returnStatus || order.returnStatus === 'none' || order.returnStatus === 'rejected') && (
+                <Button 
+                  className="w-full mb-3" 
+                  variant="destructive"
+                  onClick={() => setReturnDialogOpen(true)}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Ajukan Pengembalian
+                </Button>
+              )}
+
+              {/* Return status now shown in main Status Card at top */}
+
               <Button
                 className="w-full"
                 variant="outline"
@@ -752,6 +890,137 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Return Request Dialog */}
+      <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Ajukan Pengembalian Produk</DialogTitle>
+            <DialogDescription>
+              Pilih produk yang ingin dikembalikan dan berikan alasan pengembalian.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Product Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Pilih Produk yang Dikembalikan *</Label>
+              {order?.items.map((item: OrderItem) => (
+                <div key={item.productId} className="flex items-start gap-3 p-3 border rounded-lg">
+                  <Checkbox
+                    checked={selectedItems[item.productId] || false}
+                    onCheckedChange={(checked) => {
+                      setSelectedItems(prev => ({
+                        ...prev,
+                        [item.productId]: checked as boolean,
+                      }));
+                    }}
+                    className="mt-1"
+                  />
+                  <div className="flex gap-3 flex-1">
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden border shrink-0">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{item.name}</p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {item.quantity} {item.unit} × {formatCurrency(item.price)}
+                      </p>
+                      <p className="font-semibold text-sm mt-1">
+                        {formatCurrency(item.price * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Condition Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="return-condition">Kondisi Produk *</Label>
+              <Select value={returnCondition} onValueChange={setReturnCondition}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kondisi produk" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="damaged">Produk Rusak/Cacat</SelectItem>
+                  <SelectItem value="defective">Produk Tidak Berfungsi</SelectItem>
+                  <SelectItem value="wrong_item">Produk Salah Kirim</SelectItem>
+                  <SelectItem value="not_as_described">Tidak Sesuai Deskripsi</SelectItem>
+                  <SelectItem value="other">Alasan Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Return Reason */}
+            <div className="space-y-2">
+              <Label htmlFor="return-reason">Alasan Pengembalian *</Label>
+              <Textarea
+                id="return-reason"
+                rows={4}
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                placeholder="Jelaskan alasan pengembalian produk... (minimal 10 karakter)"
+                className="resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                {returnReason.length}/10 karakter minimum
+              </p>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-1">Kebijakan Pengembalian:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Pengajuan return maksimal 7 hari setelah pesanan diterima</li>
+                    <li>Produk harus dalam kondisi lengkap dengan kemasan asli</li>
+                    <li>Proses return membutuhkan waktu 3-7 hari kerja</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReturnDialogOpen(false);
+                setSelectedItems({});
+                setReturnReason('');
+                setReturnCondition('');
+              }}
+              disabled={createReturnMutation.isLoading}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleSubmitReturn}
+              disabled={createReturnMutation.isLoading || Object.keys(selectedItems).filter(k => selectedItems[k]).length === 0 || !returnCondition || returnReason.trim().length < 10}
+            >
+              {createReturnMutation.isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Ajukan Pengembalian
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

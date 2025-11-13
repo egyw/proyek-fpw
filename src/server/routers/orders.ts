@@ -950,8 +950,8 @@ export const ordersRouter = router({
           });
         }
 
-        // Check if already rated
-        if (order.rating) {
+        // Check if already rated (check for score, not just rating object)
+        if (order.rating && order.rating.score) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Order sudah diberi rating',

@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Ticket,
+  RotateCcw,
 } from "lucide-react";
 
 import {
@@ -100,6 +101,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: ShoppingCart,
       href: "/admin/orders",
       active: router.pathname.startsWith("/admin/orders"),
+    },
+    {
+      title: "Pengembalian",
+      icon: RotateCcw,
+      href: "/admin/returns",
+      active: router.pathname.startsWith("/admin/returns"),
     },
     {
       title: "Inventory",
