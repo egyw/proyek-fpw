@@ -868,7 +868,7 @@ export default function AdminOrdersPage() {
                 disabled={!deliveredDate || confirmDeliveredMutation.isPending}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {confirmDeliveredMutation.isLoading ? (
+                {confirmDeliveredMutation.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Memproses...
