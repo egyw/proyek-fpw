@@ -31,12 +31,11 @@ interface Address {
 
 export default function CheckoutExample() {
   const router = useRouter();
-  const { data: session } = useSession();
   const cartItems = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
 
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [shippingCost, setShippingCost] = useState(0);
+  const [selectedAddress] = useState<Address | null>(null);
+  const [shippingCost] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'midtrans' | 'cod'>('midtrans');
   const [orderCreated, setOrderCreated] = useState(false);
   const [snapToken, setSnapToken] = useState('');

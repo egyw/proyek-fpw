@@ -1,6 +1,5 @@
 import MainLayout from "@/components/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { CheckCircle, AlertCircle, FileText } from "lucide-react";
 
 export default function TermsPage() {

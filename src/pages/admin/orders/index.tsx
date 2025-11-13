@@ -865,7 +865,7 @@ export default function AdminOrdersPage() {
               </Button>
               <Button
                 onClick={confirmDelivered}
-                disabled={!deliveredDate || confirmDeliveredMutation.isLoading}
+                disabled={!deliveredDate || confirmDeliveredMutation.isPending}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {confirmDeliveredMutation.isLoading ? (

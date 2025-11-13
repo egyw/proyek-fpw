@@ -102,7 +102,7 @@ export default function OrderDetailPage() {
   const [returnCondition, setReturnCondition] = useState<string>('');
 
   // Check if order has return request
-  const { data: returnCheck } = trpc.returns.checkReturnRequest.useQuery(
+  trpc.returns.checkReturnRequest.useQuery(
     { orderId: orderId as string },
     { enabled: !!orderId && order?.orderStatus === 'delivered' }
   );
