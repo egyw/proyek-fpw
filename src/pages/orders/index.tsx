@@ -61,7 +61,8 @@ interface Order {
   shippingCost: number;
   total: number;
   paymentMethod: string;
-  paymentStatus: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'expired';
+  orderStatus: 'awaiting_payment' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
   shippingDetails?: {
     courierCode: string;
     courierName: string;
@@ -72,6 +73,11 @@ interface Order {
   snapToken?: string;
   snapRedirectUrl?: string;
   transactionId?: string;
+  rating?: {
+    score: number;
+    review?: string;
+    createdAt: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -92,6 +98,7 @@ export default function OrdersPage() {
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [returnReason, setReturnReason] = useState("");
 
@@ -111,11 +118,11 @@ export default function OrdersPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orders: Order[] = (ordersData?.orders as any) || [];
 
-  // Filter orders based on payment status
+  // Filter orders based on order status
   const filteredOrders =
     statusFilter === "all"
       ? orders
-      : orders.filter((order) => order.paymentStatus === statusFilter);
+      : orders.filter((order) => order.orderStatus === statusFilter);
 
   // Loading state
   if (authLoading || ordersLoading) {
@@ -145,12 +152,12 @@ export default function OrdersPage() {
     );
   }
 
-  const getStatusBadge = (status: Order["paymentStatus"]) => {
+  const getStatusBadge = (status: Order["orderStatus"]) => {
     const variants: Record<
-      Order["paymentStatus"],
+      Order["orderStatus"],
       { label: string; className: string; icon: React.ReactNode }
     > = {
-      pending: {
+      awaiting_payment: {
         label: "Menunggu Pembayaran",
         className: "bg-yellow-100 text-yellow-800",
         icon: <Clock className="h-3 w-3 mr-1" />,
@@ -187,7 +194,7 @@ export default function OrdersPage() {
       },
     };
 
-    const variant = variants[status] || variants.pending;
+    const variant = variants[status] || variants.awaiting_payment;
     return (
       <Badge className={`${variant.className} flex items-center w-fit`}>
         {variant.icon}
@@ -222,13 +229,38 @@ export default function OrdersPage() {
     setReturnReason("");
   };
 
+  // tRPC mutation for submitting rating
+  const submitRatingMutation = trpc.orders.submitRating.useMutation({
+    onSuccess: () => {
+      toast.success("Rating Berhasil Dikirim!", {
+        description: "Terima kasih atas rating Anda",
+      });
+      setRatingDialogOpen(false);
+      setSelectedRating(0);
+      setReviewText("");
+      // Refetch orders to update UI
+      ordersData && window.location.reload();
+    },
+    onError: (error) => {
+      toast.error("Gagal Mengirim Rating", {
+        description: error.message,
+      });
+    },
+  });
+
   const handleSubmitRating = (order: Order) => {
-    // TODO: Implement with tRPC
-    // Expected: trpc.orders.submitRating.useMutation()
-    toast.success("Rating berhasil dikirim!");
-    console.log("Rating submitted:", selectedRating, "for order:", order.orderId);
-    setRatingDialogOpen(false);
-    setSelectedRating(0);
+    if (selectedRating === 0) {
+      toast.error("Pilih Rating", {
+        description: "Silakan pilih rating terlebih dahulu",
+      });
+      return;
+    }
+
+    submitRatingMutation.mutate({
+      orderId: order.orderId,
+      score: selectedRating,
+      review: reviewText.trim() || undefined,
+    });
   };
 
   return (
@@ -254,7 +286,7 @@ export default function OrdersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Status</SelectItem>
-                    <SelectItem value="pending">Menunggu Pembayaran</SelectItem>
+                    <SelectItem value="awaiting_payment">Menunggu Pembayaran</SelectItem>
                     <SelectItem value="paid">Dibayar</SelectItem>
                     <SelectItem value="processing">Sedang Diproses</SelectItem>
                     <SelectItem value="shipped">Dikirim</SelectItem>
@@ -296,7 +328,7 @@ export default function OrdersPage() {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {order.orderId}
                         </h3>
-                        {getStatusBadge(order.paymentStatus)}
+                        {getStatusBadge(order.orderStatus)}
                       </div>
                       <p className="text-sm text-gray-600">
                         Tanggal Pemesanan: {formatDate(order.createdAt)}
@@ -397,8 +429,8 @@ export default function OrdersPage() {
                       Lihat Detail
                     </Button>
 
-                    {/* Pay Now Button - Show for pending status with snapToken */}
-                    {order.paymentStatus === "pending" && order.snapToken && (
+                    {/* Pay Now Button - Show for awaiting_payment status with snapToken */}
+                    {order.orderStatus === "awaiting_payment" && order.snapToken && (
                       <Button 
                         className="flex-1 sm:flex-none"
                         onClick={() => router.push(`/orders/${order.orderId}`)}
@@ -408,7 +440,7 @@ export default function OrdersPage() {
                     )}
 
                     {/* Return Button - Show for shipped/delivered status */}
-                    {(order.paymentStatus === "shipped" || order.paymentStatus === "delivered") && (
+                    {(order.orderStatus === "shipped" || order.orderStatus === "delivered") && (
                       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
@@ -465,8 +497,29 @@ export default function OrdersPage() {
                       </Dialog>
                     )}
 
-                    {/* Rating Button - Show for completed orders (TODO: Add rating field to Order model) */}
-                    {order.paymentStatus === "completed" && (
+                    {/* Rating Badge - Show if already rated */}
+                    {order.orderStatus === "completed" && order.rating && (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < order.rating!.score
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Rating diberikan
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Rating Button - Show for completed orders without rating */}
+                    {order.orderStatus === "completed" && !order.rating && (
                       <Dialog open={ratingDialogOpen} onOpenChange={setRatingDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
@@ -513,7 +566,23 @@ export default function OrdersPage() {
                                 </p>
                               )}
                             </div>
-                            {/* TODO: Add review textarea */}
+                            
+                            {/* Review Text */}
+                            <div className="space-y-2">
+                              <Label htmlFor="review-text">
+                                Ulasan (Opsional)
+                              </Label>
+                              <Textarea
+                                id="review-text"
+                                placeholder="Tulis ulasan Anda tentang produk dan layanan kami..."
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                className="min-h-[100px] resize-none"
+                              />
+                              <p className="text-xs text-gray-500">
+                                Bagikan pengalaman Anda untuk membantu pembeli lain.
+                              </p>
+                            </div>
                           </div>
                           <DialogFooter>
                             <Button
@@ -521,15 +590,16 @@ export default function OrdersPage() {
                               onClick={() => {
                                 setRatingDialogOpen(false);
                                 setSelectedRating(0);
+                                setReviewText("");
                               }}
                             >
                               Batal
                             </Button>
                             <Button
                               onClick={() => selectedOrder && handleSubmitRating(selectedOrder)}
-                              disabled={selectedRating === 0}
+                              disabled={selectedRating === 0 || submitRatingMutation.isPending}
                             >
-                              Kirim Rating
+                              {submitRatingMutation.isPending ? "Mengirim..." : "Kirim Rating"}
                             </Button>
                           </DialogFooter>
                         </DialogContent>

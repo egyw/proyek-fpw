@@ -825,6 +825,178 @@ export const ordersRouter = router({
       }
     }),
 
+  // Confirm order delivered (shipped → delivered)
+  confirmDelivered: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+        deliveredDate: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and staff can confirm delivery',
+          });
+        }
+
+        await connectDB();
+
+        const order = await Order.findOneAndUpdate(
+          { orderId: input.orderId, orderStatus: 'shipped' },
+          {
+            orderStatus: 'delivered',
+            deliveredDate: input.deliveredDate,
+          },
+          { new: true }
+        ).lean();
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found or not in shipped status',
+          });
+        }
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[confirmDelivered] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to confirm delivery',
+          cause: error,
+        });
+      }
+    }),
+
+  // User confirm order received (delivered → completed)
+  confirmOrderReceived: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await connectDB();
+
+        // Find order and verify ownership
+        const order = await Order.findOne({ 
+          orderId: input.orderId,
+          userId: ctx.user.id,
+          orderStatus: 'delivered'
+        });
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found, not delivered yet, or you do not have permission',
+          });
+        }
+
+        // Update status to completed
+        order.orderStatus = 'completed';
+        order.updatedAt = new Date().toISOString();
+        await order.save();
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[confirmOrderReceived] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to confirm order received',
+          cause: error,
+        });
+      }
+    }),
+
+  // User submit rating for completed order
+  submitRating: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+        score: z.number().min(1).max(5),
+        review: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await connectDB();
+
+        // Find order and verify ownership
+        const order = await Order.findOne({ 
+          orderId: input.orderId,
+          userId: ctx.user.id,
+          orderStatus: 'completed'
+        });
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found, not completed yet, or you do not have permission',
+          });
+        }
+
+        // Check if already rated
+        if (order.rating) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Order sudah diberi rating',
+          });
+        }
+
+        // Save rating to order
+        order.rating = {
+          score: input.score,
+          review: input.review,
+          createdAt: new Date(),
+        };
+        order.updatedAt = new Date().toISOString();
+        await order.save();
+
+        // Update product ratings (calculate new average)
+        for (const item of order.items) {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            const currentTotal = product.rating.average * product.rating.count;
+            const newCount = product.rating.count + 1;
+            const newAverage = (currentTotal + input.score) / newCount;
+            
+            product.rating.average = Math.round(newAverage * 10) / 10; // Round to 1 decimal
+            product.rating.count = newCount;
+            await product.save();
+          }
+        }
+
+        return { success: true, order };
+      } catch (error) {
+        console.error('[submitRating] Error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to submit rating',
+          cause: error,
+        });
+      }
+    }),
+
   // Get order statistics (for dashboard cards)
   getOrderStatistics: protectedProcedure.query(async ({ ctx }) => {
     try {

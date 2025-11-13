@@ -53,6 +53,25 @@ export default function OrderDetailPage() {
   // Mutation to simulate payment success (for Sandbox)
   const simulatePaymentMutation = trpc.orders.simulatePaymentSuccess.useMutation();
 
+  // Mutation to confirm order received
+  const confirmOrderMutation = trpc.orders.confirmOrderReceived.useMutation({
+    onSuccess: () => {
+      toast.success('Pesanan Dikonfirmasi!', {
+        description: 'Terima kasih telah mengkonfirmasi penerimaan pesanan.',
+      });
+      // Invalidate and reload
+      utils.orders.getOrderById.invalidate();
+      setTimeout(() => {
+        router.reload();
+      }, 1000);
+    },
+    onError: (error) => {
+      toast.error('Gagal Konfirmasi Pesanan', {
+        description: error.message || 'Terjadi kesalahan saat mengkonfirmasi pesanan.',
+      });
+    },
+  });
+
   // Extract order from data (tRPC returns { order: ... })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const order = orderData?.order as any; // TODO: Add proper Order interface type
@@ -606,41 +625,7 @@ export default function OrderDetailPage() {
               </div>
             </Card>
 
-            {/* Shipping Info (if shipped) */}
-            {order.shippingInfo && (order.orderStatus === 'shipped' || order.orderStatus === 'delivered' || order.orderStatus === 'completed') && (
-              <Card className="p-6 bg-purple-50 border-purple-200">
-                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-purple-600" />
-                  Informasi Pengiriman
-                </h2>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Kurir</span>
-                    <span className="font-semibold text-gray-900">{order.shippingInfo.courier.toUpperCase()}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">No. Resi</span>
-                    <span className="font-mono font-semibold text-gray-900">{order.shippingInfo.trackingNumber}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Tanggal Kirim</span>
-                    <span className="text-sm text-gray-900">{formatDate(order.shippingInfo.shippedDate)}</span>
-                  </div>
-                  <Separator className="my-2" />
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => {
-                      // TODO: Integrate with courier tracking API
-                      toast.info('Fitur lacak paket akan segera tersedia');
-                    }}
-                  >
-                    <Truck className="h-4 w-4 mr-2" />
-                    Lacak Paket
-                  </Button>
-                </div>
-              </Card>
-            )}
+
           </div>
 
           {/* Right Column - Payment Summary */}
@@ -729,25 +714,30 @@ export default function OrderDetailPage() {
                 </Button>
               )}
 
-              {/* Show tracking button if shipped/delivered */}
-              {(order.orderStatus === 'shipped' || order.orderStatus === 'delivered') && order.shippingInfo && (
-                <Button className="w-full mb-3" variant="outline" onClick={() => {
-                  // TODO: Integrate with courier tracking API
-                  toast.info('Fitur lacak paket akan segera tersedia');
-                }}>
-                  <Truck className="h-4 w-4 mr-2" />
-                  Lacak Paket
-                </Button>
-              )}
+
 
               {/* Show confirm button if delivered (not yet completed) */}
               {order.orderStatus === 'delivered' && (
-                <Button className="w-full mb-3" onClick={() => {
-                  // TODO: Add confirm order mutation
-                  toast.info('Fitur konfirmasi pesanan akan segera tersedia');
-                }}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Konfirmasi Pesanan Diterima
+                <Button 
+                  className="w-full mb-3 bg-green-600 hover:bg-green-700" 
+                  onClick={() => {
+                    if (confirm('Konfirmasi bahwa Anda telah menerima pesanan ini?')) {
+                      confirmOrderMutation.mutate({ orderId: order.orderId });
+                    }
+                  }}
+                  disabled={confirmOrderMutation.isLoading}
+                >
+                  {confirmOrderMutation.isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Memproses...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Konfirmasi Pesanan Diterima
+                    </>
+                  )}
                 </Button>
               )}
 

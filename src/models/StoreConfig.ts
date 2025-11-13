@@ -25,7 +25,6 @@ export interface IStoreConfig extends Document {
   };
   shippingSettings: {
     rajaOngkirPlan: 'free' | 'all';
-    freeShippingMinimum: number; // Minimum order for free shipping (IDR)
     maxWeight: number; // Maximum weight per order (grams)
     processingTime: string; // e.g., "1-2 hari kerja"
   };
@@ -64,7 +63,6 @@ const StoreConfigSchema = new Schema<IStoreConfig>(
         enum: ['free', 'all'], 
         default: 'free' 
       },
-      freeShippingMinimum: { type: Number, default: 0 },
       maxWeight: { type: Number, default: 30000 }, // 30kg default
       processingTime: { type: String, default: '1-2 hari kerja' },
     },

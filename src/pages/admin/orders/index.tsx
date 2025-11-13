@@ -95,6 +95,7 @@ interface Order {
     trackingNumber?: string;
     shippedDate?: string;
   };
+  deliveredDate?: string;
   cancelReason?: string;
   notes?: string;
   createdAt: string;
@@ -120,6 +121,7 @@ export default function AdminOrdersPage() {
   const [viewDetailDialog, setViewDetailDialog] = useState(false);
   const [processDialog, setProcessDialog] = useState(false);
   const [shipDialog, setShipDialog] = useState(false);
+  const [deliveredDialog, setDeliveredDialog] = useState(false);
   const [cancelDialog, setCancelDialog] = useState(false);
   
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -128,6 +130,9 @@ export default function AdminOrdersPage() {
   const [shippingCourier, setShippingCourier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippedDate, setShippedDate] = useState("");
+  
+  // Delivered form
+  const [deliveredDate, setDeliveredDate] = useState("");
   
   // Cancel form
   const [cancelReason, setCancelReason] = useState("");
@@ -159,6 +164,12 @@ export default function AdminOrdersPage() {
     setShippingCourier("");
     setTrackingNumber("");
     setShippedDate(new Date().toISOString().split("T")[0]);
+  };
+
+  const handleDelivered = (order: Order) => {
+    setSelectedOrder(order);
+    setDeliveredDialog(true);
+    setDeliveredDate(new Date().toISOString().split("T")[0]);
   };
 
   const handleCancel = (order: Order) => {
@@ -204,6 +215,25 @@ export default function AdminOrdersPage() {
     },
     onError: (error) => {
       toast.error('Gagal Mengirim Pesanan', {
+        description: error.message,
+      });
+    },
+  });
+
+  const confirmDeliveredMutation = trpc.orders.confirmDelivered.useMutation({
+    onSuccess: () => {
+      utils.orders.getAllOrders.invalidate();
+      utils.orders.getOrderStatistics.invalidate();
+      toast.success('Pesanan Terkirim', {
+        description: 'Pesanan berhasil dikonfirmasi terkirim.',
+      });
+      setDeliveredDialog(false);
+      setViewDetailDialog(false);
+      setSelectedOrder(null);
+      setDeliveredDate("");
+    },
+    onError: (error) => {
+      toast.error('Gagal Konfirmasi Pengiriman', {
         description: error.message,
       });
     },
@@ -262,6 +292,22 @@ export default function AdminOrdersPage() {
       service: courierInfo.service,
       trackingNumber: trackingNumber,
       shippedDate: shippedDate,
+    });
+  };
+
+  const confirmDelivered = () => {
+    if (!selectedOrder) return;
+
+    if (!deliveredDate) {
+      toast.error('Tanggal Diperlukan', {
+        description: 'Mohon pilih tanggal pengiriman.',
+      });
+      return;
+    }
+
+    confirmDeliveredMutation.mutate({
+      orderId: selectedOrder.orderId,
+      deliveredDate: deliveredDate,
     });
   };
 
@@ -493,6 +539,17 @@ export default function AdminOrdersPage() {
                               Kirim
                             </Button>
                           )}
+                          {order.orderStatus === "shipped" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleDelivered(order)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Konfirmasi Terkirim
+                            </Button>
+                          )}
                           {(order.orderStatus === "paid" || order.orderStatus === "processing") && (
                             <Button
                               variant="destructive"
@@ -651,6 +708,22 @@ export default function AdminOrdersPage() {
                   </div>
                 )}
 
+                {/* Delivery Info (if delivered) */}
+                {selectedOrder.deliveredDate && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Informasi Penerimaan</h3>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <div>
+                          <p className="text-gray-600">Pesanan telah diterima pada:</p>
+                          <p className="font-medium text-green-900">{formatDate(selectedOrder.deliveredDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Cancel Reason (if cancelled) */}
                 {selectedOrder.cancelReason && (
                   <div>
@@ -738,6 +811,74 @@ export default function AdminOrdersPage() {
               >
                 <Send className="h-4 w-4 mr-2" />
                 Simpan & Kirim
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Delivered Dialog */}
+        <Dialog open={deliveredDialog} onOpenChange={setDeliveredDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Pesanan Terkirim</DialogTitle>
+              <DialogDescription>
+                Pastikan pesanan {selectedOrder?.orderId} telah diterima oleh customer
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Truck className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-blue-900">
+                    <p className="font-medium mb-1">Informasi Pengiriman:</p>
+                    {selectedOrder?.shippingInfo && (
+                      <>
+                        <p>Kurir: {selectedOrder.shippingInfo.courierName} ({selectedOrder.shippingInfo.service})</p>
+                        {selectedOrder.shippingInfo.trackingNumber && (
+                          <p>No. Resi: {selectedOrder.shippingInfo.trackingNumber}</p>
+                        )}
+                        {selectedOrder.shippingInfo.shippedDate && (
+                          <p>Tanggal Kirim: {formatDate(selectedOrder.shippingInfo.shippedDate)}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="delivered-date">Tanggal Terkirim</Label>
+                <Input
+                  id="delivered-date"
+                  type="date"
+                  value={deliveredDate}
+                  onChange={(e) => setDeliveredDate(e.target.value)}
+                />
+                <p className="text-xs text-gray-500">
+                  Tanggal ketika pesanan diterima oleh customer
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeliveredDialog(false)}>
+                Batal
+              </Button>
+              <Button
+                onClick={confirmDelivered}
+                disabled={!deliveredDate || confirmDeliveredMutation.isLoading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {confirmDeliveredMutation.isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Konfirmasi Terkirim
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

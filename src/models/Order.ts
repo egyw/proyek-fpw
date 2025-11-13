@@ -57,6 +57,16 @@ export interface IOrder extends Document {
     shippedDate: Date;
   };
   
+  // Delivery confirmation (filled by admin)
+  deliveredDate?: Date;
+  
+  // Rating & Review (filled by user after delivery)
+  rating?: {
+    score: number; // 1-5 stars
+    review?: string; // Optional review text
+    createdAt: Date;
+  };
+  
   // Cancellation
   cancelReason?: string;
   cancelledAt?: Date;
@@ -125,6 +135,14 @@ const OrderSchema = new Schema<IOrder>(
       service: { type: String },
       trackingNumber: { type: String },
       shippedDate: { type: Date },
+    },
+    
+    deliveredDate: { type: Date },
+    
+    rating: {
+      score: { type: Number, min: 1, max: 5 },
+      review: { type: String },
+      createdAt: { type: Date },
     },
     
     cancelReason: { type: String },

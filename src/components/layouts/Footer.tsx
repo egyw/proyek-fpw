@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <Image 
               src="/images/logo_4x1.png" 
@@ -17,15 +17,6 @@ export default function Footer() {
             <p className="text-gray-400 text-sm">
               Solusi lengkap material bangunan berkualitas untuk kebutuhan konstruksi Anda.
             </p>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Produk</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/products?category=semen" className="hover:text-white transition-colors">Semen</Link></li>
-              <li><Link href="/products?category=besi" className="hover:text-white transition-colors">Besi</Link></li>
-              <li><Link href="/products?category=cat" className="hover:text-white transition-colors">Cat</Link></li>
-              <li><Link href="/products?category=keramik" className="hover:text-white transition-colors">Keramik</Link></li>
-            </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Perusahaan</h4>
