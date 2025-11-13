@@ -998,15 +998,15 @@ export default function OrderDetailPage() {
                 setReturnReason('');
                 setReturnCondition('');
               }}
-              disabled={createReturnMutation.isLoading}
+              disabled={createReturnMutation.isPending}
             >
               Batal
             </Button>
             <Button
               onClick={handleSubmitReturn}
-              disabled={createReturnMutation.isLoading || Object.keys(selectedItems).filter(k => selectedItems[k]).length === 0 || !returnCondition || returnReason.trim().length < 10}
+              disabled={createReturnMutation.isPending || Object.keys(selectedItems).filter(k => selectedItems[k]).length === 0 || !returnCondition || returnReason.trim().length < 10}
             >
-              {createReturnMutation.isLoading ? (
+              {createReturnMutation.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Memproses...
