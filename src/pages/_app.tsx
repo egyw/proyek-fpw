@@ -65,7 +65,9 @@ function TawkToWidget() {
     if (isAuthenticated && userRole === 'user') {
       // Initialize Tawk.to API
       if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).Tawk_API = (window as any).Tawk_API || {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).Tawk_LoadStart = new Date();
 
         const tawkScript = document.createElement('script');
@@ -85,14 +87,18 @@ function TawkToWidget() {
             tawkScript.parentNode.removeChild(tawkScript);
           }
           // Hide widget if exists
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((window as any).Tawk_API?.hideWidget) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).Tawk_API.hideWidget();
           }
         };
       }
     } else {
       // Hide widget for admin, staff, or guest users
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof window !== 'undefined' && (window as any).Tawk_API?.hideWidget) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).Tawk_API.hideWidget();
       }
     }

@@ -408,9 +408,9 @@ export default function CheckoutPage() {
           description: 'Kode voucher tidak dapat digunakan.',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Gagal Memvalidasi Voucher', {
-        description: error.message || 'Terjadi kesalahan saat memvalidasi voucher.',
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan saat memvalidasi voucher.',
       });
     } finally {
       setIsApplyingVoucher(false);
