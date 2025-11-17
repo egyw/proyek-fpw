@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Ticket } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Ticket, Power } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
@@ -142,15 +142,20 @@ export default function VouchersPage() {
     },
   });
 
-  // TODO: Add toggle status mutation when implementing quick activate/deactivate button
-  // const toggleStatusMutation = trpc.vouchers.toggleStatus.useMutation({
-  //   onSuccess: (data) => {
-  //     utils.vouchers.getAll.invalidate();
-  //     utils.vouchers.getStats.invalidate();
-  //     toast.success("Status Diubah!", { description: `Voucher ${data.voucher.isActive ? "diaktifkan" : "dinonaktifkan"}.` });
-  //   },
-  //   onError: (error) => { toast.error("Gagal Mengubah Status", { description: error.message }); }
-  // });
+  const toggleStatusMutation = trpc.vouchers.toggleStatus.useMutation({
+    onSuccess: (data) => {
+      utils.vouchers.getAll.invalidate();
+      utils.vouchers.getStats.invalidate();
+      toast.success("Status Diubah!", {
+        description: `Voucher ${data.voucher.isActive ? "diaktifkan" : "dinonaktifkan"}.`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Gagal Mengubah Status", {
+        description: error.message,
+      });
+    },
+  });
 
   const deleteVoucherMutation = trpc.vouchers.delete.useMutation({
     onSuccess: () => {
@@ -278,6 +283,10 @@ export default function VouchersPage() {
     if (selectedVoucher) {
       deleteVoucherMutation.mutate({ id: selectedVoucher._id });
     }
+  };
+
+  const handleToggleStatus = (voucher: IVoucher) => {
+    toggleStatusMutation.mutate({ id: voucher._id });
   };
 
   return (
@@ -491,6 +500,19 @@ export default function VouchersPage() {
                   <TableCell>{getStatusBadge(status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(voucher)}
+                        disabled={toggleStatusMutation.isPending}
+                        title={voucher.isActive ? "Nonaktifkan voucher" : "Aktifkan voucher"}
+                      >
+                        <Power
+                          className={`h-4 w-4 ${
+                            voucher.isActive ? "text-green-600" : "text-gray-400"
+                          }`}
+                        />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"

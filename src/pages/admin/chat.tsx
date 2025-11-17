@@ -2,6 +2,16 @@ import { useState } from 'react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import { trpc } from '@/utils/trpc';
 import { Card } from '@/components/ui/card';
+
+interface Conversation {
+  id: string;
+  visitorName: string;
+  visitorEmail?: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  status?: string;
+}
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -163,7 +173,7 @@ export default function AdminChatPage() {
                   </p>
                 </div>
               ) : (
-                conversations.map((conv) => (
+                conversations.map((conv: Conversation) => (
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv.id)}

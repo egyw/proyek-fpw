@@ -42,6 +42,8 @@ import {
   ChevronLeft,
   Edit,
   CheckCircle2,
+  Tag,
+  X,
 } from "lucide-react";
 
 // Dynamic import for AddressMapPicker to avoid SSR issues with Leaflet
@@ -223,9 +225,21 @@ export default function CheckoutPage() {
     },
   });
 
+  // ⭐ Validate voucher mutation
+  const validateVoucherMutation = trpc.vouchers.validate.useMutation();
+
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // ⭐ Voucher states
+  const [voucherCode, setVoucherCode] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState<{
+    code: string;
+    discount: number;
+    type: 'percentage' | 'fixed';
+  } | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [mapLocation, setMapLocation] = useState<{
@@ -289,7 +303,8 @@ export default function CheckoutPage() {
 
   const subtotal = calculateSubtotal();
   const shippingCost = selectedShipping?.cost || 0; // Dynamic shipping cost from RajaOngkir
-  const total = subtotal + shippingCost;
+  const voucherDiscount = appliedVoucher?.discount || 0;
+  const total = subtotal + shippingCost - voucherDiscount;
 
   // Handle select shipping
   const handleSelectShipping = (option: ShippingOption) => {
@@ -361,6 +376,55 @@ export default function CheckoutPage() {
     }
   };
 
+  // ⭐ Handle apply voucher
+  const handleApplyVoucher = async () => {
+    if (!voucherCode.trim()) {
+      toast.error('Kode Voucher Kosong', {
+        description: 'Silakan masukkan kode voucher.',
+      });
+      return;
+    }
+
+    setIsApplyingVoucher(true);
+
+    try {
+      const result = await validateVoucherMutation.mutateAsync({
+        code: voucherCode.toUpperCase(),
+        subtotal,
+      });
+
+      if (result.success && result.voucher) {
+        setAppliedVoucher({
+          code: result.voucher.code,
+          discount: result.voucher.discount,
+          type: result.voucher.type as 'percentage' | 'fixed',
+        });
+        toast.success('Voucher Berhasil Diterapkan!', {
+          description: `Anda mendapat diskon ${formatCurrency(result.voucher.discount)}`,
+        });
+        setVoucherCode(''); // Clear input
+      } else {
+        toast.error('Voucher Tidak Valid', {
+          description: 'Kode voucher tidak dapat digunakan.',
+        });
+      }
+    } catch (error: any) {
+      toast.error('Gagal Memvalidasi Voucher', {
+        description: error.message || 'Terjadi kesalahan saat memvalidasi voucher.',
+      });
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  // ⭐ Handle remove voucher
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    toast.info('Voucher Dihapus', {
+      description: 'Voucher telah dihapus dari pesanan.',
+    });
+  };
+
   // Handle place order (Create order and get Snap token)
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
@@ -413,6 +477,10 @@ export default function CheckoutPage() {
         shippingCost,
         total,
         paymentMethod: 'midtrans', // ⭐ Midtrans only
+        discount: appliedVoucher ? {
+          code: appliedVoucher.code,
+          amount: appliedVoucher.discount,
+        } : undefined,
       });
 
       // ⭐ Save order ID and redirect to order detail page
@@ -936,6 +1004,82 @@ export default function CheckoutPage() {
                 ))}
               </div>
             </Card>
+
+            {/* Voucher/Coupon Section */}
+            <Card className="p-6">
+              <div className="flex items-start gap-3">
+                <Tag className="h-6 w-6 text-primary shrink-0 mt-1" />
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-gray-900 mb-4">
+                    Kode Voucher
+                  </h2>
+
+                  {appliedVoucher ? (
+                    /* Applied Voucher Display */
+                    <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <Tag className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-green-900">
+                              {appliedVoucher.code}
+                            </p>
+                            <p className="text-sm text-green-700">
+                              Diskon: {formatCurrency(appliedVoucher.discount)}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveVoucher}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Voucher Input */
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Masukkan kode voucher"
+                          value={voucherCode}
+                          onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleApplyVoucher();
+                            }
+                          }}
+                          className="flex-1"
+                          disabled={isApplyingVoucher}
+                        />
+                        <Button
+                          onClick={handleApplyVoucher}
+                          disabled={isApplyingVoucher || !voucherCode.trim()}
+                          className="min-w-[100px]"
+                        >
+                          {isApplyingVoucher ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Cek...
+                            </>
+                          ) : (
+                            'Gunakan'
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Masukkan kode voucher untuk mendapatkan diskon
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* Right Column - Order Summary */}
@@ -965,6 +1109,15 @@ export default function CheckoutPage() {
                     <span className="text-sm italic">Pilih pengiriman</span>
                   )}
                 </div>
+                {appliedVoucher && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="flex items-center gap-2">
+                      <Tag className="h-4 w-4" />
+                      Diskon Voucher ({appliedVoucher.code})
+                    </span>
+                    <span className="font-medium">-Rp {voucherDiscount.toLocaleString('id-ID')}</span>
+                  </div>
+                )}
               </div>
 
               <Separator className="my-4" />
@@ -1063,6 +1216,33 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            {/* Voucher/Diskon */}
+            {appliedVoucher && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg border-b pb-2">
+                  Voucher/Diskon
+                </h3>
+                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                      <Tag className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-green-900">
+                        Kode: {appliedVoucher.code}
+                      </p>
+                      <p className="text-sm text-green-700">
+                        Diskon {appliedVoucher.type === 'percentage' ? 'Persentase' : 'Nominal'}
+                      </p>
+                    </div>
+                    <p className="font-bold text-green-600">
+                      -{formatCurrency(voucherDiscount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Daftar Produk */}
             <div className="space-y-3">
               <h3 className="font-semibold text-lg border-b pb-2">
@@ -1111,6 +1291,17 @@ export default function CheckoutPage() {
                     {formatCurrency(shippingCost)}
                   </span>
                 </div>
+                {appliedVoucher && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      Diskon Voucher
+                    </span>
+                    <span className="font-medium text-green-600">
+                      -{formatCurrency(voucherDiscount)}
+                    </span>
+                  </div>
+                )}
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="font-semibold text-lg">Total</span>

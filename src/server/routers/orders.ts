@@ -48,6 +48,10 @@ export const ordersRouter = router({
         shippingCost: z.number(),
         total: z.number(),
         paymentMethod: z.string(),
+        discount: z.object({
+          code: z.string(),
+          amount: z.number(),
+        }).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -77,6 +81,7 @@ export const ordersRouter = router({
           paymentStatus: 'pending',
           paymentExpiredAt, // 30 minutes deadline
           orderStatus: 'awaiting_payment',
+          discount: input.discount,
         });
 
         // If payment method is Midtrans, create Snap token
@@ -114,6 +119,13 @@ export const ordersRouter = router({
                   price: input.shippingCost,
                   quantity: 1,
                 },
+                // Add discount as negative item (if applied)
+                ...(input.discount ? [{
+                  id: 'DISCOUNT',
+                  name: `Diskon (${input.discount.code})`,
+                  price: -input.discount.amount,
+                  quantity: 1,
+                }] : []),
               ],
               shippingAddress: {
                 first_name: input.shippingAddress.recipientName,

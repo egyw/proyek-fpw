@@ -817,4 +817,47 @@ export const productsRouter = router({
         });
       }
     }),
+
+  // Toggle product status (admin only)
+  toggleStatus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and staff can toggle product status',
+          });
+        }
+
+        await connectDB();
+
+        const product = await Product.findById(input.id);
+        if (!product) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Product not found',
+          });
+        }
+
+        product.isActive = !product.isActive;
+        product.updatedAt = new Date().toISOString();
+        await product.save();
+
+        return { success: true, product };
+      } catch (error) {
+        console.error('[toggleStatus] Error:', error);
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to toggle product status',
+          cause: error,
+        });
+      }
+    }),
 });

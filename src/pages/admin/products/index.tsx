@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2 } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Power } from "lucide-react";
 import ImagePreview from "@/components/ImagePreview";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
@@ -260,6 +260,20 @@ export default function AdminProducts() {
     },
   });
 
+  const toggleStatusMutation = trpc.products.toggleStatus.useMutation({
+    onSuccess: (data) => {
+      toast.success("Status Diubah!", {
+        description: `Produk ${data.product.isActive ? "diaktifkan" : "dinonaktifkan"}.`,
+      });
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Gagal Mengubah Status", {
+        description: error.message,
+      });
+    },
+  });
+
   // Handle file selection and create local preview
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -425,6 +439,11 @@ export default function AdminProducts() {
   const handleDeleteProduct = (product: ProductType) => {
     setDeletingProduct(product);
     setDeleteDialog(true);
+  };
+
+  const handleToggleStatus = (product: ProductType) => {
+    const productId = typeof product._id === 'string' ? product._id : product._id.$oid;
+    toggleStatusMutation.mutate({ id: productId });
   };
 
   const confirmDelete = () => {
@@ -685,6 +704,19 @@ export default function AdminProducts() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleStatus(product)}
+                          disabled={toggleStatusMutation.isPending}
+                          title={product.isActive ? "Nonaktifkan produk" : "Aktifkan produk"}
+                        >
+                          <Power
+                            className={`h-4 w-4 ${
+                              product.isActive ? "text-green-600" : "text-gray-400"
+                            }`}
+                          />
+                        </Button>
                         <Button 
                           size="sm" 
                           variant="ghost" 
@@ -1124,27 +1156,6 @@ export default function AdminProducts() {
                 
                 <FormField
                   control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Produk Aktif</FormLabel>
-                        <FormDescription>
-                          Produk akan ditampilkan di katalog
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="isFeatured"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
@@ -1295,30 +1306,7 @@ export default function AdminProducts() {
               </div>
 
               {/* Status Section */}
-              <div className="space-y-5 pt-6 border-t">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Status Produk</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Produk Aktif</FormLabel>
-                        <FormDescription>
-                          Produk akan ditampilkan di katalog
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
+
 
               <DialogFooter>
                 <Button

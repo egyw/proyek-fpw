@@ -3,6 +3,16 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { getTawktoConversations, getTawktoConversation, sendTawktoMessage, transformTawktoConversation } from '@/lib/tawkto';
 
+interface Conversation {
+  id: string;
+  visitorName: string;
+  visitorEmail?: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  status?: string;
+}
+
 export const chatRouter = router({
   // Get all conversations
   getConversations: protectedProcedure.query(async ({ ctx }) => {
@@ -129,7 +139,7 @@ export const chatRouter = router({
         ? apiData.map(transformTawktoConversation)
         : apiData?.conversations?.map(transformTawktoConversation) || [];
 
-      const activeChats = conversations.filter((c) => c.status === 'active').length;
+      const activeChats = conversations.filter((c: Conversation) => c.status === 'active').length;
       const totalChats = conversations.length;
 
       return {

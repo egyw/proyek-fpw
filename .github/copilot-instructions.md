@@ -4106,7 +4106,324 @@ src/
 
 ## Recent Features & Patterns (November 2025)
 
-### 0. Admin Live Chat System - Tawk.to Integration (November 17, 2025)
+### 0. Voucher & Checkout System - Complete Integration (November 17, 2025)
+
+**Status**: ✅ Production-ready, fully tested with Midtrans
+
+**Purpose**: Complete voucher/coupon system with discount validation and Midtrans payment integration.
+
+**Key Features**:
+- ✅ Voucher validation with multiple checks (active, dates, usage limit, min purchase)
+- ✅ Discount calculation (percentage with max cap OR fixed amount)
+- ✅ Midtrans integration with discount as negative line item
+- ✅ Frontend-backend response structure alignment
+
+**Critical Fix (November 17, 2025)**: Fixed 2 major bugs in voucher checkout flow
+
+#### **Bug 1: Frontend-Backend Response Mismatch**
+
+**Problem**: Frontend expected `result.valid` but backend returned `result.success`
+
+**Root Cause**:
+```typescript
+// Backend (voucher.ts validate endpoint) returns:
+return {
+  success: true,
+  voucher: {
+    code: "DISKON10",
+    discount: 15000,
+    type: "percentage"
+  }
+};
+
+// Frontend (checkout.tsx) was checking:
+if (result.valid) { // ❌ Field doesn't exist!
+  discount: result.discount // ❌ Should be result.voucher.discount
+}
+```
+
+**Solution Applied**:
+```typescript
+// ✅ CORRECT: Match backend response structure
+if (result.success && result.voucher) {
+  setAppliedVoucher({
+    code: result.voucher.code,
+    discount: result.voucher.discount,
+    type: result.voucher.type as 'percentage' | 'fixed',
+  });
+}
+```
+
+**Location**: `src/pages/checkout.tsx` - `handleApplyVoucher()` function
+
+---
+
+#### **Bug 2: Midtrans gross_amount Mismatch**
+
+**Problem**: Midtrans error - `transaction_details.gross_amount is not equal to the sum of item_details`
+
+**Root Cause**:
+```typescript
+// Frontend sends total AFTER discount: Rp 160,000
+// Backend sends to Midtrans:
+{
+  gross_amount: 160000, // ✅ Correct (with discount applied)
+  item_details: [
+    { name: "Item 1", price: 100000, quantity: 1 },
+    { name: "Item 2", price: 50000, quantity: 1 },
+    { name: "Shipping", price: 25000, quantity: 1 }
+    // ❌ Missing discount item!
+    // Sum = 175,000 ≠ gross_amount (160,000)
+  ]
+}
+```
+
+**Midtrans Validation**: `sum(item_details) MUST equal gross_amount`
+
+**Solution Applied**:
+
+1. **Add discount field to input schema** (`orders.ts`):
+```typescript
+createOrder: protectedProcedure.input(
+  z.object({
+    // ... existing fields
+    discount: z.object({
+      code: z.string(),
+      amount: z.number(),
+    }).optional(),
+  })
+)
+```
+
+2. **Save discount to order document**:
+```typescript
+const order = await Order.create({
+  // ... other fields
+  discount: input.discount,
+});
+```
+
+3. **Add discount as NEGATIVE item in Midtrans item_details**:
+```typescript
+itemDetails: [
+  ...input.items.map((item) => ({
+    id: item.productId,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+  })),
+  {
+    id: 'SHIPPING',
+    name: `Ongkir ke ${input.shippingAddress.city}`,
+    price: input.shippingCost,
+    quantity: 1,
+  },
+  // ⭐ Add discount as negative item
+  ...(input.discount ? [{
+    id: 'DISCOUNT',
+    name: `Diskon (${input.discount.code})`,
+    price: -input.discount.amount, // ⭐ NEGATIVE!
+    quantity: 1,
+  }] : []),
+]
+```
+
+**Result**:
+```
+item_details:
+  * Item 1: Rp 100,000
+  * Item 2: Rp 50,000
+  * Shipping: Rp 25,000
+  * Discount (DISKON10): -Rp 15,000
+  * SUM = Rp 160,000 ✅
+
+gross_amount: Rp 160,000 ✅
+
+Midtrans validation: PASS! 🎉
+```
+
+**Location**: `src/server/routers/orders.ts` - `createOrder` mutation
+
+---
+
+#### **Voucher Validation Flow**
+
+**Backend Checks** (`src/server/routers/voucher.ts` - validate endpoint):
+
+1. ✅ **Find voucher by code** (uppercase)
+2. ✅ **Check isActive = true** (toggle feature must be active)
+3. ✅ **Check date range** (now >= startDate AND now <= endDate)
+4. ✅ **Check usage limit** (usedCount < usageLimit)
+5. ✅ **Check minimum purchase** (subtotal >= minPurchase)
+6. ✅ **Calculate discount**:
+   - **Percentage**: `(subtotal × value) / 100`, capped at maxDiscount
+   - **Fixed**: Direct value
+
+**Success Response**:
+```typescript
+{
+  success: true,
+  voucher: {
+    code: "DISKON10",
+    name: "Diskon 10%",
+    type: "percentage",
+    value: 10,
+    discount: 15000 // Calculated amount
+  }
+}
+```
+
+**Error Response** (via TRPCError):
+- "Voucher tidak ditemukan"
+- "Voucher tidak aktif"
+- "Voucher sudah tidak berlaku"
+- "Voucher sudah mencapai batas penggunaan"
+- "Minimum pembelian Rp XXX,XXX"
+
+---
+
+#### **Frontend Implementation**
+
+**Location**: `src/pages/checkout.tsx`
+
+**State Management**:
+```typescript
+const [voucherCode, setVoucherCode] = useState('');
+const [appliedVoucher, setAppliedVoucher] = useState<{
+  code: string;
+  discount: number;
+  type: 'percentage' | 'fixed';
+} | null>(null);
+const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+
+const validateVoucherMutation = trpc.vouchers.validate.useMutation();
+```
+
+**Apply Voucher Handler**:
+```typescript
+const handleApplyVoucher = async () => {
+  if (!voucherCode.trim()) {
+    toast.error('Kode Voucher Kosong');
+    return;
+  }
+
+  setIsApplyingVoucher(true);
+
+  try {
+    const result = await validateVoucherMutation.mutateAsync({
+      code: voucherCode.toUpperCase(),
+      subtotal,
+    });
+
+    if (result.success && result.voucher) {
+      setAppliedVoucher({
+        code: result.voucher.code,
+        discount: result.voucher.discount,
+        type: result.voucher.type as 'percentage' | 'fixed',
+      });
+      toast.success('Voucher Berhasil Diterapkan!', {
+        description: `Anda mendapat diskon ${formatCurrency(result.voucher.discount)}`,
+      });
+      setVoucherCode('');
+    }
+  } catch (error: any) {
+    toast.error('Gagal Memvalidasi Voucher', {
+      description: error.message,
+    });
+  } finally {
+    setIsApplyingVoucher(false);
+  }
+};
+```
+
+**Total Calculation**:
+```typescript
+const voucherDiscount = appliedVoucher?.discount || 0;
+const total = subtotal + shippingCost - voucherDiscount;
+```
+
+**Order Creation with Discount**:
+```typescript
+await createOrderMutation.mutateAsync({
+  items: [...],
+  shippingAddress: {...},
+  subtotal,
+  shippingCost,
+  total, // Already includes discount
+  paymentMethod: 'midtrans',
+  discount: appliedVoucher ? {
+    code: appliedVoucher.code,
+    amount: appliedVoucher.discount,
+  } : undefined,
+});
+```
+
+---
+
+#### **Important Patterns**
+
+**1. Response Structure Alignment**:
+```typescript
+// ✅ ALWAYS check both success flag AND data object
+if (result.success && result.voucher) {
+  // Use result.voucher.field
+}
+
+// ❌ NEVER assume flat response
+if (result.valid) { // Wrong field name
+  discount: result.discount // Wrong path
+}
+```
+
+**2. Midtrans Item Details Balance**:
+```typescript
+// ✅ ALWAYS include discount as negative item
+itemDetails: [
+  ...items,
+  { id: 'SHIPPING', price: shippingCost },
+  ...(discount ? [{ 
+    id: 'DISCOUNT', 
+    price: -discount.amount // ⭐ Negative!
+  }] : [])
+]
+
+// ❌ NEVER send gross_amount without matching items
+gross_amount: totalAfterDiscount,
+item_details: [...itemsBeforeDiscount] // Mismatch!
+```
+
+**3. Voucher Validation Order**:
+```typescript
+// ✅ Check in this order for best UX
+1. Code exists?
+2. Is active?
+3. Date valid?
+4. Usage limit not reached?
+5. Minimum purchase met?
+6. Calculate discount
+
+// ❌ Don't check minimum purchase first
+// (User can't tell if voucher expired or cart too small)
+```
+
+---
+
+#### **Testing Checklist**
+
+✅ Apply voucher → Discount shows correctly  
+✅ Remove voucher → Total recalculates  
+✅ Create order with voucher → Midtrans shows discount line  
+✅ Midtrans payment → No gross_amount error  
+✅ Invalid code → Shows "tidak ditemukan"  
+✅ Inactive voucher → Shows "tidak aktif"  
+✅ Expired voucher → Shows "sudah tidak berlaku"  
+✅ Below min purchase → Shows "Minimum pembelian Rp XXX"  
+✅ Percentage with max cap → Correctly capped  
+✅ Fixed discount → Direct amount applied  
+
+---
+
+### 0.1. Admin Live Chat System - Tawk.to Integration (November 17, 2025)
 
 **Status**: 🚧 UI Complete, API Integration Pending (Tawk.to account registration in progress)
 
