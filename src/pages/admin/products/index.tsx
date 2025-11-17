@@ -263,7 +263,7 @@ export default function AdminProducts() {
   const toggleStatusMutation = trpc.products.toggleStatus.useMutation({
     onSuccess: (data) => {
       toast.success("Status Diubah!", {
-        description: `Produk ${data.product.isActive ? "diaktifkan" : "dinonaktifkan"}.`,
+        description: `Produk ${(data as { product: { isActive: boolean } }).product.isActive ? "diaktifkan" : "dinonaktifkan"}.`,
       });
       refetch();
     },
