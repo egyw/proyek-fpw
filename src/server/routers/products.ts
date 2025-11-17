@@ -842,8 +842,7 @@ export const productsRouter = router({
         }
 
         product.isActive = !product.isActive;
-        product.updatedAt = new Date().toISOString();
-        await product.save();
+        await product.save(); // updatedAt auto-updated by Mongoose timestamps
 
         return { success: true, product };
       } catch (error) {
