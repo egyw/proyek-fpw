@@ -6650,3 +6650,5 @@ If you have dynamic data in session (like addresses), remove it:
 45. **Never use mutation.isLoading with tRPC v10** (ALWAYS use mutation.isPending instead)
 46. **Never skip order status validation in return requests** (only completed orders can be returned)
 47. **Never allow returns without minimum reason length** (enforce 10+ characters for return reason)
+48. **Never access unknown mutation response without type assertion** (use `as { field: type }` pattern)
+49. **Never manually set updatedAt with Mongoose timestamps** (auto-updated by `save()` when `timestamps: true`)
