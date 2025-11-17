@@ -4106,7 +4106,542 @@ src/
 
 ## Recent Features & Patterns (November 2025)
 
-### 0. Soft Delete Pattern - Product & Customer Management (November 11, 2025)
+### 0. Admin Live Chat System - Tawk.to Integration (November 17, 2025)
+
+**Status**: 🚧 UI Complete, API Integration Pending (Tawk.to account registration in progress)
+
+**Location**: `src/pages/admin/chat.tsx`, `src/server/routers/chat.ts`, `src/lib/tawkto.ts`
+
+**Purpose**: Admin dashboard for managing customer live chat conversations with real-time Tawk.to API integration.
+
+**⚠️ IMPORTANT - Not Yet Functional**:
+- **API Registration Pending**: Tawk.to account masih dalam proses pendaftaran
+- **Cannot Test**: Fitur chat belum bisa dicoba karena API key belum tersedia
+- **UI Ready**: Interface sudah selesai dibuat dan siap digunakan setelah API key tersedia
+- **Future Setup**: Setelah API key didapat, tambahkan ke `.env.local` sebagai `TAWK_TO_API_KEY`
+
+**Current State**:
+```typescript
+// src/lib/tawkto.ts - API functions prepared but not active
+export async function getTawktoConversations() {
+  // Will fetch from Tawk.to API when key is available
+  // Currently returns empty array for development
+}
+
+// src/server/routers/chat.ts - tRPC procedures ready
+export const chatRouter = router({
+  getConversations: protectedProcedure.query(async ({ ctx }) => {
+    // Role check implemented (admin/staff only)
+    // API integration prepared, waiting for credentials
+  }),
+  getConversation: protectedProcedure.input(...).query(...),
+  sendMessage: protectedProcedure.input(...).mutation(...),
+  getStats: protectedProcedure.query(...),
+});
+```
+
+**UI Design Pattern - Clean Minimal**:
+
+**Layout Structure**:
+```tsx
+<div className="h-[600px] flex border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+  {/* Sidebar - Conversation List (320px) */}
+  <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
+    {/* Search + Conversations */}
+  </div>
+  
+  {/* Chat Window (flex-1) */}
+  <div className="flex-1 flex flex-col bg-white">
+    {/* Messages + Input */}
+  </div>
+</div>
+```
+
+**Empty States** (Clean, Lucide Icons Only):
+```tsx
+// Sidebar Empty State
+<div className="flex flex-col items-center justify-center h-full p-8">
+  <MessageCircle className="h-12 w-12 text-gray-300 mb-3" />
+  <p className="text-sm text-gray-900 font-semibold mb-1">Belum ada percakapan</p>
+  <p className="text-xs text-gray-500 text-center">
+    Chat baru akan muncul otomatis
+  </p>
+</div>
+
+// Chat Window Empty State
+<div className="flex-1 flex items-center justify-center bg-gray-50">
+  <div className="text-center">
+    <MessageCircle className="h-16 w-16 text-gray-300 mx-auto mb-3" />
+    <p className="text-sm text-gray-900 font-semibold mb-1">Pilih percakapan</p>
+    <p className="text-xs text-gray-500">Klik chat di sebelah kiri untuk mulai</p>
+  </div>
+</div>
+```
+
+**Loading States** (Minimal Spinner):
+```tsx
+<div className="text-center">
+  <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary mb-2 mx-auto"></div>
+  <p className="text-sm text-gray-600">Memuat pesan...</p>
+</div>
+```
+
+**Error States** (Clean with Lucide Icons):
+```tsx
+<div className="flex flex-col items-center justify-center h-full p-6">
+  <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-3">
+    <MessageCircle className="h-7 w-7 text-red-500" />
+  </div>
+  <p className="text-sm text-gray-900 font-semibold mb-1">Gagal memuat chat</p>
+  <p className="text-xs text-gray-600 text-center mb-4">{error.message}</p>
+  <div className="bg-gray-50 rounded-lg p-3 w-full text-center">
+    <p className="text-xs text-gray-600">Periksa koneksi internet dan API key</p>
+  </div>
+</div>
+```
+
+**Design Principles**:
+- ✅ **No Gradients**: Pure flat colors (white, gray-50, gray-100)
+- ✅ **Lucide Icons Only**: MessageCircle, Send, Users, Clock (NO emoji)
+- ✅ **Minimal Borders**: Subtle gray-200 borders only
+- ✅ **Clean Typography**: text-sm/xs, no excessive bold
+- ✅ **Consistent Spacing**: p-4, p-6, p-8 (multiples of 4)
+- ✅ **Professional Look**: No decorative elements, badges, or animations
+
+**When API is Ready**:
+1. Get Tawk.to API key from dashboard
+2. Add to `.env.local`: `TAWK_TO_API_KEY=your_key_here`
+3. Restart dev server
+4. Chat interface will automatically connect to real API
+5. Remove dummy data fallbacks from `chat.ts` router
+
+**Testing Checklist** (After API Available):
+- [ ] Login as admin/staff
+- [ ] Navigate to /admin/chat
+- [ ] Verify conversation list loads from Tawk.to
+- [ ] Click conversation to view messages
+- [ ] Send reply message
+- [ ] Verify real-time updates work
+
+---
+
+### 1. tRPC v10 Migration & Return System (November 13-17, 2025)
+
+**Status**: ✅ Production-ready, fully migrated to tRPC v10 API
+
+#### **A. tRPC v10 Breaking Change - isPending API**
+
+**Critical Change**: tRPC v10 removed `isLoading` from mutation hooks, replaced with `isPending`
+
+**Migration Pattern**:
+
+```typescript
+// ❌ WRONG (tRPC v9 - deprecated):
+const mutation = trpc.orders.createOrder.useMutation();
+if (mutation.isLoading) {
+  return <Spinner />;
+}
+
+// ✅ CORRECT (tRPC v10):
+const mutation = trpc.orders.createOrder.useMutation();
+if (mutation.isPending) {
+  return <Spinner />;
+}
+```
+
+**Common Usage Patterns**:
+
+1. **Button Disabled State**:
+```typescript
+// ❌ OLD
+<Button disabled={mutation.isLoading}>Submit</Button>
+
+// ✅ NEW
+<Button disabled={mutation.isPending}>Submit</Button>
+```
+
+2. **Loading Indicator**:
+```typescript
+// ❌ OLD
+{mutation.isLoading ? <Spinner /> : <CheckIcon />}
+
+// ✅ NEW
+{mutation.isPending ? <Spinner /> : <CheckIcon />}
+```
+
+3. **Multiple Conditions**:
+```typescript
+// ❌ OLD
+disabled={mutation.isLoading || !formValid || itemCount === 0}
+
+// ✅ NEW
+disabled={mutation.isPending || !formValid || itemCount === 0}
+```
+
+**Files Updated** (13 instances across 5 files):
+- `src/pages/admin/returns/index.tsx` - 6 instances (approve, reject, complete mutations)
+- `src/pages/admin/orders/index.tsx` - 2 instances (confirmDelivered mutation)
+- `src/pages/orders/[orderId].tsx` - 5 instances (confirmOrder, createReturn mutations)
+- `src/pages/checkout-example.tsx` - Removed unused code
+- `src/pages/terms.tsx` - Cleanup
+
+**Important Notes**:
+- ✅ Queries still use `isLoading` (unchanged)
+- ✅ Only mutations changed: `isLoading` → `isPending`
+- ✅ All production build errors resolved
+- ✅ TypeScript type checking passes
+
+---
+
+#### **B. Return/Refund System - Complete Order Lifecycle**
+
+**Status**: ✅ Fully implemented with validation and status tracking
+
+**Purpose**: Handle product returns after order completion with proper validation and workflow.
+
+**Order Status Flow**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ORDER LIFECYCLE (Complete Flow)                             │
+└─────────────────────────────────────────────────────────────┘
+
+1. pending        → Payment not yet received (Midtrans popup)
+2. paid           → Payment received, needs processing
+3. processing     → Admin processing order (packing items)
+4. shipped        → Order shipped with tracking number
+5. delivered      → Package delivered to customer
+6. completed      → Customer confirms receipt ✅ (RETURN ELIGIBLE)
+7. cancelled      → Order cancelled (refund if paid)
+8. expired        → Payment expired (60 minutes timeout)
+
+┌─────────────────────────────────────────────────────────────┐
+│ RETURN FLOW (After Order Completed)                         │
+└─────────────────────────────────────────────────────────────┘
+
+completed → return_requested → return_approved → refund_processed
+         ↓
+         └─→ return_rejected (if invalid)
+```
+
+**Return Eligibility Rules**:
+
+```typescript
+// src/pages/orders/[orderId].tsx
+const canReturn = order.paymentStatus === 'completed'; // ⭐ ONLY completed orders
+
+// Validation checks:
+1. Order must be completed (NOT shipped/delivered/processing)
+2. At least 1 item must be selected for return
+3. Return condition must be selected (damaged/wrong/defective/other)
+4. Return reason must be minimum 10 characters
+```
+
+**Return Request Interface**:
+
+```typescript
+interface ReturnRequest {
+  orderId: string;
+  returnNumber: string;      // Auto-generated: RET-YYYY-NNNN
+  items: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;        // Quantity to return (max: ordered qty)
+    price: number;
+    reason: string;          // Item-specific reason
+    condition: 'damaged' | 'wrong' | 'defective' | 'other';
+  }>;
+  reason: string;            // Overall return reason (min 10 chars)
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  requestDate: string;       // ISO date
+  resolvedDate?: string;     // ISO date (when approved/rejected)
+  refundAmount: number;      // Total refund amount
+  refundMethod: string;      // e.g., "Original Payment Method"
+  adminNotes?: string;       // Admin rejection/approval notes
+}
+```
+
+**Return Dialog Implementation** (`src/pages/orders/[orderId].tsx`):
+
+```typescript
+// State management
+const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
+const [returnReason, setReturnReason] = useState('');
+const [returnCondition, setReturnCondition] = useState<'damaged' | 'wrong' | 'defective' | 'other' | ''>('');
+
+// Validation
+const selectedItemsCount = Object.keys(selectedItems).filter(k => selectedItems[k]).length;
+const isReturnValid = selectedItemsCount > 0 && returnCondition && returnReason.trim().length >= 10;
+
+// Submit handler
+const handleSubmitReturn = async () => {
+  const itemsToReturn = order.items
+    .filter(item => selectedItems[item.productId])
+    .map(item => ({
+      productId: item.productId,
+      productName: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      reason: returnReason,
+      condition: returnCondition
+    }));
+
+  await createReturnMutation.mutateAsync({
+    orderId: order._id,
+    items: itemsToReturn,
+    reason: returnReason
+  });
+};
+
+// Dialog structure
+<Dialog open={returnDialogOpen}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Ajukan Pengembalian</DialogTitle>
+    </DialogHeader>
+
+    {/* Item Selection with Checkboxes */}
+    {order.items.map(item => (
+      <div key={item.productId}>
+        <Checkbox
+          checked={selectedItems[item.productId] || false}
+          onCheckedChange={(checked) => 
+            setSelectedItems(prev => ({ ...prev, [item.productId]: !!checked }))
+          }
+        />
+        {/* Item details */}
+      </div>
+    ))}
+
+    {/* Return Condition Select */}
+    <Select value={returnCondition} onValueChange={setReturnCondition}>
+      <SelectItem value="damaged">Produk Rusak</SelectItem>
+      <SelectItem value="wrong">Produk Tidak Sesuai</SelectItem>
+      <SelectItem value="defective">Produk Cacat</SelectItem>
+      <SelectItem value="other">Lainnya</SelectItem>
+    </Select>
+
+    {/* Return Reason Textarea (min 10 chars) */}
+    <Textarea
+      value={returnReason}
+      onChange={(e) => setReturnReason(e.target.value)}
+      placeholder="Jelaskan alasan pengembalian (minimal 10 karakter)..."
+      rows={4}
+    />
+    <p className="text-xs text-gray-600">
+      {returnReason.length}/10 karakter minimum
+    </p>
+
+    <DialogFooter>
+      <Button variant="outline" disabled={createReturnMutation.isPending}>
+        Batal
+      </Button>
+      <Button
+        onClick={handleSubmitReturn}
+        disabled={createReturnMutation.isPending || !isReturnValid}
+      >
+        {createReturnMutation.isPending ? (
+          <>
+            <div className="animate-spin h-4 w-4 border-b-2 mr-2" />
+            Memproses...
+          </>
+        ) : (
+          <>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Ajukan Pengembalian
+          </>
+        )}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Backend tRPC Procedures** (`src/server/routers/returns.ts`):
+
+```typescript
+export const returnsRouter = router({
+  // Create return request (customer)
+  create: protectedProcedure
+    .input(z.object({
+      orderId: z.string(),
+      items: z.array(z.object({
+        productId: z.string(),
+        productName: z.string(),
+        quantity: z.number().min(1),
+        price: z.number(),
+        reason: z.string().min(10),
+        condition: z.enum(['damaged', 'wrong', 'defective', 'other'])
+      })),
+      reason: z.string().min(10) // Overall reason validation
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Validate order exists and is completed
+      const order = await Order.findById(input.orderId);
+      if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (order.paymentStatus !== 'completed') {
+        throw new TRPCError({ 
+          code: 'BAD_REQUEST', 
+          message: 'Only completed orders can be returned' 
+        });
+      }
+
+      // Generate return number
+      const returnNumber = `RET-${new Date().getFullYear()}-${String(returnCount + 1).padStart(4, '0')}`;
+
+      // Calculate refund amount
+      const refundAmount = input.items.reduce((sum, item) => 
+        sum + (item.price * item.quantity), 0
+      );
+
+      // Create return request
+      const returnRequest = new Return({
+        userId: ctx.user.id,
+        orderId: input.orderId,
+        returnNumber,
+        items: input.items,
+        reason: input.reason,
+        status: 'pending',
+        refundAmount,
+        refundMethod: order.paymentMethod,
+        requestDate: new Date().toISOString()
+      });
+
+      await returnRequest.save();
+      return { success: true, returnNumber };
+    }),
+
+  // Admin: Approve return
+  approve: protectedProcedure
+    .input(z.object({
+      returnId: z.string(),
+      adminNotes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Check admin/staff role
+      if (!['admin', 'staff'].includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const returnRequest = await Return.findByIdAndUpdate(
+        input.returnId,
+        {
+          status: 'approved',
+          resolvedDate: new Date().toISOString(),
+          adminNotes: input.adminNotes
+        },
+        { new: true }
+      );
+
+      return { success: true, return: returnRequest };
+    }),
+
+  // Admin: Reject return
+  reject: protectedProcedure
+    .input(z.object({
+      returnId: z.string(),
+      adminNotes: z.string().min(10) // Reason required
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!['admin', 'staff'].includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const returnRequest = await Return.findByIdAndUpdate(
+        input.returnId,
+        {
+          status: 'rejected',
+          resolvedDate: new Date().toISOString(),
+          adminNotes: input.adminNotes
+        },
+        { new: true }
+      );
+
+      return { success: true, return: returnRequest };
+    })
+});
+```
+
+**Admin Returns Management** (`src/pages/admin/returns/index.tsx`):
+
+```typescript
+// Features:
+- ✅ Filter by status (all/pending/approved/rejected/completed)
+- ✅ Search by return number or customer name
+- ✅ 3 action buttons per return (Approve/Reject/Complete)
+- ✅ View details dialog with full return info
+- ✅ Admin notes required for rejection (min 10 chars)
+
+// Key mutations (all use isPending):
+const approveReturnMutation = trpc.returns.approve.useMutation();
+const rejectReturnMutation = trpc.returns.reject.useMutation();
+const completeReturnMutation = trpc.returns.complete.useMutation();
+
+// Approve dialog
+<Dialog open={approveDialog}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Setujui Pengembalian?</DialogTitle>
+    </DialogHeader>
+    <p>Refund: {formatCurrency(selectedReturn.refundAmount)}</p>
+    <DialogFooter>
+      <Button onClick={handleApprove} disabled={approveReturnMutation.isPending}>
+        {approveReturnMutation.isPending ? 'Memproses...' : 'Ya, Setujui'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+// Reject dialog (requires reason)
+<Dialog open={rejectDialog}>
+  <DialogContent>
+    <Label>Alasan Penolakan *</Label>
+    <Textarea
+      value={rejectReason}
+      onChange={(e) => setRejectReason(e.target.value)}
+      placeholder="Masukkan alasan penolakan (minimal 10 karakter)..."
+    />
+    <Button
+      onClick={handleReject}
+      disabled={rejectReturnMutation.isPending || rejectReason.length < 10}
+    >
+      {rejectReturnMutation.isPending ? 'Memproses...' : 'Tolak'}
+    </Button>
+  </DialogContent>
+</Dialog>
+```
+
+**Key Validation Rules**:
+
+1. **Order Status**: Only `completed` orders eligible for returns
+2. **Item Selection**: Minimum 1 item must be selected
+3. **Return Condition**: Must select one of 4 conditions
+4. **Return Reason**: Minimum 10 characters (customer input)
+5. **Rejection Reason**: Minimum 10 characters (admin input)
+
+**Benefits**:
+
+✅ **Clear Workflow** - Defined status progression with validation  
+✅ **Customer Protection** - Only completed orders can be returned  
+✅ **Admin Control** - Approve/reject with mandatory notes  
+✅ **Data Integrity** - Return linked to order, tracks refund amount  
+✅ **Audit Trail** - Request date, resolved date, admin notes  
+✅ **Type Safety** - Full TypeScript + Zod validation  
+
+**Testing Checklist**:
+
+✅ Return button only shows for completed orders  
+✅ Dialog validates minimum 1 item selected  
+✅ Reason textarea enforces 10+ character minimum  
+✅ Submit button disabled until all validation passes  
+✅ Admin can approve/reject with notes  
+✅ All mutations use isPending (not isLoading)  
+✅ Toast notifications confirm success/error  
+
+---
+
+### 1. Soft Delete Pattern - Product & Customer Management (November 11, 2025)
 
 **Status**: ✅ Production-ready, consistent across Product and Customer entities
 
@@ -5486,6 +6021,9 @@ useEffect(() => {
 10. **Role-based Access**: Proper authentication guards on admin pages
 11. **Export Buttons**: PDF left, Excel right with "Export PDF"/"Export Excel" labels
 12. **Export Toasts**: Full format with description ("telah berhasil diunduh")
+13. **tRPC v10 Mutations**: ALWAYS use `mutation.isPending` (NOT `mutation.isLoading`)
+14. **Return Validation**: Only completed orders can request returns
+15. **Return Reason Length**: Minimum 10 characters for return/rejection reasons
 
 ### Authentication & Security DO's ✅
 
@@ -5792,3 +6330,6 @@ If you have dynamic data in session (like addresses), remove it:
 42. **Never use simple toast format for exports** (always include description with filename)
 43. **Never use "telah diunduh" without "berhasil"** (must be "telah berhasil diunduh")
 44. **Never use "Gagal export"** (use "Gagal mengekspor" for proper Indonesian)
+45. **Never use mutation.isLoading with tRPC v10** (ALWAYS use mutation.isPending instead)
+46. **Never skip order status validation in return requests** (only completed orders can be returned)
+47. **Never allow returns without minimum reason length** (enforce 10+ characters for return reason)

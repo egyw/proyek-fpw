@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Ticket,
   RotateCcw,
+  MessageCircle,
 } from "lucide-react";
 
 import {
@@ -119,6 +120,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       href: "/admin/customers",
       active: router.pathname.startsWith("/admin/customers"),
+    },
+    {
+      title: "Live Chat",
+      icon: MessageCircle,
+      href: "/admin/chat",
+      active: router.pathname.startsWith("/admin/chat"),
     },
     {
       title: "Voucher",
