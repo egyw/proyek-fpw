@@ -161,18 +161,17 @@ export default function ProductsPage() {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery, sortBy, minPrice, maxPrice, hasDiscount]);
 
-  // Static categories from database schema
+  // Fetch categories from database
+  const { data: categoriesData, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
+    includeInactive: false,
+    includeProductCount: true,
+  });
+
+  // Add "Semua Produk" option to categories
+  // Use 'name' as filter value (Title Case) to match Product.category in database
   const categories = [
-    { name: "Semua Produk", slug: "" },
-    { name: "Pipa", slug: "Pipa" },
-    { name: "Besi", slug: "Besi" },
-    { name: "Semen", slug: "Semen" },
-    { name: "Triplek", slug: "Triplek" },
-    { name: "Tangki Air", slug: "Tangki Air" },
-    { name: "Kawat", slug: "Kawat" },
-    { name: "Paku", slug: "Paku" },
-    { name: "Baut", slug: "Baut" },
-    { name: "Aspal", slug: "Aspal" },
+    { _id: 'all', name: "Semua Produk", slug: "", productCount: 0 },
+    ...(categoriesData || []).map(cat => ({ ...cat, slug: cat.name })), // Use name as slug for filter
   ];
 
   return (
@@ -198,29 +197,42 @@ export default function ProductsPage() {
               {/* Categories */}
               <Card className="p-4">
                 <h3 className="font-semibold text-gray-900 mb-4">Kategori</h3>
-                <ul className="space-y-2">
-                  {categories.map((category) => (
-                    <li key={category.slug}>
-                      <button
-                        onClick={() => {
-                          setSelectedCategory(category.slug);
-                          setCurrentPage(1); // Reset to page 1
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                          selectedCategory === category.slug
-                            ? "bg-primary text-white"
-                            : "hover:bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">
-                            {category.name}
-                          </span>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                {categoriesLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="h-9 bg-gray-200 rounded-lg animate-pulse"></div>
+                    ))}
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {categories.map((category) => (
+                      <li key={category._id}>
+                        <button
+                          onClick={() => {
+                            setSelectedCategory(category.slug); // slug now equals name (Title Case)
+                            setCurrentPage(1); // Reset to page 1
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                            selectedCategory === category.slug
+                              ? "bg-primary text-white"
+                              : "hover:bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {category.name}
+                            </span>
+                            {category.productCount !== undefined && category.productCount > 0 && (
+                              <span className="text-xs text-gray-500">
+                                ({category.productCount})
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </Card>
 
               {/* Price Range */}

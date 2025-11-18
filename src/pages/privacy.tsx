@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             </p>
             <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
               <div className="flex items-start gap-2">
-                <Shield className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <Shield className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                 <p className="text-sm text-green-800">
                   <strong>Komitmen Kami:</strong> Kami tidak akan pernah menjual, 
                   menyewakan, atau membagikan informasi pribadi Anda kepada pihak ketiga 
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
           {/* Section 1: Informasi yang Kami Kumpulkan */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Database className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Informasi yang Kami Kumpulkan</h2>
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
           {/* Section 2: Bagaimana Kami Menggunakan Informasi */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Eye className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Bagaimana Kami Menggunakan Informasi</h2>
@@ -160,7 +160,7 @@ export default function PrivacyPage() {
           {/* Section 3: Berbagi Informasi dengan Pihak Ketiga */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <UserCheck className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Berbagi Informasi dengan Pihak Ketiga</h2>
@@ -172,7 +172,7 @@ export default function PrivacyPage() {
               </p>
               <div className="space-y-4">
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold mb-1">Mitra Logistik</p>
                     <p className="text-sm">
@@ -183,7 +183,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold mb-1">Payment Gateway</p>
                     <p className="text-sm">
@@ -193,7 +193,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold mb-1">Penyedia Layanan</p>
                     <p className="text-sm">
@@ -203,7 +203,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold mb-1">Kewajiban Hukum</p>
                     <p className="text-sm">
@@ -215,7 +215,7 @@ export default function PrivacyPage() {
               </div>
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mt-4">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
                   <p className="text-sm text-red-800">
                     <strong>Catatan Penting:</strong> Kami TIDAK PERNAH menjual atau 
                     menyewakan data pribadi Anda kepada pihak ketiga untuk tujuan marketing 
@@ -229,7 +229,7 @@ export default function PrivacyPage() {
           {/* Section 4: Keamanan Data */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Lock className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Keamanan Data</h2>
@@ -241,7 +241,7 @@ export default function PrivacyPage() {
               </p>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
                     <Lock className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
@@ -253,7 +253,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
                     <Lock className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
@@ -265,7 +265,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
                     <Lock className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
@@ -277,7 +277,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
                     <Lock className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
@@ -302,7 +302,7 @@ export default function PrivacyPage() {
           {/* Section 5: Cookies dan Teknologi Pelacakan */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Database className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Cookies dan Teknologi Pelacakan</h2>
@@ -344,7 +344,7 @@ export default function PrivacyPage() {
           {/* Section 6: Hak Anda */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <UserCheck className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Hak Anda atas Data Pribadi</h2>
@@ -355,7 +355,7 @@ export default function PrivacyPage() {
               </p>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Hak Akses</p>
                     <p className="text-sm">
@@ -364,7 +364,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Hak Perbaikan</p>
                     <p className="text-sm">
@@ -373,7 +373,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Hak Penghapusan</p>
                     <p className="text-sm">
@@ -382,7 +382,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Hak Pembatasan</p>
                     <p className="text-sm">
@@ -391,7 +391,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Hak Portabilitas</p>
                     <p className="text-sm">
@@ -400,7 +400,7 @@ export default function PrivacyPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Hak Keberatan</p>
                     <p className="text-sm">
@@ -419,7 +419,7 @@ export default function PrivacyPage() {
           {/* Section 7: Penyimpanan Data */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Database className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Penyimpanan dan Retensi Data</h2>
@@ -452,7 +452,7 @@ export default function PrivacyPage() {
           {/* Section 8: Privasi Anak-anak */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Privasi Anak-anak</h2>
@@ -471,7 +471,7 @@ export default function PrivacyPage() {
           {/* Section 9: Perubahan Kebijakan */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Shield className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Perubahan Kebijakan Privasi</h2>
@@ -493,7 +493,7 @@ export default function PrivacyPage() {
           {/* Section 10: Hubungi Kami */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <Mail className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Hubungi Kami</h2>

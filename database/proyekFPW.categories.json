@@ -1,0 +1,184 @@
+[
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d01"
+    },
+    "name": "Pipa",
+    "slug": "pipa",
+    "description": "Pipa PVC, pipa air, pipa limbah, dan aksesoris pipa untuk instalasi rumah dan bangunan",
+    "icon": "Pipe",
+    "image": "/images/categories/pipa.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 1,
+    "availableUnits": [
+      { "value": "batang", "label": "Batang (4m)", "conversionRate": 1 },
+      { "value": "meter", "label": "Meter (m)", "conversionRate": 0.25 },
+      { "value": "pcs", "label": "Pieces (pcs)", "conversionRate": 1 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d02"
+    },
+    "name": "Besi",
+    "slug": "besi",
+    "description": "Besi beton, besi hollow, besi siku, dan berbagai jenis besi untuk konstruksi bangunan",
+    "icon": "Hammer",
+    "image": "/images/categories/besi.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 2,
+    "availableUnits": [
+      { "value": "batang", "label": "Batang (7.4kg)", "conversionRate": 7.4 },
+      { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 1 },
+      { "value": "ton", "label": "Ton (1000kg)", "conversionRate": 1000 },
+      { "value": "lonjor", "label": "Lonjor (12m)", "conversionRate": 88.8 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d03"
+    },
+    "name": "Semen",
+    "slug": "semen",
+    "description": "Semen Gresik, Semen Padang, Semen Tonasa, dan berbagai merk semen berkualitas",
+    "icon": "Package",
+    "image": "/images/categories/semen.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 3,
+    "availableUnits": [
+      { "value": "sak", "label": "Sak (50kg)", "conversionRate": 50 },
+      { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 1 },
+      { "value": "zak", "label": "Zak (40kg)", "conversionRate": 40 },
+      { "value": "ton", "label": "Ton (1000kg)", "conversionRate": 1000 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d04"
+    },
+    "name": "Triplek",
+    "slug": "triplek",
+    "description": "Triplek, plywood, MDF, dan material kayu lapis untuk furniture dan konstruksi",
+    "icon": "Box",
+    "image": "/images/categories/triplek.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 4,
+    "availableUnits": [
+      { "value": "lembar", "label": "Lembar", "conversionRate": 1 },
+      { "value": "set", "label": "Set (10 lembar)", "conversionRate": 10 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d05"
+    },
+    "name": "Tangki Air",
+    "slug": "tangki-air",
+    "description": "Tangki air Profil, Penguin, dan berbagai merk tangki air berkualitas untuk rumah tangga",
+    "icon": "Droplet",
+    "image": "/images/categories/tangki-air.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 5,
+    "availableUnits": [
+      { "value": "set", "label": "Set", "conversionRate": 1 },
+      { "value": "pcs", "label": "Pieces (pcs)", "conversionRate": 1 },
+      { "value": "unit", "label": "Unit", "conversionRate": 1 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d06"
+    },
+    "name": "Kawat",
+    "slug": "kawat",
+    "description": "Kawat beton, kawat bronjong, kawat harmonika untuk berbagai keperluan konstruksi",
+    "icon": "Network",
+    "image": "/images/categories/kawat.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 6,
+    "availableUnits": [
+      { "value": "gulung", "label": "Gulung (50kg)", "conversionRate": 50 },
+      { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 1 },
+      { "value": "ton", "label": "Ton (1000kg)", "conversionRate": 1000 },
+      { "value": "meter", "label": "Meter (m)", "conversionRate": 0.1 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d07"
+    },
+    "name": "Paku",
+    "slug": "paku",
+    "description": "Paku beton, paku kayu, paku tembak, dan berbagai jenis paku untuk konstruksi",
+    "icon": "Zap",
+    "image": "/images/categories/paku.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 7,
+    "availableUnits": [
+      { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 1 },
+      { "value": "pcs", "label": "Pieces (pcs)", "conversionRate": 0.01 },
+      { "value": "pack", "label": "Pack (5kg)", "conversionRate": 5 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d08"
+    },
+    "name": "Baut",
+    "slug": "baut",
+    "description": "Baut, mur, ring, dan aksesoris pengencang untuk berbagai aplikasi konstruksi",
+    "icon": "Nut",
+    "image": "/images/categories/baut.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 8,
+    "availableUnits": [
+      { "value": "set", "label": "Set (10 pcs)", "conversionRate": 10 },
+      { "value": "pcs", "label": "Pieces (pcs)", "conversionRate": 1 },
+      { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 200 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "674b1a5c8e9f7d1a2b3c4d09"
+    },
+    "name": "Aspal",
+    "slug": "aspal",
+    "description": "Aspal cair, aspal curah, dan material aspal untuk pengaspalan jalan dan waterproofing",
+    "icon": "Layers",
+    "image": "/images/categories/aspal.jpg",
+    "isActive": true,
+    "productCount": 0,
+    "order": 9,
+    "availableUnits": [
+      { "value": "liter", "label": "Liter (L)", "conversionRate": 1 },
+      { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 1.1 },
+      { "value": "drum", "label": "Drum (200L)", "conversionRate": 200 }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  }
+]

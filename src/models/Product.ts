@@ -79,10 +79,8 @@ const ProductSchema = new Schema<IProduct>(
     category: { 
       type: String, 
       required: [true, 'Kategori harus diisi'],
-      enum: {
-        values: ['Pipa', 'Besi', 'Semen', 'Triplek', 'Tangki Air', 'Kawat', 'Paku', 'Baut', 'Aspal'],
-        message: '{VALUE} bukan kategori yang valid'
-      }
+      trim: true,
+      // Note: Category validation now done via database lookup (Category model)
     },
     brand: { 
       type: String, 

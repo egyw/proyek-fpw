@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Power } from "lucide-react";
+import { Search, Plus, Edit, Power } from "lucide-react";
 import ImagePreview from "@/components/ImagePreview";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
@@ -47,79 +47,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
 
-// Category-specific units mapping (units available for each category)
-const categoryUnitsMap: Record<string, Array<{ value: string; label: string }>> = {
-  Semen: [
-    { value: "sak", label: "Sak (50kg)" },
-    { value: "kg", label: "Kilogram (kg)" },
-    { value: "zak", label: "Zak (40kg)" },
-    { value: "ton", label: "Ton (1000kg)" },
-  ],
-  Cat: [
-    { value: "kaleng", label: "Kaleng (5L)" },
-    { value: "liter", label: "Liter (L)" },
-    { value: "galon", label: "Galon (20L)" },
-    { value: "kg", label: "Kilogram (kg)" },
-  ],
-  Besi: [
-    { value: "batang", label: "Batang (7.4kg)" },
-    { value: "kg", label: "Kilogram (kg)" },
-    { value: "ton", label: "Ton (1000kg)" },
-    { value: "lonjor", label: "Lonjor (12m)" },
-  ],
-  Keramik: [
-    { value: "dus", label: "Dus (11 pcs)" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "m2", label: "Meter Persegi (m²)" },
-    { value: "box", label: "Box (6 pcs)" },
-  ],
-  Pipa: [
-    { value: "batang", label: "Batang (4m)" },
-    { value: "meter", label: "Meter (m)" },
-    { value: "pcs", label: "Pieces (pcs)" },
-  ],
-  Kayu: [
-    { value: "lembar", label: "Lembar" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "m3", label: "Meter Kubik (m³)" },
-  ],
-  Genteng: [
-    { value: "lembar", label: "Lembar" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "m2", label: "Meter Persegi (m²)" },
-  ],
-  Triplek: [
-    { value: "lembar", label: "Lembar" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "m2", label: "Meter Persegi (m²)" },
-  ],
-  "Tangki Air": [
-    { value: "set", label: "Set" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "unit", label: "Unit" },
-  ],
-  Kawat: [
-    { value: "gulung", label: "Gulung" },
-    { value: "kg", label: "Kilogram (kg)" },
-    { value: "ton", label: "Ton (1000kg)" },
-    { value: "meter", label: "Meter (m)" },
-  ],
-  Paku: [
-    { value: "kg", label: "Kilogram (kg)" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "pack", label: "Pack" },
-  ],
-  Baut: [
-    { value: "set", label: "Set" },
-    { value: "pcs", label: "Pieces (pcs)" },
-    { value: "kg", label: "Kilogram (kg)" },
-  ],
-  Aspal: [
-    { value: "liter", label: "Liter (L)" },
-    { value: "kg", label: "Kilogram (kg)" },
-    { value: "drum", label: "Drum (200L)" },
-  ],
-};
+// NO MORE HARDCODED categoryUnitsMap!
+// Units now come from database via categoriesData.availableUnits
 
 // Form validation schema
 const productSchema = z.object({
@@ -148,6 +77,10 @@ export default function AdminProducts() {
   const [addDialog, setAddDialog] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
+  // Edit image states
+  const [editImagePreview, setEditImagePreview] = useState<string>("");
+  const [selectedEditFile, setSelectedEditFile] = useState<File | null>(null);
 
   // Form setup
   const form = useForm<ProductFormValues>({
@@ -203,8 +136,6 @@ export default function AdminProducts() {
 
   const [editingProduct, setEditingProduct] = useState<ProductType | null>(null);
   const [editDialog, setEditDialog] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState(false);
-  const [deletingProduct, setDeletingProduct] = useState<ProductType | null>(null);
 
   // tRPC Queries
   const { data: productsData, isLoading, refetch } = trpc.products.getAdminAll.useQuery({
@@ -214,6 +145,12 @@ export default function AdminProducts() {
     sortBy: sortBy,
     page: currentPage,
     limit: itemsPerPage,
+  });
+
+  // Fetch categories from database
+  const { data: categoriesData, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
+    includeInactive: false,
+    includeProductCount: false,
   });
 
   const createProductMutation = trpc.products.createProduct.useMutation({
@@ -246,19 +183,7 @@ export default function AdminProducts() {
     },
   });
 
-  const deleteProductMutation = trpc.products.deleteProduct.useMutation({
-    onSuccess: () => {
-      toast.success("Produk berhasil dihapus!");
-      refetch();
-      setDeleteDialog(false);
-      setDeletingProduct(null);
-    },
-    onError: (error) => {
-      toast.error("Gagal menghapus produk", {
-        description: error.message,
-      });
-    },
-  });
+
 
   const toggleStatusMutation = trpc.products.toggleStatus.useMutation({
     onSuccess: (data) => {
@@ -291,6 +216,21 @@ export default function AdminProducts() {
     setSelectedFile(null);
     setImagePreview("");
   };
+  
+  // Edit image handlers
+  const handleEditFileSelect = (file: File) => {
+    setSelectedEditFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditRemoveImage = () => {
+    setSelectedEditFile(null);
+    setEditImagePreview("");
+  };
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
@@ -298,21 +238,10 @@ export default function AdminProducts() {
 
       // Upload image to Cloudinary first if file selected
       if (selectedFile) {
-        // Map category to folder name
-        const categoryFolderMap: Record<string, string> = {
-          'Pipa': 'pipa-pvc',
-          'Tangki Air': 'tangki-air',
-          'Semen': 'semen',
-          'Besi': 'besi',
-          'Kawat': 'kawat',
-          'Paku': 'paku',
-          'Baut': 'baut',
-          'Aspal': 'aspal',
-          'Triplek': 'triplek',
-        };
-
-        const folderName = categoryFolderMap[data.category] || data.category.toLowerCase();
-        const folder = `proyekFPW/product_assets/${folderName}`;
+        // Get category slug from database for folder path
+        const selectedCategoryData = categoriesData?.find(cat => cat.name === data.category);
+        const categorySlug = selectedCategoryData?.slug || data.category.toLowerCase().replace(/\s+/g, '-');
+        const folder = `proyekFPW/product_assets/${categorySlug}`;
 
         // Get signature from backend
         const signResponse = await fetch('/api/cloudinary/sign-upload', {
@@ -388,6 +317,9 @@ export default function AdminProducts() {
   const handleEditProduct = (product: ProductType) => {
     setEditingProduct(product);
     setEditDialog(true);
+    // Set image preview
+    setEditImagePreview(product.images[0] || "");
+    setSelectedEditFile(null);
     // Pre-populate form
     form.reset({
       name: product.name,
@@ -406,53 +338,117 @@ export default function AdminProducts() {
     });
   };
 
-  const handleUpdateProduct = (data: ProductFormValues) => {
+  const handleUpdateProduct = async (data: ProductFormValues) => {
     if (!editingProduct) return;
 
     const productId = typeof editingProduct._id === 'string' 
       ? editingProduct._id 
       : editingProduct._id.$oid;
 
-    const updateData = {
-      id: productId,
-      name: data.name,
-      category: data.category,
-      brand: data.brand,
-      unit: data.unit,
-      price: Number(data.price),
-      originalPrice: data.originalPrice ? Number(data.originalPrice) : undefined,
-      discount: data.discount ? {
-        percentage: Number(data.discount),
-        validUntil: editingProduct.discount?.validUntil || "",
-      } : undefined,
-      stock: Number(data.stock),
-      minStock: data.minStock ? Number(data.minStock) : 10,
-      availableUnits: data.availableUnits,
-      description: data.description,
-      isActive: data.isActive,
-      isFeatured: data.isFeatured,
-    };
+    try {
+      let imageUrl = editingProduct.images[0]; // Default: keep old image
+      const oldImageUrl = editingProduct.images[0];
 
-    updateProductMutation.mutate(updateData);
-  };
+      // Upload new image if selected
+      if (selectedEditFile) {
+        // Get category slug from database for folder path
+        const selectedCategoryData = categoriesData?.find(cat => cat.name === data.category);
+        const categorySlug = selectedCategoryData?.slug || data.category.toLowerCase().replace(/\s+/g, '-');
+        const folder = `proyekFPW/product_assets/${categorySlug}`;
 
-  const handleDeleteProduct = (product: ProductType) => {
-    setDeletingProduct(product);
-    setDeleteDialog(true);
+        // Get signature from backend
+        const signResponse = await fetch('/api/cloudinary/sign-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder }),
+        });
+
+        if (!signResponse.ok) {
+          throw new Error('Failed to get upload signature');
+        }
+
+        const { signature, timestamp, api_key, cloud_name } = await signResponse.json();
+
+        // Upload to Cloudinary with signature and folder
+        const formData = new FormData();
+        formData.append('file', selectedEditFile);
+        formData.append('folder', folder);
+        formData.append('timestamp', timestamp);
+        formData.append('signature', signature);
+        formData.append('api_key', api_key);
+
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.secure_url;
+
+        // Delete old image from Cloudinary if it exists and is not the dummy image
+        if (oldImageUrl && !oldImageUrl.includes('dummy_image')) {
+          try {
+            // Extract public_id from Cloudinary URL
+            const urlParts = oldImageUrl.split('/');
+            const uploadIndex = urlParts.findIndex(part => part === 'upload');
+            if (uploadIndex !== -1) {
+              const publicIdWithExt = urlParts.slice(uploadIndex + 2).join('/');
+              const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
+
+              // Call deletion endpoint
+              await fetch('/api/cloudinary/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ publicId }),
+              });
+            }
+          } catch (deleteError) {
+            console.error('Failed to delete old image:', deleteError);
+            // Continue with update even if deletion fails
+          }
+        }
+      }
+
+      const updateData = {
+        id: productId,
+        name: data.name,
+        category: data.category,
+        brand: data.brand,
+        unit: data.unit,
+        price: Number(data.price),
+        originalPrice: data.originalPrice ? Number(data.originalPrice) : undefined,
+        discount: data.discount ? {
+          percentage: Number(data.discount),
+          validUntil: editingProduct.discount?.validUntil || "",
+        } : undefined,
+        stock: Number(data.stock),
+        minStock: data.minStock ? Number(data.minStock) : 10,
+        availableUnits: data.availableUnits,
+        images: [imageUrl], // Include updated image
+        description: data.description,
+        isActive: data.isActive,
+        isFeatured: data.isFeatured,
+      };
+
+      updateProductMutation.mutate(updateData);
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error('Gagal mengupdate produk', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      });
+    }
   };
 
   const handleToggleStatus = (product: ProductType) => {
     const productId = typeof product._id === 'string' ? product._id : product._id.$oid;
     toggleStatusMutation.mutate({ id: productId });
-  };
-
-  const confirmDelete = () => {
-    if (deletingProduct) {
-      const productId = typeof deletingProduct._id === 'string' 
-        ? deletingProduct._id 
-        : deletingProduct._id.$oid;
-      deleteProductMutation.mutate({ id: productId });
-    }
   };
 
   // Handle Add Dialog close - reset form to empty
@@ -500,6 +496,8 @@ export default function AdminProducts() {
       });
       setEditingProduct(null);
       setImagePreview("");
+      setEditImagePreview("");
+      setSelectedEditFile(null);
     }
   };
 
@@ -545,17 +543,17 @@ export default function AdminProducts() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Kategori</SelectItem>
-                <SelectItem value="Semen">Semen</SelectItem>
-                <SelectItem value="Besi">Besi</SelectItem>
-                <SelectItem value="Cat">Cat</SelectItem>
-                <SelectItem value="Pipa">Pipa</SelectItem>
-                <SelectItem value="Keramik">Keramik</SelectItem>
-                <SelectItem value="Triplek">Triplek</SelectItem>
-                <SelectItem value="Tangki Air">Tangki Air</SelectItem>
-                <SelectItem value="Kawat">Kawat</SelectItem>
-                <SelectItem value="Paku">Paku</SelectItem>
-                <SelectItem value="Baut">Baut</SelectItem>
-                <SelectItem value="Aspal">Aspal</SelectItem>
+                {categoriesLoading ? (
+                  <SelectItem value="loading" disabled>Memuat kategori...</SelectItem>
+                ) : categoriesData && categoriesData.length > 0 ? (
+                  categoriesData.map((category) => (
+                    <SelectItem key={category._id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="empty" disabled>Tidak ada kategori tersedia</SelectItem>
+                )}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
@@ -719,19 +717,10 @@ export default function AdminProducts() {
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="ghost" 
-                          className="text-blue-600 hover:text-blue-700"
+                          variant="ghost"
                           onClick={() => handleEditProduct(product)}
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteProduct(product)}
-                        >
-                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -885,15 +874,21 @@ export default function AdminProducts() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Semen">Semen</SelectItem>
-                            <SelectItem value="Besi">Besi</SelectItem>
-                            <SelectItem value="Pipa">Pipa</SelectItem>
-                            <SelectItem value="Triplek">Triplek</SelectItem>
-                            <SelectItem value="Tangki Air">Tangki Air</SelectItem>
-                            <SelectItem value="Kawat">Kawat</SelectItem>
-                            <SelectItem value="Paku">Paku</SelectItem>
-                            <SelectItem value="Baut">Baut</SelectItem>
-                            <SelectItem value="Aspal">Aspal</SelectItem>
+                            {categoriesLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Memuat kategori...
+                              </SelectItem>
+                            ) : categoriesData && categoriesData.length > 0 ? (
+                              categoriesData.map((category) => (
+                                <SelectItem key={category._id} value={category.name}>
+                                  {category.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="empty" disabled>
+                                Tidak ada kategori tersedia
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormDescription>
@@ -986,38 +981,44 @@ export default function AdminProducts() {
                   <FormField
                     control={form.control}
                     name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Satuan Utama Supplier *</FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            // Auto-select this unit in availableUnits
-                            const currentUnits = form.getValues("availableUnits");
-                            if (!currentUnits.includes(value)) {
-                              form.setValue("availableUnits", [...currentUnits, value]);
-                            }
-                          }} 
-                          defaultValue={field.value}
-                          disabled={!watchedCategory}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih unit utama" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {watchedCategory && categoryUnitsMap[watchedCategory]?.map((unit) => (
-                              <SelectItem key={unit.value} value={unit.value}>
-                                {unit.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>Unit yang digunakan supplier</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      // Get available units from database (dynamic)
+                      const selectedCategory = categoriesData?.find(cat => cat.name === watchedCategory);
+                      const availableUnits = selectedCategory?.availableUnits || [];
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Satuan Utama Supplier *</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Auto-select this unit in availableUnits
+                              const currentUnits = form.getValues("availableUnits");
+                              if (!currentUnits.includes(value)) {
+                                form.setValue("availableUnits", [...currentUnits, value]);
+                              }
+                            }} 
+                            defaultValue={field.value}
+                            disabled={!watchedCategory}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih unit utama" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableUnits.map((unit) => (
+                                <SelectItem key={unit.value} value={unit.value}>
+                                  {unit.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>Unit yang digunakan supplier</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <FormField
@@ -1060,60 +1061,66 @@ export default function AdminProducts() {
                 </div>
 
                 {/* Available Units for Customers */}
-                {watchedCategory && categoryUnitsMap[watchedCategory] && (
-                  <FormField
-                    control={form.control}
-                    name="availableUnits"
-                    render={() => (
-                      <FormItem>
-                        <div className="mb-4">
-                          <FormLabel className="text-base">Unit yang Tersedia untuk Customer *</FormLabel>
-                          <FormDescription>
-                            Pilih unit yang bisa dipilih customer saat checkout (unit utama otomatis terpilih)
-                          </FormDescription>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          {categoryUnitsMap[watchedCategory].map((unit) => (
-                            <FormField
-                              key={unit.value}
-                              control={form.control}
-                              name="availableUnits"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={unit.value}
-                                    className="flex items-start space-x-3 border rounded-lg p-3"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(unit.value)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...field.value, unit.value])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) => value !== unit.value
-                                                )
-                                              );
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                      <FormLabel className="font-medium cursor-pointer">
-                                        {unit.label}
-                                      </FormLabel>
-                                    </div>
-                                  </FormItem>
-                                );
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                {watchedCategory && (() => {
+                  // Get available units from database (dynamic)
+                  const selectedCategory = categoriesData?.find(cat => cat.name === watchedCategory);
+                  const availableUnits = selectedCategory?.availableUnits || [];
+                  
+                  return availableUnits.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="availableUnits"
+                      render={() => (
+                        <FormItem>
+                          <div className="mb-4">
+                            <FormLabel className="text-base">Unit yang Tersedia untuk Customer *</FormLabel>
+                            <FormDescription>
+                              Pilih unit yang bisa dipilih customer saat checkout (unit utama otomatis terpilih)
+                            </FormDescription>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {availableUnits.map((unit) => (
+                              <FormField
+                                key={unit.value}
+                                control={form.control}
+                                name="availableUnits"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={unit.value}
+                                      className="flex items-start space-x-3 border rounded-lg p-3"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(unit.value)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, unit.value])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== unit.value
+                                                  )
+                                                );
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <div className="space-y-1 leading-none">
+                                        <FormLabel className="font-medium cursor-pointer">
+                                          {unit.label}
+                                        </FormLabel>
+                                      </div>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  );
+                })()}
 
                 <FormField
                   control={form.control}
@@ -1206,7 +1213,7 @@ export default function AdminProducts() {
           
           <Form {...form}>
             <form id="edit-product-form" name="edit-product-form" onSubmit={form.handleSubmit(handleUpdateProduct)} className="space-y-8">
-              {/* Reuse the same form fields as Add Dialog */}
+              {/* Informasi Produk Section */}
               <div className="space-y-5">
                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informasi Produk</h3>
                 
@@ -1230,25 +1237,14 @@ export default function AdminProducts() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Kategori *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih kategori" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Semen">Semen</SelectItem>
-                            <SelectItem value="Besi">Besi</SelectItem>
-                            <SelectItem value="Pipa">Pipa</SelectItem>
-                            <SelectItem value="Triplek">Triplek</SelectItem>
-                            <SelectItem value="Tangki Air">Tangki Air</SelectItem>
-                            <SelectItem value="Kawat">Kawat</SelectItem>
-                            <SelectItem value="Paku">Paku</SelectItem>
-                            <SelectItem value="Baut">Baut</SelectItem>
-                            <SelectItem value="Aspal">Aspal</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Kategori</FormLabel>
+                        <FormControl>
+                          <Input 
+                            value={field.value || ""} 
+                            disabled 
+                            className="bg-gray-100 cursor-not-allowed"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1268,9 +1264,30 @@ export default function AdminProducts() {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deskripsi *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={4}
+                          placeholder="Deskripsi produk..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Minimal 10 karakter
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              {/* Price & Stock Section */}
+              {/* Harga & Stok Section */}
               <div className="space-y-5 pt-6 border-t">
                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Harga & Stok</h3>
 
@@ -1291,6 +1308,57 @@ export default function AdminProducts() {
 
                   <FormField
                     control={form.control}
+                    name="originalPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Harga Asli (Rp)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="120000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => {
+                      const editCategory = form.watch("category");
+                      const selectedCategory = categoriesData?.find(cat => cat.name === editCategory);
+                      const units = selectedCategory?.availableUnits || [];
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Satuan Utama *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih satuan" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {units.length > 0 ? (
+                                units.map((unit) => (
+                                  <SelectItem key={unit.value} value={unit.value}>
+                                    {unit.label}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="pcs">PCS</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="stock"
                     render={({ field }) => (
                       <FormItem>
@@ -1302,11 +1370,132 @@ export default function AdminProducts() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="minStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stok Minimal</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+
+                {/* Available Units for Customer - Based on product's category */}
+                {(() => {
+                  const editCategory = form.watch("category");
+                  const selectedCategory = categoriesData?.find(cat => cat.name === editCategory);
+                  const availableUnits = selectedCategory?.availableUnits || [];
+                  
+                  return availableUnits.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="availableUnits"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Unit Tersedia untuk Customer *</FormLabel>
+                          <FormDescription>
+                            Pilih unit yang bisa dipilih customer saat belanja (dari kategori {editCategory})
+                          </FormDescription>
+                          <div className="grid grid-cols-2 gap-3 mt-2">
+                            {availableUnits.map((unit) => (
+                              <FormItem
+                                key={unit.value}
+                                className="flex items-start space-x-3 space-y-0 rounded-md border p-4"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(unit.value)}
+                                    onCheckedChange={(checked) => {
+                                      const currentValues = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...currentValues, unit.value]);
+                                      } else {
+                                        field.onChange(
+                                          currentValues.filter((value) => value !== unit.value)
+                                        );
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="font-medium">
+                                    {unit.label}
+                                  </FormLabel>
+                                  <FormDescription className="text-xs">
+                                    {unit.value === form.watch("unit") ? "Satuan utama" : "Konversi tersedia"}
+                                  </FormDescription>
+                                </div>
+                              </FormItem>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  );
+                })()}
+
+                <FormField
+                  control={form.control}
+                  name="discount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Diskon (%)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="15" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Persentase diskon (0-100)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              {/* Status Section */}
+              {/* Gambar Produk Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Gambar Produk</h3>
+                
+                <ImagePreview
+                  currentImage={editImagePreview}
+                  onFileSelect={handleEditFileSelect}
+                  onRemove={handleEditRemoveImage}
+                  disabled={updateProductMutation.isPending}
+                />
+              </div>
 
+              {/* Status Produk Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Status Produk</h3>
+
+                <FormField
+                  control={form.control}
+                  name="isFeatured"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Produk Unggulan</FormLabel>
+                        <FormDescription>
+                          Tampilkan di section featured products
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <DialogFooter>
                 <Button
@@ -1325,56 +1514,7 @@ export default function AdminProducts() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Product Dialog */}
-      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Hapus Produk</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
 
-          {deletingProduct && (
-            <div className="py-4">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
-                  <Image
-                    src={deletingProduct.images[0]}
-                    alt={deletingProduct.name}
-                    fill
-                    sizes="48px"
-                    className="object-cover"
-                  />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">{deletingProduct.name}</p>
-                  <p className="text-sm text-gray-600">{deletingProduct.brand}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteDialog(false);
-                setDeletingProduct(null);
-              }}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleteProductMutation.isPending}
-            >
-              {deleteProductMutation.isPending ? "Menghapus..." : "Hapus Produk"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 }

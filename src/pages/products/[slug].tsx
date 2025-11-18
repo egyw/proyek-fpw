@@ -119,6 +119,9 @@ export default function ProductDetailPage() {
     { enabled: !!slug } // Only run query when slug is available
   );
 
+  // Fetch categories for unit conversion data
+  const { data: categoriesData } = trpc.categories.getAll.useQuery();
+
   // Fetch related products (same category, exclude current product)
   const { data: relatedProductsData } = trpc.products.getAll.useQuery(
     {
@@ -464,6 +467,15 @@ export default function ProductDetailPage() {
               productPrice={discountPrice}
               productStock={product.stock}
               availableUnits={product.availableUnits || [product.unit]}
+              categoryUnits={(() => {
+                // Get category data from database
+                const selectedCategory = categoriesData?.find(cat => cat.name === product.category);
+                if (!selectedCategory) return undefined;
+                
+                return {
+                  availableUnits: selectedCategory.availableUnits
+                };
+              })()}
               productAttributes={product.attributes as Record<string, string | number>}
               onAddToCart={(quantityInUserUnit, userSelectedUnit, totalPrice) => {
                 // UnitConverter now sends user's selected unit and quantity

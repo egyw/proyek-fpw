@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Ticket, Power } from "lucide-react";
+import { Plus, Search, Edit, Ticket, Power } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
@@ -76,7 +76,6 @@ export default function VouchersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<IVoucher | null>(null);
 
   // Form state
@@ -157,22 +156,7 @@ export default function VouchersPage() {
     },
   });
 
-  const deleteVoucherMutation = trpc.vouchers.delete.useMutation({
-    onSuccess: () => {
-      utils.vouchers.getAll.invalidate();
-      utils.vouchers.getStats.invalidate();
-      toast.success("Voucher Dihapus!", {
-        description: `Voucher ${selectedVoucher?.code} berhasil dihapus.`,
-      });
-      setShowDeleteDialog(false);
-      setSelectedVoucher(null);
-    },
-    onError: (error) => {
-      toast.error("Gagal Menghapus Voucher", {
-        description: error.message,
-      });
-    },
-  });
+
 
   const pagination = vouchersData?.pagination;
 
@@ -276,12 +260,6 @@ export default function VouchersPage() {
           description: firstError ? firstError.message : "Data tidak valid",
         });
       }
-    }
-  };
-
-  const confirmDelete = () => {
-    if (selectedVoucher) {
-      deleteVoucherMutation.mutate({ id: selectedVoucher._id });
     }
   };
 
@@ -519,13 +497,6 @@ export default function VouchersPage() {
                         onClick={() => handleEdit(voucher)}
                       >
                         <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(voucher)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>
@@ -844,32 +815,7 @@ export default function VouchersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Hapus Voucher?</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus voucher{" "}
-              <code className="bg-red-50 text-red-700 px-2 py-1 rounded">
-                {selectedVoucher?.code}
-              </code>
-              ? Tindakan ini tidak dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Hapus Voucher
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </AdminLayout>
   );
 }

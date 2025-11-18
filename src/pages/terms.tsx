@@ -38,7 +38,7 @@ export default function TermsPage() {
           {/* Section 1: Definisi */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">1</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Definisi</h2>
@@ -71,14 +71,14 @@ export default function TermsPage() {
           {/* Section 2: Pendaftaran Akun */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">2</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Pendaftaran Akun</h2>
             </div>
             <div className="space-y-4 text-gray-700">
               <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold mb-1">2.1. Kewajiban Pengguna</p>
                   <p className="leading-relaxed">
@@ -89,7 +89,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold mb-1">2.2. Keamanan Akun</p>
                   <p className="leading-relaxed">
@@ -100,7 +100,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold mb-1">2.3. Syarat Usia</p>
                   <p className="leading-relaxed">
@@ -115,7 +115,7 @@ export default function TermsPage() {
           {/* Section 3: Pemesanan dan Pembayaran */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">3</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Pemesanan dan Pembayaran</h2>
@@ -164,7 +164,7 @@ export default function TermsPage() {
           {/* Section 4: Pengiriman */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">4</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Pengiriman</h2>
@@ -212,7 +212,7 @@ export default function TermsPage() {
           {/* Section 5: Pengembalian dan Penukaran */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">5</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Pengembalian dan Penukaran</h2>
@@ -261,7 +261,7 @@ export default function TermsPage() {
           {/* Section 6: Hak Kekayaan Intelektual */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">6</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Hak Kekayaan Intelektual</h2>
@@ -279,7 +279,7 @@ export default function TermsPage() {
           {/* Section 7: Batasan Tanggung Jawab */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">7</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Batasan Tanggung Jawab</h2>
@@ -287,7 +287,7 @@ export default function TermsPage() {
             <div className="space-y-4 text-gray-700">
               <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded mb-4">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
                   <p className="text-sm text-yellow-800">
                     <strong>Penting:</strong> Kami tidak bertanggung jawab atas kerugian 
                     tidak langsung, insidental, atau konsekuensial yang timbul dari 
@@ -317,7 +317,7 @@ export default function TermsPage() {
           {/* Section 8: Perubahan Syarat dan Ketentuan */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">8</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Perubahan Syarat dan Ketentuan</h2>
@@ -339,7 +339,7 @@ export default function TermsPage() {
           {/* Section 9: Hukum yang Berlaku */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">9</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Hukum yang Berlaku</h2>
@@ -357,7 +357,7 @@ export default function TermsPage() {
           {/* Section 10: Kontak */}
           <Card className="p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary font-bold">10</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Hubungi Kami</h2>

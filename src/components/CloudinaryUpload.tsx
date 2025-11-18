@@ -7,14 +7,14 @@ interface CloudinaryUploadProps {
   onUploadSuccess: (url: string) => void;
   currentImage?: string;
   onRemove?: () => void;
-  category?: string; // Optional: untuk dynamic folder berdasarkan kategori
+  categorySlug?: string; // Category slug dari database untuk dynamic folder
 }
 
 export default function CloudinaryUpload({
   onUploadSuccess,
   currentImage,
   onRemove,
-  category,
+  categorySlug,
 }: CloudinaryUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -98,23 +98,10 @@ export default function CloudinaryUpload({
     setError("");
 
     try {
-      // Mapping kategori ke nama folder Cloudinary
-      const categoryFolderMap: Record<string, string> = {
-        'Pipa': 'pipa-pvc',
-        'Tangki Air': 'tangki-air',
-        'Semen': 'semen',
-        'Besi': 'besi',
-        'Kawat': 'kawat',
-        'Paku': 'paku',
-        'Baut': 'baut',
-        'Aspal': 'aspal',
-        'Triplek': 'triplek',
-      };
-      
-      // Full path ke folder tujuan
-      const folderSlug = category ? categoryFolderMap[category] || category.toLowerCase() : '';
-      const folderName = folderSlug 
-        ? `proyekFPW/product_assets/${folderSlug}` 
+      // Use category slug directly from database for folder path
+      // No more hardcoded mapping - fully dynamic!
+      const folderName = categorySlug 
+        ? `proyekFPW/product_assets/${categorySlug}` 
         : "proyekFPW/product_assets";
       
       // Get signature from backend (signed upload)

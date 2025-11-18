@@ -3854,11 +3854,15 @@ interface Order {
 - **Size convention**: `className="h-4 w-4"` for buttons, `h-5 w-5` for larger elements
 - **Avoid emoji icons** (🔍👁️🛒) - they look unprofessional and inconsistent across platforms
 
-### Unit Converter Component
+### Unit Converter Component (Database-Driven System)
+
+**Status**: ✅ Production-ready, 100% database-driven (November 2025)
 
 **Purpose**: Allow customers to purchase building materials in their preferred unit (e.g., buy cement in KG when product is sold per SAK)
 
 **Location**: `src/components/UnitConverter.tsx`
+
+**Architecture**: Fully database-driven unit system with NO hardcoded conversions
 
 **Features**:
 
@@ -3868,90 +3872,174 @@ interface Order {
 - Price calculation based on supplier's unit
 - Stock availability check in supplier's unit
 - Add to cart with supplier's unit (bukan converted unit)
-- Supports 7 product categories: Semen, Keramik, Cat, Besi, Pipa, Kayu, Genteng
-- **Admin controls which units are available** via checkbox in product form
+- **100% Database-Driven** - All unit data from MongoDB categories collection
+- **Admin controls which units are available** via Category management
 
-**How It Works**:
+**Database-Driven Architecture**:
 
-1. Admin creates product → selects category (e.g., "Semen")
-2. Category-specific units appear as checkboxes (e.g., Sak, Kg, Ton, Zak)
-3. Admin checks which units customers can purchase in → saved to `availableUnits` array in database
-4. Customer sees:
-   - **"Dari" field**: Locked to supplier's unit (e.g., "Sak") - gray background, tidak bisa edit
-   - **"Ke" field**: Dropdown dengan unit yang dipilih admin (e.g., Kg, Ton)
+**Categories Collection** (`database/proyekFPW.categories.json`):
+```json
+{
+  "name": "Semen",
+  "slug": "semen",
+  "baseUnit": "kg",
+  "availableUnits": [
+    { "value": "sak", "label": "Sak (50kg)", "conversionRate": 50 },
+    { "value": "kg", "label": "Kilogram (kg)", "conversionRate": 1 },
+    { "value": "zak", "label": "Zak (40kg)", "conversionRate": 40 },
+    { "value": "ton", "label": "Ton (1000kg)", "conversionRate": 1000 }
+  ]
+}
+```
 
-**Usage Pattern**:
+**Key Fields**:
+- `baseUnit`: Reference unit for all conversions (e.g., "kg", "meter", "pcs")
+- `availableUnits`: Array of unit options with conversion rates to base unit
+- `conversionRate`: Multiplier to convert to base unit (e.g., 1 sak = 50kg, conversionRate = 50)
+
+**Component Props** (Database-Driven):
+
+```typescript
+interface CategoryUnitData {
+  value: string;            // Unit code (e.g., "sak", "kg")
+  label: string;            // Display label (e.g., "Sak (50kg)")
+  conversionRate: number;   // Multiplier to base unit (e.g., 50 for sak→kg)
+}
+
+interface CategoryUnits {
+  baseUnit: string;                    // Base unit from database
+  availableUnits: CategoryUnitData[];  // All units from database
+}
+
+interface UnitConverterProps {
+  category: string;              // Product category name
+  productUnit: string;           // Supplier's primary unit (LOCKED)
+  productPrice: number;          // Price per productUnit
+  productStock: number;          // Stock in productUnit
+  categoryUnits?: CategoryUnits; // ⭐ NEW: Database unit data (required)
+  productAttributes?: Record<string, string | number>; // For dynamic labels
+  onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
+}
+```
+
+**Usage Pattern** (Parent Component):
 
 ```tsx
-<UnitConverter
-  category={product.category} // Product category (e.g., "Semen")
-  productUnit={product.unit} // Supplier's primary unit (e.g., "sak") - LOCKED
-  productPrice={product.price} // Price per primary unit
-  productStock={product.stock} // Available stock in primary unit
-  availableUnits={product.availableUnits} // ["sak", "kg", "ton"] from database
-  onAddToCart={(qty, unit, total) => {
-    // qty & unit are in SUPPLIER'S UNIT (e.g., 2 sak, not 100kg)
-    // total is calculated price
-  }}
+// 1. Query categories from database
+const { data: categoriesData } = trpc.categories.getAll.useQuery();
+
+// 2. Pass category units to UnitConverter
+<UnitConverter 
+  category={product.category}
+  productUnit={product.unit}
+  productPrice={discountPrice}
+  productStock={product.stock}
+  categoryUnits={(() => {
+    // Find matching category
+    const selectedCategory = categoriesData?.find(cat => cat.name === product.category);
+    if (!selectedCategory) return undefined;
+    
+    // Transform to component format
+    return {
+      baseUnit: selectedCategory.baseUnit,
+      availableUnits: selectedCategory.availableUnits
+    };
+  })()}
+  productAttributes={product.attributes as Record<string, string | number>}
+  onAddToCart={handleAddToCart}
 />
+```
+
+**Conversion Logic** (Database-Driven):
+
+```typescript
+// Convert using conversionRate from database
+const convertUnits = (value: number, from: string, to: string): number => {
+  const fromUnit = dynamicUnits.find(u => u.value === from);
+  const toUnit = dynamicUnits.find(u => u.value === to);
+  
+  if (!fromUnit || !toUnit) return 0;
+  
+  // Convert via base unit: value → base → target
+  const baseValue = value * fromUnit.conversionRate;
+  const result = baseValue / toUnit.conversionRate;
+  
+  return result;
+};
 ```
 
 **Example Flow**:
 
 ```
-Supplier: 1 Sak Semen = Rp 65,000, Stok 150 Sak
-Customer Input:
-  - Dari: 2 Sak (LOCKED, tidak bisa diganti)
-  - Ke: Ton (pilih dari dropdown)
-  - Hasil: 2 Sak = 0.10 Ton
-  - Harga: Rp 130,000 (2 × 65,000)
-  - Stok: 150 Sak tersedia
-  - Klik "Beli 2 Sak" → Cart: 2 Sak @ Rp 65,000
+Database:
+  Category: Semen
+  Base Unit: kg
+  Available Units:
+    - sak: conversionRate = 50 (1 sak = 50kg)
+    - kg: conversionRate = 1 (1 kg = 1kg)
+    - ton: conversionRate = 1000 (1 ton = 1000kg)
+
+Product:
+  1 Sak Semen = Rp 65,000, Stok 150 Sak
+
+Customer Converts:
+  2 Sak → Ton
+  
+Calculation:
+  2 sak × 50 (conversionRate) = 100 kg (base)
+  100 kg ÷ 1000 (conversionRate) = 0.1 ton
+  Price: 2 × Rp 65,000 = Rp 130,000
 ```
 
-**Base Unit System**:
+**Admin Category Management**:
 
-- Each category has a base unit (e.g., Semen → kg, Keramik → pcs)
-- Conversions defined as multiplier to base unit
-- Example: 1 sak = 50kg, 1 zak = 40kg, 1 ton = 1000kg
-
-**Category Units Mapping** (defined in both Admin Products & UnitConverter):
-
-```typescript
-const categoryUnitsMap: Record<
-  string,
-  Array<{ value: string; label: string }>
-> = {
-  Semen: [
-    { value: "sak", label: "Sak (50kg)" },
-    { value: "kg", label: "Kilogram (kg)" },
-    { value: "zak", label: "Zak (40kg)" },
-    { value: "ton", label: "Ton (1000kg)" },
-  ],
-  Cat: [
-    { value: "kaleng", label: "Kaleng (5L)" },
-    { value: "liter", label: "Liter (L)" },
-    { value: "galon", label: "Galon (20L)" },
-    { value: "kg", label: "Kilogram (kg)" },
-  ],
-  // ... other categories
-};
+```tsx
+// Admin creates/edits category
+<FormField name="availableUnits">
+  {availableUnits.map(unit => (
+    <Checkbox
+      label={unit.label}  // e.g., "Sak (50kg)"
+      value={unit.value}  // e.g., "sak"
+      // Save to database: { value, label, conversionRate }
+    />
+  ))}
+</FormField>
 ```
 
-**Props Interface**:
+**Dynamic Weight Labels** (Besi/Kawat):
 
 ```typescript
-interface UnitConverterProps {
-  category: string; // Product category
-  productUnit: string; // Product's primary unit (supplier uses)
-  productPrice: number; // Price per productUnit
-  productStock: number; // Stock in productUnit
-  availableUnits?: string[]; // Units allowed for customers (from DB)
-  onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
+// For Besi: weight varies per diameter
+if (category === "Besi" && productAttributes?.weight_kg) {
+  const weightKg = Number(productAttributes.weight_kg);
+  dynamicUnits = [
+    { 
+      value: "batang", 
+      label: `Batang (${weightKg}kg)`,  // Dynamic! e.g., "Batang (7.4kg)"
+      conversionRate: weightKg 
+    },
+    // ... other units from database
+  ];
 }
 ```
 
-**Database Field**: `availableUnits: string[]` (e.g., `["sak", "kg", "ton"]`)
+**Benefits of Database-Driven System**:
+
+✅ **No Hardcoded Data** - All unit data in MongoDB, easy to update  
+✅ **Centralized Management** - Update conversions in one place  
+✅ **Scalable** - Add new categories/units without code changes  
+✅ **Type-Safe** - Full TypeScript + Zod validation  
+✅ **Admin-Friendly** - Manage units via admin panel (future feature)  
+✅ **Consistent** - Single source of truth for all conversions  
+
+**Files Modified** (November 2025):
+- `src/models/Category.ts` - Added baseUnit + availableUnits fields
+- `database/proyekFPW.categories.json` - 9 categories with conversion data
+- `src/components/UnitConverter.tsx` - Removed ~150 lines hardcoded data
+- `src/pages/admin/products/index.tsx` - Dynamic unit checkboxes from DB
+- `src/pages/products/[slug].tsx` - Query categories + pass categoryUnits prop
+
+**Migration Complete**: Old hardcoded `unitConversions` map removed entirely
 
 **DO NOT use Form component** - UnitConverter uses simple `useState` for real-time calculation, NOT react-hook-form
 
@@ -5422,20 +5510,10 @@ const onSubmit = async (data: ProductFormValues) => {
 
     // Upload image ONLY if file selected
     if (selectedFile) {
-      // 1. Map category to folder name
-      const categoryFolderMap: Record<string, string> = {
-        'Pipa': 'pipa-pvc',
-        'Tangki Air': 'tangki-air',
-        'Semen': 'semen',
-        'Besi': 'besi',
-        'Kawat': 'kawat',
-        'Paku': 'paku',
-        'Baut': 'baut',
-        'Aspal': 'aspal',
-        'Triplek': 'triplek',
-      };
-      const folderName = categoryFolderMap[data.category] || data.category.toLowerCase();
-      const folder = `proyekFPW/product_assets/${folderName}`;
+      // 1. Get category slug from database for dynamic folder routing
+      const selectedCategoryData = categoriesData?.find(cat => cat.name === data.category);
+      const categorySlug = selectedCategoryData?.slug || data.category.toLowerCase().replace(/\\s+/g, '-');
+      const folder = `proyekFPW/product_assets/${categorySlug}`;
 
       // 2. Get signature from backend (signed upload)
       const signResponse = await fetch('/api/cloudinary/sign-upload', {

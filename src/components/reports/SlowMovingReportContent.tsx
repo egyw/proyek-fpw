@@ -21,6 +21,8 @@ import { TrendingDown, Package, AlertCircle, Download, FileText, Tag } from 'luc
 import { trpc } from '@/utils/trpc';
 import { toast } from 'sonner';
 
+import type { ICategoryData } from '@/models/Category';
+
 interface SlowMovingProduct {
   id: string;
   productName: string;
@@ -40,7 +42,13 @@ export default function SlowMovingReportContent() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'dead' | 'very_slow' | 'slow'>('all');
 
-  // tRPC Query
+  // tRPC Query - Categories
+  const { data: categoriesData, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
+    includeInactive: false,
+    includeProductCount: false,
+  });
+
+  // tRPC Query - Slow Moving Report
   const { data: reportData, isLoading, error } = trpc.reports.getSlowMoving.useQuery({
     period,
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
@@ -408,12 +416,13 @@ export default function SlowMovingReportContent() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Kategori</SelectItem>
-                <SelectItem value="Paku">Paku</SelectItem>
-                <SelectItem value="Baut">Baut</SelectItem>
-                <SelectItem value="Cat">Cat</SelectItem>
-                <SelectItem value="Triplek">Triplek</SelectItem>
-                <SelectItem value="Kawat">Kawat</SelectItem>
-                <SelectItem value="Aspal">Aspal</SelectItem>
+                {categoriesLoading ? (
+                  <SelectItem value="loading" disabled>Memuat...</SelectItem>
+                ) : (categoriesData as ICategoryData[] | undefined)?.map((category) => (
+                  <SelectItem key={category._id.toString()} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

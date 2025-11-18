@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import type { ICategoryData } from '@/models/Category';
 import {
   Select,
   SelectContent,
@@ -38,7 +39,13 @@ export default function LowStockReportContent() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // tRPC Query
+  // tRPC Query - Categories
+  const { data: categoriesData, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
+    includeInactive: false,
+    includeProductCount: false,
+  });
+
+  // tRPC Query - Low Stock Report
   const { data: reportData, isLoading, error } = trpc.reports.getLowStock.useQuery({
     threshold: 20,
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
@@ -343,12 +350,13 @@ export default function LowStockReportContent() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Kategori</SelectItem>
-                <SelectItem value="Semen">Semen</SelectItem>
-                <SelectItem value="Besi">Besi</SelectItem>
-                <SelectItem value="Cat">Cat</SelectItem>
-                <SelectItem value="Pipa">Pipa</SelectItem>
-                <SelectItem value="Triplek">Triplek</SelectItem>
-                <SelectItem value="Kawat">Kawat</SelectItem>
+                {categoriesLoading ? (
+                  <SelectItem value="loading" disabled>Memuat...</SelectItem>
+                ) : (categoriesData as ICategoryData[] | undefined)?.map((category) => (
+                  <SelectItem key={category._id.toString()} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

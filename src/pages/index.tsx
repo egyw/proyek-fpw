@@ -24,7 +24,8 @@ import { useRef, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store/cartStore";
 import { toast } from "sonner";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Package } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import Autoplay from "embla-carousel-autoplay";
 
 export default function Home() {
@@ -114,16 +115,11 @@ export default function Home() {
     { id: 5, image: "/assets/carousels/carousel5.png" },
   ];
 
-  const categories = [
-    { name: "Semen", icon: "🧱" },
-    { name: "Besi", icon: "⚙️" },
-    { name: "Cat", icon: "🎨" },
-    { name: "Pipa", icon: "🚰" },
-    { name: "Keramik", icon: "⬜" },
-    { name: "Kayu", icon: "🪵" },
-    { name: "Atap", icon: "🏠" },
-    { name: "Lainnya", icon: "📦" },
-  ];
+  // Fetch categories from database
+  const { data: categories, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
+    includeInactive: false,
+    includeProductCount: true,
+  });
 
   return (
     <MainLayout>
@@ -332,20 +328,49 @@ export default function Home() {
             Kategori Populer
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                href={`/products?category=${category.name}`}
-                className="group"
-              >
-                <Card className="p-6 text-center hover:shadow-lg transition-all hover:scale-105 cursor-pointer">
-                  <div className="text-4xl mb-3">{category.icon}</div>
-                  <h3 className="font-medium text-gray-900 group-hover:text-primary">
-                    {category.name}
-                  </h3>
+            {categoriesLoading ? (
+              // Loading skeleton
+              Array.from({ length: 8 }).map((_, index) => (
+                <Card key={index} className="p-6 text-center animate-pulse">
+                  <div className="h-10 w-10 bg-gray-200 rounded-full mx-auto mb-3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
                 </Card>
-              </Link>
-            ))}
+              ))
+            ) : categories && categories.length > 0 ? (
+              categories.map((category) => {
+                // Get Lucide icon component dynamically
+                const IconComponent = category.icon && (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[category.icon]
+                  ? (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[category.icon]
+                  : Package; // Fallback icon
+
+                return (
+                  <Link
+                    key={category._id}
+                    href={`/products?category=${category.name}`}
+                    className="group"
+                  >
+                    <Card className="p-6 text-center hover:shadow-lg transition-all hover:scale-105 cursor-pointer">
+                      <div className="mb-3 flex justify-center">
+                        <IconComponent className="h-10 w-10 text-primary group-hover:text-primary/80" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 group-hover:text-primary text-sm">
+                        {category.name}
+                      </h3>
+                      {category.productCount !== undefined && category.productCount > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {category.productCount} produk
+                        </p>
+                      )}
+                    </Card>
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Tidak ada kategori tersedia</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

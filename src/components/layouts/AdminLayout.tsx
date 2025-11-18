@@ -22,6 +22,7 @@ import {
   Ticket,
   RotateCcw,
   MessageCircle,
+  FolderTree,
 } from "lucide-react";
 
 import {
@@ -120,6 +121,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       href: "/admin/customers",
       active: router.pathname.startsWith("/admin/customers"),
+    },
+    {
+      title: "Kategori",
+      icon: FolderTree,
+      href: "/admin/categories",
+      active: router.pathname.startsWith("/admin/categories"),
     },
     {
       title: "Live Chat",
