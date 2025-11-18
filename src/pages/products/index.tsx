@@ -171,7 +171,7 @@ export default function ProductsPage() {
   // Use 'name' as filter value (Title Case) to match Product.category in database
   const categories = [
     { _id: 'all', name: "Semua Produk", slug: "", productCount: 0 },
-    ...(categoriesData || []).map(cat => ({ ...cat, slug: cat.name })), // Use name as slug for filter
+    ...((categoriesData as ICategoryData[]) || []).map(cat => ({ ...cat, slug: cat.name })), // Use name as slug for filter
   ];
 
   return (
