@@ -23,6 +23,7 @@ import {
 import UnitConverter from "@/components/UnitConverter";
 import { trpc } from "@/utils/trpc";
 import { useCartStore } from "@/store/cartStore";
+import type { ICategoryData } from "@/models/Category";
 
 export default function ProductDetailPage() {
   const router = useRouter();
@@ -469,7 +470,7 @@ export default function ProductDetailPage() {
               availableUnits={product.availableUnits || [product.unit]}
               categoryUnits={(() => {
                 // Get category data from database
-                const selectedCategory = categoriesData?.find(cat => cat.name === product.category);
+                const selectedCategory = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === product.category);
                 if (!selectedCategory) return undefined;
                 
                 return {
