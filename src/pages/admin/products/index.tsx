@@ -984,7 +984,7 @@ export default function AdminProducts() {
                     name="unit"
                     render={({ field }) => {
                       // Get available units from database (dynamic)
-                      const selectedCategory = categoriesData?.find(cat => cat.name === watchedCategory);
+                      const selectedCategory = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === watchedCategory);
                       const availableUnits = selectedCategory?.availableUnits || [];
                       
                       return (
@@ -1064,7 +1064,7 @@ export default function AdminProducts() {
                 {/* Available Units for Customers */}
                 {watchedCategory && (() => {
                   // Get available units from database (dynamic)
-                  const selectedCategory = categoriesData?.find(cat => cat.name === watchedCategory);
+                  const selectedCategory = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === watchedCategory);
                   const availableUnits = selectedCategory?.availableUnits || [];
                   
                   return availableUnits.length > 0 && (
@@ -1328,7 +1328,7 @@ export default function AdminProducts() {
                     name="unit"
                     render={({ field }) => {
                       const editCategory = form.watch("category");
-                      const selectedCategory = categoriesData?.find(cat => cat.name === editCategory);
+                      const selectedCategory = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === editCategory);
                       const units = selectedCategory?.availableUnits || [];
                       
                       return (
@@ -1390,7 +1390,7 @@ export default function AdminProducts() {
                 {/* Available Units for Customer - Based on product's category */}
                 {(() => {
                   const editCategory = form.watch("category");
-                  const selectedCategory = categoriesData?.find(cat => cat.name === editCategory);
+                  const selectedCategory = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === editCategory);
                   const availableUnits = selectedCategory?.availableUnits || [];
                   
                   return availableUnits.length > 0 && (
