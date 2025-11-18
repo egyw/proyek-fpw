@@ -225,11 +225,6 @@ export default function VouchersPage() {
     setShowEditDialog(true);
   };
 
-  const handleDelete = (voucher: IVoucher) => {
-    setSelectedVoucher(voucher);
-    setShowDeleteDialog(true);
-  };
-
   const handleSubmitAdd = () => {
     try {
       const validated = voucherSchema.parse(formData);

@@ -239,7 +239,7 @@ export default function AdminProducts() {
       // Upload image to Cloudinary first if file selected
       if (selectedFile) {
         // Get category slug from database for folder path
-        const selectedCategoryData = categoriesData?.find(cat => cat.name === data.category);
+        const selectedCategoryData = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === data.category);
         const categorySlug = selectedCategoryData?.slug || data.category.toLowerCase().replace(/\s+/g, '-');
         const folder = `proyekFPW/product_assets/${categorySlug}`;
 
@@ -352,7 +352,7 @@ export default function AdminProducts() {
       // Upload new image if selected
       if (selectedEditFile) {
         // Get category slug from database for folder path
-        const selectedCategoryData = categoriesData?.find(cat => cat.name === data.category);
+        const selectedCategoryData = (categoriesData as ICategoryData[] | undefined)?.find(cat => cat.name === data.category);
         const categorySlug = selectedCategoryData?.slug || data.category.toLowerCase().replace(/\s+/g, '-');
         const folder = `proyekFPW/product_assets/${categorySlug}`;
 
