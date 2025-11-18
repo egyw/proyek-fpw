@@ -5,6 +5,7 @@ import MainLayout from "@/components/layouts/MainLayout";
 import Link from "next/link";
 import Image from "next/image";
 import { trpc } from "@/utils/trpc";
+import type { ICategoryData } from "@/models/Category";
 import {
   Carousel,
   CarouselContent,
@@ -337,7 +338,7 @@ export default function Home() {
                 </Card>
               ))
             ) : categories && categories.length > 0 ? (
-              categories.map((category) => {
+              (categories as ICategoryData[]).map((category) => {
                 // Get Lucide icon component dynamically
                 const IconComponent = category.icon && (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[category.icon]
                   ? (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[category.icon]
@@ -345,7 +346,7 @@ export default function Home() {
 
                 return (
                   <Link
-                    key={category._id}
+                    key={category._id.toString()}
                     href={`/products?category=${category.name}`}
                     className="group"
                   >
