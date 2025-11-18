@@ -28,6 +28,7 @@ import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/cartStore";
+import type { ICategoryData } from "@/models/Category";
 
 export default function ProductsPage() {
   const router = useRouter();
