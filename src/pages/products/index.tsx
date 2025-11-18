@@ -207,7 +207,7 @@ export default function ProductsPage() {
                 ) : (
                   <ul className="space-y-2">
                     {categories.map((category) => (
-                      <li key={category._id}>
+                      <li key={category._id.toString()}>
                         <button
                           onClick={() => {
                             setSelectedCategory(category.slug); // slug now equals name (Title Case)
