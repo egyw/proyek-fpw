@@ -340,9 +340,9 @@ export default function Home() {
             ) : categories && categories.length > 0 ? (
               (categories as ICategoryData[]).map((category) => {
                 // Get Lucide icon component dynamically
-                const IconComponent = category.icon && (LucideIcons as any)[category.icon]
-                  ? (LucideIcons as any)[category.icon]
-                  : Package; // Fallback icon
+                const IconComponent = (category.icon && (LucideIcons as Record<string, unknown>)[category.icon]
+                  ? (LucideIcons as Record<string, unknown>)[category.icon]
+                  : Package) as React.ComponentType<{ className?: string }>;
 
                 return (
                   <Link
