@@ -8,6 +8,7 @@ import { Search, Plus, Edit, Power } from "lucide-react";
 import ImagePreview from "@/components/ImagePreview";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
+import type { ICategoryData } from "@/models/Category";
 import {
   Table,
   TableBody,
