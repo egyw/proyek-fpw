@@ -547,8 +547,8 @@ export default function AdminProducts() {
                 {categoriesLoading ? (
                   <SelectItem value="loading" disabled>Memuat kategori...</SelectItem>
                 ) : categoriesData && categoriesData.length > 0 ? (
-                  categoriesData.map((category) => (
-                    <SelectItem key={category._id} value={category.name}>
+                  (categoriesData as ICategoryData[]).map((category) => (
+                    <SelectItem key={category._id.toString()} value={category.name}>
                       {category.name}
                     </SelectItem>
                   ))
@@ -880,8 +880,8 @@ export default function AdminProducts() {
                                 Memuat kategori...
                               </SelectItem>
                             ) : categoriesData && categoriesData.length > 0 ? (
-                              categoriesData.map((category) => (
-                                <SelectItem key={category._id} value={category.name}>
+                              (categoriesData as ICategoryData[]).map((category) => (
+                                <SelectItem key={category._id.toString()} value={category.name}>
                                   {category.name}
                                 </SelectItem>
                               ))
