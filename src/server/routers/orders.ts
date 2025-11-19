@@ -460,6 +460,23 @@ export const ordersRouter = router({
         
         await order.save();
 
+        // Send order_confirmed notification to customer
+        try {
+          await Notification.create({
+            userId: order.userId,
+            type: 'order_confirmed',
+            title: 'Pesanan Dikonfirmasi',
+            message: `Pesanan #${order.orderId} sedang diproses. Estimasi pengiriman 1-2 hari kerja`,
+            clickAction: `/orders/${order.orderId}`,
+            icon: 'package',
+            color: 'blue',
+            data: { orderId: order.orderId.toString() },
+          });
+        } catch (notifError) {
+          console.error('[simulatePaymentSuccess] Failed to send customer notification:', notifError);
+          // Continue - notification failure shouldn't block order processing
+        }
+
         return { success: true, order };
       } catch (error) {
         console.error('[simulatePaymentSuccess] Error:', error);
@@ -750,6 +767,26 @@ export const ordersRouter = router({
           });
         }
 
+        // Send order_shipped notification to customer
+        try {
+          await Notification.create({
+            userId: order.userId,
+            type: 'order_shipped',
+            title: 'Pesanan Dikirim',
+            message: `Pesanan #${order.orderId} telah dikirim via ${input.courierName}. Nomor resi: ${input.trackingNumber}`,
+            clickAction: `/orders/${order.orderId}`,
+            icon: 'truck',
+            color: 'purple',
+            data: { 
+              orderId: order.orderId.toString(),
+              trackingNumber: input.trackingNumber,
+              courier: input.courierName,
+            },
+          });
+        } catch (notifError) {
+          console.error('[shipOrder] Failed to send customer notification:', notifError);
+        }
+
         return { success: true, order };
       } catch (error) {
         console.error('[shipOrder] Error:', error);
@@ -821,6 +858,25 @@ export const ordersRouter = router({
             code: 'NOT_FOUND',
             message: 'Order not found or cannot be cancelled',
           });
+        }
+
+        // Send order_cancelled notification to customer
+        try {
+          await Notification.create({
+            userId: order.userId,
+            type: 'order_cancelled',
+            title: 'Pesanan Dibatalkan',
+            message: `Pesanan #${order.orderId} dibatalkan. Alasan: ${input.cancelReason}`,
+            clickAction: `/orders/${order.orderId}`,
+            icon: 'x-circle',
+            color: 'red',
+            data: { 
+              orderId: order.orderId.toString(),
+              cancelReason: input.cancelReason,
+            },
+          });
+        } catch (notifError) {
+          console.error('[cancelOrder] Failed to send customer notification:', notifError);
         }
 
         // ⭐ Phase 1: Restore stock if order was already processing (stock was reduced)
@@ -909,6 +965,22 @@ export const ordersRouter = router({
           });
         }
 
+        // Send order_delivered notification to customer
+        try {
+          await Notification.create({
+            userId: order.userId,
+            type: 'order_delivered',
+            title: 'Pesanan Terkirim',
+            message: `Pesanan #${order.orderId} telah sampai di tujuan. Mohon konfirmasi penerimaan`,
+            clickAction: `/orders/${order.orderId}`,
+            icon: 'check-circle',
+            color: 'green',
+            data: { orderId: order.orderId.toString() },
+          });
+        } catch (notifError) {
+          console.error('[confirmDelivered] Failed to send customer notification:', notifError);
+        }
+
         return { success: true, order };
       } catch (error) {
         console.error('[confirmDelivered] Error:', error);
@@ -954,6 +1026,22 @@ export const ordersRouter = router({
         order.orderStatus = 'completed';
         order.updatedAt = new Date().toISOString();
         await order.save();
+
+        // Send order_completed notification to customer (confirmation)
+        try {
+          await Notification.create({
+            userId: order.userId,
+            type: 'order_completed',
+            title: 'Pesanan Selesai',
+            message: `Terima kasih! Pesanan #${order.orderId} telah selesai. Jangan lupa berikan rating`,
+            clickAction: `/orders/${order.orderId}`,
+            icon: 'check-circle',
+            color: 'green',
+            data: { orderId: order.orderId.toString() },
+          });
+        } catch (notifError) {
+          console.error('[confirmOrderReceived] Failed to send customer notification:', notifError);
+        }
 
         return { success: true, order };
       } catch (error) {

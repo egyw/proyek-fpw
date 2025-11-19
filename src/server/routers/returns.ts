@@ -319,6 +319,27 @@ export const returnsRouter = router({
           await order.save();
         }
 
+        // Send return_approved notification to customer
+        try {
+          await Notification.create({
+            userId: returnRequest.customerId,
+            type: 'return_approved',
+            title: 'Pengembalian Disetujui',
+            message: `Permintaan pengembalian pesanan #${returnRequest.orderNumber} telah disetujui. Refund akan diproses dalam 3-7 hari kerja`,
+            clickAction: `/orders/${returnRequest.orderNumber}`,
+            icon: 'check-circle',
+            color: 'green',
+            data: { 
+              returnId: returnRequest._id.toString(),
+              orderId: returnRequest.orderId.toString(),
+              orderNumber: returnRequest.orderNumber,
+              refundAmount: returnRequest.totalAmount,
+            },
+          });
+        } catch (notifError) {
+          console.error('[approveReturn] Failed to send customer notification:', notifError);
+        }
+
         return { success: true, message: 'Return request disetujui' };
       } catch (error) {
         console.error('[approveReturn] Error:', error);
@@ -394,6 +415,27 @@ export const returnsRouter = router({
           await order.save();
         }
 
+        // Send return_rejected notification to customer
+        try {
+          await Notification.create({
+            userId: returnRequest.customerId,
+            type: 'return_rejected',
+            title: 'Pengembalian Ditolak',
+            message: `Permintaan pengembalian pesanan #${returnRequest.orderNumber} ditolak. Alasan: ${input.rejectionReason}`,
+            clickAction: `/orders/${returnRequest.orderNumber}`,
+            icon: 'x-circle',
+            color: 'red',
+            data: { 
+              returnId: returnRequest._id.toString(),
+              orderId: returnRequest.orderId.toString(),
+              orderNumber: returnRequest.orderNumber,
+              rejectionReason: input.rejectionReason,
+            },
+          });
+        } catch (notifError) {
+          console.error('[rejectReturn] Failed to send customer notification:', notifError);
+        }
+
         return { success: true, message: 'Return request ditolak' };
       } catch (error) {
         console.error('[rejectReturn] Error:', error);
@@ -453,6 +495,27 @@ export const returnsRouter = router({
           order.returnStatus = 'completed';
           order.orderStatus = 'returned'; // Mark order as returned
           await order.save();
+        }
+
+        // Send return_completed notification to customer
+        try {
+          await Notification.create({
+            userId: returnRequest.customerId,
+            type: 'return_completed',
+            title: 'Pengembalian Selesai',
+            message: `Pengembalian pesanan #${returnRequest.orderNumber} telah selesai diproses. Refund sebesar Rp ${returnRequest.totalAmount.toLocaleString('id-ID')} telah dikirim`,
+            clickAction: `/orders/${returnRequest.orderNumber}`,
+            icon: 'check-circle',
+            color: 'green',
+            data: { 
+              returnId: returnRequest._id.toString(),
+              orderId: returnRequest.orderId.toString(),
+              orderNumber: returnRequest.orderNumber,
+              refundAmount: returnRequest.totalAmount,
+            },
+          });
+        } catch (notifError) {
+          console.error('[completeReturn] Failed to send customer notification:', notifError);
         }
 
         return { success: true, message: 'Return selesai diproses' };

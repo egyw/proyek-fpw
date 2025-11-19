@@ -1,17 +1,30 @@
 import { useRouter } from 'next/router';
-import { ShoppingCart, RotateCcw, AlertTriangle, X } from 'lucide-react';
+import { 
+  ShoppingCart, 
+  RotateCcw, 
+  AlertTriangle, 
+  X,
+  Package,
+  Truck,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { Button } from './ui/button';
 
 interface NotificationItemProps {
   notification: {
     _id: string;
-    type: 'new_paid_order' | 'new_return_request' | 'low_stock_alert';
+    type: 'new_paid_order' | 'new_return_request' | 'low_stock_alert' |
+          'order_confirmed' | 'order_shipped' | 'order_delivered' | 
+          'order_cancelled' | 'order_completed' |
+          'return_approved' | 'return_rejected' | 'return_completed';
     title: string;
     message: string;
     clickAction: string;
-    icon: 'shopping-cart' | 'rotate-ccw' | 'alert-triangle';
-    color: 'blue' | 'orange' | 'yellow';
+    icon: 'shopping-cart' | 'rotate-ccw' | 'alert-triangle' |
+          'package' | 'truck' | 'check-circle' | 'x-circle';
+    color: 'blue' | 'orange' | 'yellow' | 'green' | 'red' | 'purple';
     isRead: boolean;
     createdAt: Date | string;
   };
@@ -49,8 +62,16 @@ export default function NotificationItem({
         return <RotateCcw className="h-5 w-5" />;
       case 'alert-triangle':
         return <AlertTriangle className="h-5 w-5" />;
+      case 'package':
+        return <Package className="h-5 w-5" />;
+      case 'truck':
+        return <Truck className="h-5 w-5" />;
+      case 'check-circle':
+        return <CheckCircle className="h-5 w-5" />;
+      case 'x-circle':
+        return <XCircle className="h-5 w-5" />;
       default:
-        return null;
+        return <ShoppingCart className="h-5 w-5" />;
     }
   };
 
@@ -82,6 +103,24 @@ export default function NotificationItem({
           bg: 'bg-yellow-50',
           icon: 'bg-yellow-100 text-yellow-600',
           border: 'border-yellow-200',
+        };
+      case 'green':
+        return {
+          bg: 'bg-green-50',
+          icon: 'bg-green-100 text-green-600',
+          border: 'border-green-200',
+        };
+      case 'red':
+        return {
+          bg: 'bg-red-50',
+          icon: 'bg-red-100 text-red-600',
+          border: 'border-red-200',
+        };
+      case 'purple':
+        return {
+          bg: 'bg-purple-50',
+          icon: 'bg-purple-100 text-purple-600',
+          border: 'border-purple-200',
         };
       default:
         return {

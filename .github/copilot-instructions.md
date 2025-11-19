@@ -4784,6 +4784,164 @@ item_details: [...itemsBeforeDiscount] // Mismatch!
 
 ---
 
+### 0.2. Customer Notification System - Order & Return Lifecycle (November 17, 2025)
+
+**Status**: ✅ Production-ready, fully integrated, 8 customer notification types
+
+**Purpose**: Real-time notification system for customer order and return lifecycle tracking with automatic triggers on status changes.
+
+**Complete Notification Types**:
+
+**5 Order Lifecycle Notifications**:
+1. **order_confirmed** - Payment success, order processing started
+   - Trigger: After payment verification (orders.ts `simulatePaymentSuccess`)
+   - Icon: package | Color: blue
+   - Message: "Pesanan #{orderId} sedang diproses. Estimasi pengiriman 1-2 hari kerja"
+
+2. **order_shipped** - Order dispatched with tracking
+   - Trigger: Admin ships order (orders.ts `shipOrder`)
+   - Icon: truck | Color: purple
+   - Message: "Pesanan #{orderId} telah dikirim via {courier}. Nomor resi: {trackingNumber}"
+
+3. **order_delivered** - Package arrived at destination
+   - Trigger: Admin confirms delivery (orders.ts `confirmDelivered`)
+   - Icon: check-circle | Color: green
+   - Message: "Pesanan #{orderId} telah sampai di tujuan. Mohon konfirmasi penerimaan"
+
+4. **order_cancelled** - Order cancelled by admin
+   - Trigger: Admin cancels order (orders.ts `cancelOrder`)
+   - Icon: x-circle | Color: red
+   - Message: "Pesanan #{orderId} dibatalkan. Alasan: {cancelReason}"
+
+5. **order_completed** - Customer confirms receipt
+   - Trigger: Customer confirms order (orders.ts `confirmOrderReceived`)
+   - Icon: check-circle | Color: green
+   - Message: "Terima kasih! Pesanan #{orderId} telah selesai. Jangan lupa berikan rating"
+
+**3 Return/Refund Notifications**:
+1. **return_approved** - Return request approved
+   - Trigger: Admin approves return (returns.ts `approveReturn`)
+   - Icon: check-circle | Color: green
+   - Message: "Permintaan pengembalian pesanan #{orderNumber} telah disetujui. Refund akan diproses dalam 3-7 hari kerja"
+
+2. **return_rejected** - Return request rejected
+   - Trigger: Admin rejects return (returns.ts `rejectReturn`)
+   - Icon: x-circle | Color: red
+   - Message: "Permintaan pengembalian pesanan #{orderNumber} ditolak. Alasan: {rejectionReason}"
+
+3. **return_completed** - Refund processed
+   - Trigger: Admin completes refund (returns.ts `completeReturn`)
+   - Icon: check-circle | Color: green
+   - Message: "Pengembalian pesanan #{orderNumber} telah selesai diproses. Refund sebesar Rp {totalAmount} telah dikirim"
+
+**Backend Implementation Pattern**:
+
+```typescript
+// All notification triggers follow this pattern
+try {
+  await Notification.create({
+    userId: order.userId, // or returnRequest.customerId
+    type: 'order_confirmed',
+    title: 'Pesanan Dikonfirmasi',
+    message: `Pesanan #${order.orderId} sedang diproses...`,
+    clickAction: `/orders/${order.orderId}`,
+    icon: 'package',
+    color: 'blue',
+    data: { orderId: order.orderId.toString() },
+  });
+} catch (notifError) {
+  console.error('[mutationName] Failed to send customer notification:', notifError);
+  // Continue - notification failure shouldn't block operation
+}
+```
+
+**Key Architectural Decisions**:
+- ✅ **Fault Tolerance**: All wrapped in try-catch to prevent blocking business logic
+- ✅ **Customer Targeting**: Sent to specific userId vs admin broadcasts
+- ✅ **Contextual Data**: Each includes relevant IDs and metadata
+- ✅ **Indonesian Localization**: All messages in Bahasa Indonesia
+- ✅ **Click Actions**: All link to order detail page `/orders/{orderId}`
+
+**Frontend Component Integration**:
+
+**NotificationItem.tsx** supports all notification types:
+```typescript
+// Lucide icons
+import { 
+  ShoppingCart, RotateCcw, AlertTriangle, X, // Admin notifications
+  Package, Truck, CheckCircle, XCircle, // Customer notifications
+} from 'lucide-react';
+
+// TypeScript interface
+interface NotificationItemProps {
+  notification: {
+    type: 'new_paid_order' | 'new_return_request' | 'low_stock_alert' |
+          'order_confirmed' | 'order_shipped' | 'order_delivered' | 
+          'order_cancelled' | 'order_completed' |
+          'return_approved' | 'return_rejected' | 'return_completed';
+    icon: 'shopping-cart' | 'rotate-ccw' | 'alert-triangle' |
+          'package' | 'truck' | 'check-circle' | 'x-circle';
+    color: 'blue' | 'orange' | 'yellow' | 'green' | 'red' | 'purple';
+  };
+}
+
+// Icon rendering
+const getIcon = () => {
+  switch (notification.icon) {
+    case 'package': return <Package className="h-5 w-5" />;
+    case 'truck': return <Truck className="h-5 w-5" />;
+    case 'check-circle': return <CheckCircle className="h-5 w-5" />;
+    case 'x-circle': return <XCircle className="h-5 w-5" />;
+    // ... other cases
+  }
+};
+
+// Color styling (includes green, red, purple)
+const getColorClasses = () => {
+  switch (notification.color) {
+    case 'green': 
+      return { 
+        bg: 'bg-green-50', 
+        icon: 'bg-green-100 text-green-600',
+        border: 'border-green-200' 
+      };
+    case 'red':
+      return { 
+        bg: 'bg-red-50', 
+        icon: 'bg-red-100 text-red-600',
+        border: 'border-red-200' 
+      };
+    case 'purple':
+      return { 
+        bg: 'bg-purple-50', 
+        icon: 'bg-purple-100 text-purple-600',
+        border: 'border-purple-200' 
+      };
+    // ... other colors
+  }
+};
+```
+
+**Testing Checklist**:
+
+✅ Payment success → order_confirmed notification sent  
+✅ Ship order → order_shipped notification with tracking  
+✅ Confirm delivered → order_delivered notification  
+✅ Cancel order → order_cancelled with reason  
+✅ Customer confirms → order_completed notification  
+✅ Approve return → return_approved with refund info  
+✅ Reject return → return_rejected with rejection reason  
+✅ Complete refund → return_completed with amount  
+✅ All notifications clickable to order detail page  
+✅ Notification dropdown shows correct icons and colors  
+
+**Files Modified**:
+- `src/server/routers/orders.ts` - 5 notification triggers added
+- `src/server/routers/returns.ts` - 3 notification triggers added
+- `src/components/NotificationItem.tsx` - 4 new icons, 8 new types, 3 new colors
+
+---
+
 ### 0.1. Admin Live Chat System - Tawk.to Integration (November 17, 2025)
 
 **Status**: 🚧 UI Complete, API Integration Pending (Tawk.to account registration in progress)
