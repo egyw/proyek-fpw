@@ -8,6 +8,24 @@ import StockMovement from '@/models/StockMovement';
 import User from '@/models/User';
 import Notification from '@/models/Notification';
 import { createSnapToken, getTransactionStatus } from '@/lib/midtrans';
+import type { Types } from 'mongoose';
+
+// Type for lean Order documents
+interface LeanOrder {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId | string;
+  orderId: string;
+  items: Array<{
+    productId: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    price: number;
+  }>;
+  orderStatus: string;
+  paymentStatus: string;
+  [key: string]: unknown;
+}
 
 // Generate unique order ID
 function generateOrderId(): string {
@@ -621,7 +639,7 @@ export const ordersRouter = router({
           { orderId: input.orderId, orderStatus: 'paid' },
           { orderStatus: 'processing' },
           { new: true }
-        ).lean();
+        ).lean() as LeanOrder | null;
 
         if (!order) {
           throw new TRPCError({
@@ -631,8 +649,7 @@ export const ordersRouter = router({
         }
 
         // ⭐ Phase 1: Record stock OUT for each order item
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for (const item of (order as any).items) {
+        for (const item of order.items) {
           // Get product details
           const product = await Product.findById(item.productId);
           if (product) {
@@ -687,7 +704,7 @@ export const ordersRouter = router({
                       color: 'yellow',
                       isRead: false,
                       data: {
-                        productId: product._id.toString(),
+                        productId: String(product._id),
                       },
                       createdAt: now,
                     });
@@ -758,7 +775,7 @@ export const ordersRouter = router({
             },
           },
           { new: true }
-        ).lean();
+        ).lean() as LeanOrder | null;
 
         if (!order) {
           throw new TRPCError({
@@ -851,7 +868,7 @@ export const ordersRouter = router({
             cancelReason: input.cancelReason,
           },
           { new: true }
-        ).lean();
+        ).lean() as LeanOrder | null;
 
         if (!order) {
           throw new TRPCError({
@@ -956,7 +973,7 @@ export const ordersRouter = router({
             deliveredDate: input.deliveredDate,
           },
           { new: true }
-        ).lean();
+        ).lean() as LeanOrder | null;
 
         if (!order) {
           throw new TRPCError({
