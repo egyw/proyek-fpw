@@ -4363,6 +4363,85 @@ const form = useForm({ ... }); // Overkill for real-time input
 - tRPC errors: Check Network tab for `/api/trpc` calls
 - Type errors: Run `npm run build` to check TypeScript compilation
 
+### Local Validation Workflow (Before Production)
+
+**Quick Type Check (10-15 seconds):**
+```bash
+npx tsc --noEmit
+```
+- Validates all TypeScript types
+- No JavaScript files generated
+- Catches type errors early
+
+**Full Production Build (1-2 minutes):**
+```bash
+npm run build
+```
+- Complete Next.js production build
+- Includes TypeScript compilation
+- Includes ESLint validation
+- **MUST run before pushing to production**
+- Simulates Vercel build environment
+
+**ESLint Only (5-10 seconds):**
+```bash
+npm run lint
+```
+- Code style and quality checks
+- Already included in `npm run build`
+
+**Recommended Workflow:**
+1. **Daily Coding**: VSCode auto type-check (real-time)
+2. **Before Commit**: `npx tsc --noEmit` (quick validation)
+3. **Before Push**: `npm run build` (full validation)
+4. **If build passes**: Vercel deployment will succeed ✅
+
+**Important Notes:**
+- ⚠️ **NEVER run `npx tsc` without `--noEmit`** - will generate unwanted .js files
+- ⚠️ **`npm run build` already includes type checking** - no need to run tsc separately
+- ✅ **VSCode TypeScript errors may not match build** - always trust `npm run build` output
+
+### Notification System Testing Status (November 19, 2025)
+
+**Status**: ✅ Implementation Complete, ⚠️ Testing Pending
+
+**Issue**: Midtrans payment webhook API currently down/unavailable
+
+**Impact**: Cannot test payment-dependent notification triggers
+
+**Untested Notification Types** (8 total):
+1. `order_confirmed` - Triggered after successful payment (orders.ts ~line 465)
+2. `order_shipped` - Triggered when admin marks order as shipped (orders.ts ~line 788)
+3. `order_delivered` - Triggered when admin confirms delivery (orders.ts ~line 986)
+4. `order_cancelled` - Triggered when admin cancels order (orders.ts ~line 881)
+5. `order_completed` - Triggered when customer confirms receipt (orders.ts ~line 1046)
+6. `return_approved` - Triggered when admin approves return request (returns.ts)
+7. `return_rejected` - Triggered when admin rejects return request (returns.ts)
+8. `return_completed` - Triggered when return process finishes (returns.ts)
+
+**Implementation Details**:
+- ✅ Backend triggers: All 8 implemented in orders.ts and returns.ts
+- ✅ Frontend UI: Bell icons with badges in Navbar (user) and AdminLayout (admin)
+- ✅ Dropdown component: Dual-mode NotificationDropdown working (isUserMode prop)
+- ✅ No collision: userId-based filtering prevents admin/customer notification mixing
+- ✅ Admin notifications: 3 types (new_paid_order, new_return_request, low_stock_alert) tested and working
+
+**Testing Checklist** (when Midtrans API is restored):
+- [ ] Create test order → Make payment → Verify order_confirmed notification sent to customer
+- [ ] Admin process order → Verify stock reduced, low_stock_alert sent to admins if needed
+- [ ] Admin ship order → Verify order_shipped notification sent to customer with tracking
+- [ ] Admin confirm delivery → Verify order_delivered notification sent to customer
+- [ ] Admin cancel order → Verify order_cancelled notification sent + stock restored
+- [ ] Customer confirm receipt → Verify order_completed notification sent to customer
+- [ ] Customer submit return → Verify admin receives new_return_request notification
+- [ ] Admin approve return → Verify return_approved notification sent to customer
+- [ ] Admin reject return → Verify return_rejected notification sent with reason
+- [ ] Admin complete return → Verify return_completed notification sent with refund amount
+- [ ] Check bell badge updates in real-time for both user and admin
+- [ ] Test mark as read functionality (badge count decreases)
+- [ ] Verify admin sees only admin notifications (new_paid_order, new_return_request, low_stock_alert)
+- [ ] Verify customer sees only their own notifications (order lifecycle + return lifecycle)
+
 ## Reference Files
 
 - Architecture guide: `GUIDE.md` (quick reference for team)
@@ -7163,3 +7242,7 @@ If you have dynamic data in session (like addresses), remove it:
 49. **Never manually set updatedAt with Mongoose timestamps** (auto-updated by `save()` when `timestamps: true`)
 50. **Never use require() in TypeScript files** (always use ES6 import statements for proper type checking)
 51. **Never leave action button columns misaligned** (always use `text-right` on both TableHead and TableCell with `justify-end` for consistent right alignment)
+52. **Never use `as any` in production code** (use proper type assertions or interfaces instead)
+53. **Never pass `user: null` in tRPC context** (use `user: undefined` for optional types)
+54. **Never call `.toString()` on Mongoose ObjectId with unknown type** (use `String(objectId)` instead)
+55. **Never skip `npm run build` before pushing to production** (catches TypeScript/ESLint errors early)
