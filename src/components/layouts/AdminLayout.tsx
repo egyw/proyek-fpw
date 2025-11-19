@@ -12,7 +12,6 @@ import {
   ClipboardList,
   Users,
   BarChart3,
-  Settings,
   Store,
   Bell,
   User,
@@ -23,6 +22,7 @@ import {
   RotateCcw,
   MessageCircle,
   FolderTree,
+  UserCog,
 } from "lucide-react";
 
 import {
@@ -47,6 +47,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const {user, isAuthenticated, isLoading } = useRequireRole(['admin', 'staff']);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Check if current user is admin (for filtering admin-only menu items)
+  const isAdmin = session?.user?.role === 'admin';
 
   // Show loading spinner while checking auth
   if (isLoading) {
@@ -123,6 +126,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       active: router.pathname.startsWith("/admin/customers"),
     },
     {
+      title: "Team",
+      icon: UserCog,
+      href: "/admin/team",
+      active: router.pathname.startsWith("/admin/team"),
+      adminOnly: true,
+    },
+    {
       title: "Kategori",
       icon: FolderTree,
       href: "/admin/categories",
@@ -145,12 +155,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: BarChart3,
       href: "/admin/reports",
       active: router.pathname.startsWith("/admin/reports"),
-    },
-    {
-      title: "Pengaturan",
-      icon: Settings,
-      href: "/admin/settings",
-      active: router.pathname.startsWith("/admin/settings"),
     },
   ];
 
@@ -182,26 +186,28 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
-            {menuItems.map((item) => {
-              const IconComponent = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      item.active
-                        ? "bg-primary text-white"
-                        : "text-gray-700 hover:bg-gray-100"
-                    } ${!sidebarOpen ? "justify-center" : ""}`}
-                  >
-                    <IconComponent className="h-5 w-5 shrink-0" />
-                    {sidebarOpen && (
-                      <span className="font-medium">{item.title}</span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
+            {menuItems
+              .filter((item) => !item.adminOnly || isAdmin)
+              .map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                        item.active
+                          ? "bg-primary text-white"
+                          : "text-gray-700 hover:bg-gray-100"
+                      } ${!sidebarOpen ? "justify-center" : ""}`}
+                    >
+                      <IconComponent className="h-5 w-5 shrink-0" />
+                      {sidebarOpen && (
+                        <span className="font-medium">{item.title}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
         </nav>
 
@@ -271,16 +277,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <Store className="mr-2 h-4 w-4" />
                     <span>Lihat Toko</span>
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  Profil
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Pengaturan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

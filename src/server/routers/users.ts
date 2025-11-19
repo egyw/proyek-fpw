@@ -289,4 +289,237 @@ export const usersRouter = router({
         });
       }
     }),
+
+  // ============================================
+  // STAFF MANAGEMENT (Admin Only)
+  // ============================================
+
+  // Get all staff and admin users
+  getAllStaff: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      // Only admin can view staff list
+      if (ctx.user.role !== 'admin') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Hanya admin yang dapat melihat daftar staff',
+        });
+      }
+
+      const staffList = await User.find({
+        role: { $in: ['admin', 'staff'] },
+      })
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return staffList;
+    } catch (error) {
+      console.error('[getAllStaff] Error:', error);
+      if (error instanceof TRPCError) throw error;
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Gagal memuat daftar staff',
+        cause: error,
+      });
+    }
+  }),
+
+  // Create new staff account
+  createStaff: protectedProcedure
+    .input(
+      z.object({
+        fullName: z.string().min(1, 'Nama lengkap harus diisi'),
+        email: z.string().email('Format email tidak valid'),
+        phone: z.string().regex(/^08\d{8,11}$/, 'Format nomor telepon tidak valid (harus dimulai dengan 08 dan 10-13 digit)'),
+        password: z.string().min(8, 'Password minimal 8 karakter'),
+        role: z.enum(['admin', 'staff']),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Only admin can create staff
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin yang dapat menambahkan staff',
+          });
+        }
+
+        // Check if email already exists
+        const existingUser = await User.findOne({ email: input.email });
+        if (existingUser) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Email sudah terdaftar',
+          });
+        }
+
+        // Hash password
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash(input.password, 10);
+
+        // Create staff account
+        const newStaff = await User.create({
+          fullName: input.fullName,
+          email: input.email,
+          username: input.email.split('@')[0], // Generate username from email
+          phone: input.phone,
+          password: hashedPassword,
+          role: input.role,
+          addresses: [], // Empty array for staff/admin
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        return {
+          success: true,
+          message: 'Staff berhasil ditambahkan',
+          staffId: newStaff._id,
+        };
+      } catch (error) {
+        console.error('[createStaff] Error:', error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal menambahkan staff',
+          cause: error,
+        });
+      }
+    }),
+
+  // Update staff information
+  updateStaff: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        fullName: z.string().min(1, 'Nama lengkap harus diisi'),
+        email: z.string().email('Format email tidak valid'),
+        role: z.enum(['admin', 'staff']),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Only admin can update staff
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin yang dapat memperbarui data staff',
+          });
+        }
+
+        // Cannot edit own role (safety check)
+        if (input.userId === ctx.user.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Anda tidak dapat mengubah role Anda sendiri',
+          });
+        }
+
+        // Check if email already used by another user
+        const existingUser = await User.findOne({
+          email: input.email,
+          _id: { $ne: input.userId },
+        });
+        if (existingUser) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Email sudah digunakan oleh user lain',
+          });
+        }
+
+        const staff = await User.findById(input.userId);
+        if (!staff) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Staff tidak ditemukan',
+          });
+        }
+
+        // Only allow updating admin/staff roles
+        if (!['admin', 'staff'].includes(staff.role)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Hanya akun admin/staff yang dapat diperbarui',
+          });
+        }
+
+        staff.fullName = input.fullName;
+        staff.email = input.email;
+        staff.role = input.role;
+        staff.updatedAt = new Date();
+        await staff.save();
+
+        return {
+          success: true,
+          message: 'Data staff berhasil diperbarui',
+          isActive: staff.isActive,
+        };
+      } catch (error) {
+        console.error('[updateStaff] Error:', error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal memperbarui data staff',
+          cause: error,
+        });
+      }
+    }),
+
+  // Toggle staff active status
+  toggleStaffStatus: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Only admin can toggle status
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Hanya admin yang dapat mengubah status staff',
+          });
+        }
+
+        // Cannot deactivate self
+        if (input.userId === ctx.user.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Anda tidak dapat menonaktifkan akun Anda sendiri',
+          });
+        }
+
+        const staff = await User.findById(input.userId);
+        if (!staff) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Staff tidak ditemukan',
+          });
+        }
+
+        // Only allow toggling admin/staff status
+        if (!['admin', 'staff'].includes(staff.role)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Hanya status admin/staff yang dapat diubah',
+          });
+        }
+
+        staff.isActive = !staff.isActive;
+        staff.updatedAt = new Date();
+        await staff.save();
+
+        return {
+          success: true,
+          message: `Staff berhasil ${staff.isActive ? 'diaktifkan' : 'dinonaktifkan'}`,
+          isActive: staff.isActive,
+        };
+      } catch (error) {
+        console.error('[toggleStaffStatus] Error:', error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal mengubah status staff',
+          cause: error,
+        });
+      }
+    }),
 });

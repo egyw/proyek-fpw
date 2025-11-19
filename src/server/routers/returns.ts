@@ -238,16 +238,16 @@ export const returnsRouter = router({
       }
     }),
 
-  // Approve return (Admin only)
+  // Approve return (Tiered: Staff < 1jt, Admin unlimited)
   approveReturn: protectedProcedure
     .input(z.object({ returnId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        // Check admin role
-        if (ctx.user.role !== 'admin') {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Hanya admin yang dapat approve return',
+            message: 'Hanya admin dan staff yang dapat approve return',
           });
         }
 
@@ -308,14 +308,15 @@ export const returnsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // Check admin role
-        if (ctx.user.role !== 'admin') {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Hanya admin yang dapat reject return',
+            message: 'Hanya admin dan staff yang dapat reject return',
           });
         }
 
+        // Staff rejection limit: same as approval (< 1jt)
         await connectDB();
 
         const returnRequest = await Return.findById(input.returnId);
@@ -324,6 +325,14 @@ export const returnsRouter = router({
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Return request tidak ditemukan',
+          });
+        }
+
+        // Staff can only reject returns < 1jt
+        if (ctx.user.role === 'staff' && returnRequest.totalAmount >= 1000000) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Staff hanya dapat reject return di bawah Rp 1.000.000. Hubungi admin.',
           });
         }
 
@@ -364,16 +373,16 @@ export const returnsRouter = router({
       }
     }),
 
-  // Complete return (Admin only)
+  // Complete return (Admin & Staff)
   completeReturn: protectedProcedure
     .input(z.object({ returnId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        // Check admin role
-        if (ctx.user.role !== 'admin') {
+        // Check if user is admin or staff
+        if (!['admin', 'staff'].includes(ctx.user.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Hanya admin yang dapat complete return',
+            message: 'Hanya admin dan staff yang dapat complete return',
           });
         }
 
