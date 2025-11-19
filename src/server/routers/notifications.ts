@@ -5,6 +5,47 @@ import Notification from '@/models/Notification';
 import connectDB from '@/lib/mongodb';
 
 export const notificationsRouter = router({
+  // Get user notifications (for customers - order and return notifications)
+  getUserNotifications: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        offset: z.number().min(0).default(0),
+        unreadOnly: z.boolean().default(false),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        await connectDB();
+
+        const query: { userId: string; isRead?: boolean } = { userId: ctx.user.id };
+        if (input.unreadOnly) {
+          query.isRead = false;
+        }
+
+        const notifications = await Notification.find(query)
+          .sort({ createdAt: -1 })
+          .skip(input.offset)
+          .limit(input.limit)
+          .lean();
+
+        const total = await Notification.countDocuments(query);
+
+        return {
+          notifications,
+          total,
+          hasMore: input.offset + input.limit < total,
+        };
+      } catch (error) {
+        console.error('[getUserNotifications] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch notifications',
+          cause: error,
+        });
+      }
+    }),
+
   // Get admin notifications with pagination and filters
   getAdminNotifications: protectedProcedure
     .input(
@@ -54,14 +95,9 @@ export const notificationsRouter = router({
       }
     }),
 
-  // Get unread count for badge
+  // Get unread count for badge (works for all users)
   getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
     try {
-      // Only admin/staff can access notifications
-      if (!['admin', 'staff'].includes(ctx.user.role)) {
-        return { count: 0 };
-      }
-
       await connectDB();
 
       const count = await Notification.countDocuments({

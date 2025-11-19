@@ -14,13 +14,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ShoppingCart, User, Package, LogOut, LayoutDashboard } from "lucide-react";
+import { ShoppingCart, User, Package, LogOut, LayoutDashboard, Bell } from "lucide-react";
+import NotificationDropdown from "@/components/NotificationDropdown";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
+
+  // Notification state
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
+
+  // Query unread notification count
+  const { data: unreadData } = trpc.notifications.getUnreadCount.useQuery(
+    undefined,
+    { 
+      enabled: isLoggedIn,
+      refetchInterval: 30000, // Refresh every 30 seconds
+    }
+  );
+
+  // Update badge count
+  useEffect(() => {
+    if (isLoggedIn && unreadData) {
+      setNotificationBadgeCount(unreadData.count);
+    } else {
+      setNotificationBadgeCount(0);
+    }
+  }, [isLoggedIn, unreadData]);
 
   // Guest cart (Zustand)
   const guestCartItems = useCartStore((state) => state.items);
@@ -90,6 +113,40 @@ export default function Navbar() {
                 )}
               </Button>
             </Link>
+
+            {/* Notification Bell - Show only for logged in users */}
+            {isLoggedIn && (
+              <div className="relative">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative"
+                  onClick={() => setNotificationOpen(!notificationOpen)}
+                >
+                  <Bell className="h-5 w-5" />
+                  {notificationBadgeCount > 0 && (
+                    <Badge 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 hover:bg-red-600"
+                    >
+                      {notificationBadgeCount > 99 ? '99+' : notificationBadgeCount}
+                    </Badge>
+                  )}
+                </Button>
+
+                {/* Notification Dropdown */}
+                <NotificationDropdown
+                  isOpen={notificationOpen}
+                  onClose={() => setNotificationOpen(false)}
+                  onRefreshBadge={() => {
+                    // Refetch unread count after marking as read
+                    if (unreadData) {
+                      setNotificationBadgeCount(unreadData.count);
+                    }
+                  }}
+                  isUserMode={true}
+                />
+              </div>
+            )}
 
             {/* Conditional: Show Login/Register OR Profile Dropdown */}
             {isLoggedIn && session?.user ? (

@@ -7,6 +7,7 @@ interface NotificationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   onRefreshBadge: () => void;
+  isUserMode?: boolean; // NEW: true = user notifications, false/undefined = admin notifications
 }
 
 interface NotificationData {
@@ -25,20 +26,37 @@ export default function NotificationDropdown({
   isOpen,
   onClose,
   onRefreshBadge,
+  isUserMode = false, // Default to admin mode
 }: NotificationDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications
-  const { data, isLoading, refetch } = trpc.notifications.getAdminNotifications.useQuery(
+  // Fetch notifications - switch between user and admin queries
+  const { data: adminData, isLoading: adminLoading, refetch: adminRefetch } = trpc.notifications.getAdminNotifications.useQuery(
     {
       limit: 20,
       offset: 0,
       unreadOnly: false,
     },
     {
-      enabled: isOpen,
+      enabled: isOpen && !isUserMode, // Only enabled for admin mode
     }
   );
+
+  const { data: userData, isLoading: userLoading, refetch: userRefetch } = trpc.notifications.getUserNotifications.useQuery(
+    {
+      limit: 20,
+      offset: 0,
+      unreadOnly: false,
+    },
+    {
+      enabled: isOpen && isUserMode, // Only enabled for user mode
+    }
+  );
+
+  // Select the appropriate data based on mode
+  const data = isUserMode ? userData : adminData;
+  const isLoading = isUserMode ? userLoading : adminLoading;
+  const refetch = isUserMode ? userRefetch : adminRefetch;
 
   // Mark all as read mutation
   const markAllAsReadMutation = trpc.notifications.markAllAsRead.useMutation({
