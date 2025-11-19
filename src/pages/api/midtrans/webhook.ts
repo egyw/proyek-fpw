@@ -105,7 +105,12 @@ export default async function handler(
           res,
           session: null,
           user: null,
-        } as any);
+        } as unknown as {
+          req: NextApiRequest;
+          res: NextApiResponse;
+          session: null;
+          user: null;
+        });
 
         // Send notification to each admin
         for (const admin of admins) {
