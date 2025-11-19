@@ -99,17 +99,10 @@ export default async function handler(
       try {
         const admins = await User.find({ role: 'admin' }).lean();
         
-        // Create tRPC caller for server-side calls
+        // Create tRPC caller for server-side calls (webhook context without auth)
         const caller = appRouter.createCaller({
-          req,
-          res,
           session: null,
-          user: null,
-        } as unknown as {
-          req: NextApiRequest;
-          res: NextApiResponse;
-          session: null;
-          user: null;
+          user: undefined, // Use undefined instead of null for optional user
         });
 
         // Send notification to each admin
