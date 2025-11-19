@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Ticket, Power } from "lucide-react";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import { z } from "zod";
@@ -70,6 +71,10 @@ const voucherSchema = z.object({
 type VoucherFormValues = z.infer<typeof voucherSchema>;
 
 export default function VouchersPage() {
+  // Role check
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin';
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "expired">("all");
   const [filterType, setFilterType] = useState<"all" | "percentage" | "fixed">("all");
@@ -348,11 +353,13 @@ export default function VouchersPage() {
             </SelectContent>
           </Select>
 
-          {/* Add Button */}
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Tambah Voucher
-          </Button>
+          {/* Add Button - Admin Only */}
+          {isAdmin && (
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Voucher
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -473,26 +480,32 @@ export default function VouchersPage() {
                   <TableCell>{getStatusBadge(status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleToggleStatus(voucher)}
-                        disabled={toggleStatusMutation.isPending}
-                        title={voucher.isActive ? "Nonaktifkan voucher" : "Aktifkan voucher"}
-                      >
-                        <Power
-                          className={`h-4 w-4 ${
-                            voucher.isActive ? "text-green-600" : "text-gray-400"
-                          }`}
-                        />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEdit(voucher)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      {isAdmin ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleStatus(voucher)}
+                            disabled={toggleStatusMutation.isPending}
+                            title={voucher.isActive ? "Nonaktifkan voucher" : "Aktifkan voucher"}
+                          >
+                            <Power
+                              className={`h-4 w-4 ${
+                                voucher.isActive ? "text-green-600" : "text-gray-400"
+                              }`}
+                            />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(voucher)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-500 italic">Hanya Admin</span>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

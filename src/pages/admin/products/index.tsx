@@ -632,7 +632,7 @@ export default function AdminProducts() {
                 <TableHead>Stok</TableHead>
                 <TableHead>Terjual</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Aksi</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -701,8 +701,8 @@ export default function AdminProducts() {
                         {product.isActive ? 'Aktif' : 'Tidak Aktif'}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           size="sm"
                           variant="ghost"

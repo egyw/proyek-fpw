@@ -29,6 +29,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
 import {
@@ -43,6 +44,8 @@ import {
 } from "lucide-react";
 
 export default function AdminReturnsPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin';
   const utils = trpc.useContext();
 
   // Filters
@@ -303,42 +306,57 @@ export default function AdminReturnsPage() {
                             </Button>
                             {returnItem.status === "pending" && (
                               <>
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  onClick={() => {
-                                    setSelectedReturn(returnItem);
-                                    setApproveDialog(true);
-                                  }}
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Setuju
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => {
-                                    setSelectedReturn(returnItem);
-                                    setRejectDialog(true);
-                                  }}
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Tolak
-                                </Button>
+                                {/* Show approve/reject if admin OR return amount < 1jt */}
+                                {(isAdmin || returnItem.totalAmount < 1000000) && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                      onClick={() => {
+                                        setSelectedReturn(returnItem);
+                                        setApproveDialog(true);
+                                      }}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Setuju
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => {
+                                        setSelectedReturn(returnItem);
+                                        setRejectDialog(true);
+                                      }}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-1" />
+                                      Tolak
+                                    </Button>
+                                  </>
+                                )}
+                                {/* Show info badge for staff on high-value returns */}
+                                {!isAdmin && returnItem.totalAmount >= 1000000 && (
+                                  <Badge variant="outline" className="text-xs text-orange-700 border-orange-300">
+                                    Perlu Approval Admin
+                                  </Badge>
+                                )}
                               </>
                             )}
                             {returnItem.status === "approved" && (
-                              <Button
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700"
-                                onClick={() => {
-                                  setSelectedReturn(returnItem);
-                                  setCompleteDialog(true);
-                                }}
-                              >
-                                <Package className="h-4 w-4 mr-1" />
-                                Selesai
-                              </Button>
+                              <>
+                                {(isAdmin || returnItem.totalAmount < 1000000) && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    onClick={() => {
+                                      setSelectedReturn(returnItem);
+                                      setCompleteDialog(true);
+                                    }}
+                                  >
+                                    <Package className="h-4 w-4 mr-1" />
+                                    Selesai
+                                  </Button>
+                                )}
+                              </>
                             )}
                           </div>
                         </TableCell>

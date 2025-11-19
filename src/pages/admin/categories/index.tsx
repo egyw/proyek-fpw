@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,10 @@ interface UnitInput {
 }
 
 export default function AdminCategoriesPage() {
+  // Role check
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin';
+
   // State
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -340,10 +345,12 @@ export default function AdminCategoriesPage() {
               Kelola kategori produk dan unit konversi
             </p>
           </div>
-          <Button onClick={handleOpenAdd}>
-            <Plus className="h-4 w-4 mr-2" />
-            Tambah Kategori
-          </Button>
+          {isAdmin && (
+            <Button onClick={handleOpenAdd}>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Kategori
+            </Button>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -472,24 +479,31 @@ export default function AdminCategoriesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleStatus(category)}
-                        >
-                          <Power
-                            className={`h-4 w-4 ${
-                              category.isActive ? "text-green-600" : "text-gray-400"
-                            }`}
-                          />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleOpenEdit(category)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleStatus(category)}
+                            >
+                              <Power
+                                className={`h-4 w-4 ${
+                                  category.isActive ? "text-green-600" : "text-gray-400"
+                                }`}
+                              />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenEdit(category)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {!isAdmin && (
+                          <span className="text-xs text-gray-500 italic">Hanya Admin</span>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

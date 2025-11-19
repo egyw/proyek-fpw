@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,10 @@ interface Customer {
 }
 
 export default function CustomersPage() {
+  // Role check
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin';
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -480,8 +485,8 @@ export default function CustomersPage() {
                 </Button>
               )}
               
-              {/* Suspend/Reactivate Button */}
-              {selectedCustomer && (
+              {/* Suspend/Reactivate Button - Admin Only */}
+              {selectedCustomer && isAdmin && (
                 <>
                   {selectedCustomer.isActive ? (
                     <Button
@@ -503,6 +508,18 @@ export default function CustomersPage() {
                     </Button>
                   )}
                 </>
+              )}
+              
+              {/* Staff Info Message */}
+              {selectedCustomer && !isAdmin && (
+                <Button
+                  variant="outline"
+                  disabled
+                  className="cursor-not-allowed opacity-60"
+                >
+                  <Ban className="h-4 w-4 mr-2" />
+                  Hanya Admin
+                </Button>
               )}
             </div>
             
