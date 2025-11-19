@@ -14,7 +14,6 @@ import {
   BarChart3,
   Store,
   Bell,
-  User,
   LogOut,
   ChevronLeft,
   ChevronRight,

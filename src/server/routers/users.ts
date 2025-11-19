@@ -3,6 +3,7 @@ import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import User from '@/models/User';
 import Order from '@/models/Order';
+import bcryptjs from 'bcryptjs';
 
 export const usersRouter = router({
   // Get all customers (role: user only)
@@ -355,8 +356,7 @@ export const usersRouter = router({
         }
 
         // Hash password
-        const bcrypt = require('bcryptjs');
-        const hashedPassword = await bcrypt.hash(input.password, 10);
+        const hashedPassword = await bcryptjs.hash(input.password, 10);
 
         // Create staff account
         const newStaff = await User.create({
