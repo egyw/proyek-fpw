@@ -2867,6 +2867,279 @@ const formatCurrency = (amount: number) => {
 - Handle optional fields (lastOrderDate) with fallback text
 - Use Lucide icons consistently (NO emoji icons in admin pages)
 
+### Admin Team Management (COMPLETED - Phase 35.5.3)
+
+**Status**: ✅ Production-ready, fully integrated with database, aligned with User model
+
+**Location**: `src/pages/admin/team/index.tsx` (677 lines)
+
+**Purpose**: Centralized admin and staff account management system with role-based access control, phone validation, and comprehensive stats tracking.
+
+**URL**: `/admin/team` (renamed from `/admin/staff` in Phase 35.5.3b)
+
+**Key Features**:
+
+- **4 Stats Cards** with real-time role-based filtering:
+  - Total Akun (blue, Users) - All admin/staff accounts in system
+  - Akun Aktif (green, UserCheck) - Currently active accounts
+  - Total Admin (purple, Shield) - Accounts with admin role
+  - Total Staff (orange, UserCog) - Accounts with staff role
+- **Filters**:
+  - Search Input - Search by name, email, or phone (case-insensitive)
+  - Role Select - All / Admin / Staff
+- **Team Table**: 7 columns
+  - Nama (name with role badge)
+  - Email (email address)
+  - Telepon (phone number)
+  - Role (Badge: Admin=purple/Staff=blue)
+  - Status (Badge: Aktif=green/Tidak Aktif=gray)
+  - Last Login (formatted date)
+  - Aksi (Power toggle + Edit buttons)
+
+**Form Validation Standards** (Aligned with User Model):
+
+| Field | Validation | Format/Rule |
+|-------|-----------|-------------|
+| Full Name | Required | Min 1 character |
+| Email | Required + Regex | Standard email format |
+| Phone | Required + Regex | `/^08\d{8,11}$/` (10-13 digits, starts with 08) |
+| Password | Required + Length | **Minimum 8 characters** |
+| Role | Required + Enum | `'admin'` or `'staff'` |
+
+**Critical Phone Validation** (Indonesian Format):
+
+```tsx
+// Pattern: /^08\d{8,11}$/
+// Valid: 081234567890 (12 digits), 08123456789 (11 digits), 0812345678 (10 digits)
+// Invalid: 8123456789 (missing 0), 021234567 (not mobile), 08123 (too short)
+
+const phoneRegex = /^08\d{8,11}$/;
+if (!phoneRegex.test(formData.phone)) {
+  toast.error("Format Nomor Telepon Salah", {
+    description: "Nomor telepon harus dimulai dengan 08 dan 10-13 digit.",
+  });
+  return;
+}
+```
+
+**Stats Cards Implementation**:
+
+```tsx
+// Dynamic calculations from fetched staff list
+const totalStaff = (staffList as StaffUser[] | undefined)?.length || 0;
+const activeStaff = (staffList as StaffUser[] | undefined)?.filter(s => s.isActive).length || 0;
+const totalAdmins = (staffList as StaffUser[] | undefined)?.filter(s => s.role === 'admin').length || 0;
+const totalStaffRole = (staffList as StaffUser[] | undefined)?.filter(s => s.role === 'staff').length || 0;
+
+// Layout: 4 columns responsive (1/2/4)
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+  {/* Card 1: Total Akun - Blue with Users icon */}
+  {/* Card 2: Akun Aktif - Green with UserCheck icon */}
+  {/* Card 3: Total Admin - Purple with Shield icon */}
+  {/* Card 4: Total Staff - Orange with UserCog icon */}
+</div>
+```
+
+**tRPC Procedures** (`src/server/routers/users.ts`):
+
+1. **getAllStaff** - Get all staff/admin accounts
+   ```typescript
+   getAllStaff: protectedProcedure.query(async ({ ctx }) => {
+     // Role check: admin only
+     if (ctx.user.role !== 'admin') {
+       throw new TRPCError({ code: 'FORBIDDEN' });
+     }
+     
+     const users = await User.find({
+       role: { $in: ['admin', 'staff'] }
+     }).select('fullName email phone role isActive lastLogin createdAt');
+     
+     return users;
+   });
+   ```
+
+2. **createStaff** - Create new staff/admin account
+   ```typescript
+   input: {
+     fullName: z.string().min(1),
+     email: z.string().email(),
+     phone: z.string().regex(/^08\d{8,11}$/),
+     password: z.string().min(8), // Aligned with User model
+     role: z.enum(['admin', 'staff'])
+   }
+   
+   // Process:
+   // 1. Generate username from email (before @)
+   // 2. Hash password with bcryptjs (10 rounds)
+   // 3. Create empty addresses array (User model requirement)
+   // 4. Set isActive: true, createdAt, updatedAt
+   ```
+
+3. **updateStaff** - Edit existing account
+   ```typescript
+   input: {
+     staffId: z.string(),
+     fullName: z.string().min(1).optional(),
+     email: z.string().email().optional(),
+     phone: z.string().regex(/^08\d{8,11}$/).optional(),
+     role: z.enum(['admin', 'staff']).optional()
+   }
+   
+   // Password update NOT allowed here (use separate changePassword)
+   // Role change restricted: only admin can change roles
+   ```
+
+4. **toggleStaffStatus** - Activate/deactivate account
+   ```typescript
+   toggleStaffStatus: protectedProcedure
+     .input(z.object({ staffId: z.string() }))
+     .mutation(async ({ ctx, input }) => {
+       const user = await User.findById(input.staffId);
+       user.isActive = !user.isActive;
+       user.updatedAt = new Date().toISOString();
+       await user.save();
+       return { success: true, isActive: user.isActive };
+     });
+   ```
+
+**Action Buttons Pattern** (Aligned Right):
+
+```tsx
+<TableHead className="text-right">Aksi</TableHead>
+
+<TableCell className="text-right">
+  <div className="flex items-center justify-end gap-2">
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => handleToggleStatus(staff._id)}
+      disabled={toggleStaffStatusMutation.isPending}
+      title={staff.isActive ? "Nonaktifkan akun" : "Aktifkan akun"}
+    >
+      <Power
+        className={`h-4 w-4 ${
+          staff.isActive ? "text-green-600" : "text-gray-400"
+        }`}
+      />
+    </Button>
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => openEditDialog(staff)}
+    >
+      <Edit className="h-4 w-4" />
+    </Button>
+  </div>
+</TableCell>
+```
+
+**Add/Edit Dialog Features**:
+
+- **Form Fields** (All controlled with formData state):
+  - Full Name * (min 1 character)
+  - Email * (email validation)
+  - Phone * (Indonesian format `/^08\d{8,11}$/`)
+  - Password * (min 8 characters - create only)
+  - Role * (Select: Admin/Staff)
+  
+- **Validation**:
+  - Client-side: Phone regex check before mutation
+  - Server-side: Zod schema validation in tRPC
+  - Toast notifications for success/error
+  
+- **Loading States**: 
+  - Mutation `isPending` → disable submit button
+  - Show spinner during data fetch
+
+**Role Badge Colors**:
+
+```tsx
+{staff.role === 'admin' ? (
+  <Badge className="bg-purple-100 text-purple-800 text-xs">Admin</Badge>
+) : (
+  <Badge className="bg-blue-100 text-blue-800 text-xs">Staff</Badge>
+)}
+```
+
+**Status Badge Colors**:
+
+```tsx
+{staff.isActive ? (
+  <Badge className="bg-green-100 text-green-800 text-xs">Aktif</Badge>
+) : (
+  <Badge className="bg-gray-100 text-gray-800 text-xs">Tidak Aktif</Badge>
+)}
+```
+
+**Important Patterns**:
+
+- ✅ **Aligned with User Model**: password min 8, addresses array, username auto-generated
+- ✅ **Phone Validation**: Indonesian mobile format (08xxxxxxxxxx)
+- ✅ **Role-Based Stats**: Filter counts by role (admin/staff)
+- ✅ **Admin-Only Access**: AdminLayout protection + role check in procedures
+- ✅ **Action Button Alignment**: text-right on header + cell, justify-end on flex
+- ✅ **Power Icon Color**: Green for active, gray for inactive
+- ✅ **No Password in Edit**: Security - use separate change password flow
+
+**Migration History**:
+
+- **Phase 35.5.3a**: Added 4th stats card (Total Staff) with role filtering
+- **Phase 35.5.3b**: Renamed folder `staff` → `team`, URL `/admin/staff` → `/admin/team`
+- **Phase 35.5.3c**: Added phone field with Indonesian validation pattern
+- **Phase 35.5.3d**: Aligned validation with User model (password min 8, addresses array)
+- **Phase 35.5.3e**: Fixed action button alignment (text-right + justify-end)
+- **Phase 35.5.4a**: Refined action button UI (removed PowerOff, use conditional Power color)
+
+**AdminLayout Integration**:
+
+```tsx
+// src/components/layouts/AdminLayout.tsx
+{
+  title: "Team",
+  icon: UserCog,
+  href: "/admin/team",
+  active: router.pathname.startsWith("/admin/team"),
+  adminOnly: true, // Only visible to admin role
+},
+```
+
+**Testing Checklist**:
+
+✅ Create staff/admin account → Form validation works  
+✅ Invalid phone format → Shows error toast with format guide  
+✅ Password < 8 chars → Backend rejects with validation error  
+✅ Edit account → Pre-fills form correctly  
+✅ Toggle status → Power icon changes color (green ↔ gray)  
+✅ Search → Filters by name/email/phone  
+✅ Filter role → Shows admin/staff separately  
+✅ Stats cards → Update after mutations  
+✅ Action buttons → Aligned right with header  
+✅ Only admin can access → Staff users redirected  
+
+**Database Integration**:
+
+- **Collection**: `proyekFPW.users` (shared with customer accounts)
+- **Filter**: `role: { $in: ['admin', 'staff'] }` (excludes customers)
+- **Fields Used**: fullName, email, phone, role, isActive, lastLogin, createdAt, updatedAt
+- **Model**: `src/models/User.ts` - Same model as customer accounts
+
+**Security Features**:
+
+- ✅ Password hashing with bcryptjs (10 rounds)
+- ✅ Admin-only access (centralized in AdminLayout + tRPC)
+- ✅ No password retrieval (edit form doesn't show/change password)
+- ✅ Account active status check
+- ✅ Role-based permission system
+
+**Future Enhancements** (Optional):
+
+- [ ] Password reset functionality (admin can reset staff passwords)
+- [ ] Activity log (track when staff last made changes)
+- [ ] Bulk actions (multi-select, bulk activate/deactivate)
+- [ ] Export staff list to CSV/Excel
+- [ ] Staff permissions granularity (read-only staff, etc.)
+- [ ] Two-factor authentication for admin accounts
+
 ### Admin Vouchers Management (COMPLETED)
 
 **Status**: ✅ Production-ready, fully integrated with database, soft delete
@@ -6730,3 +7003,5 @@ If you have dynamic data in session (like addresses), remove it:
 47. **Never allow returns without minimum reason length** (enforce 10+ characters for return reason)
 48. **Never access unknown mutation response without type assertion** (use `as { field: type }` pattern)
 49. **Never manually set updatedAt with Mongoose timestamps** (auto-updated by `save()` when `timestamps: true`)
+50. **Never use require() in TypeScript files** (always use ES6 import statements for proper type checking)
+51. **Never leave action button columns misaligned** (always use `text-right` on both TableHead and TableCell with `justify-end` for consistent right alignment)

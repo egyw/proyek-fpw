@@ -7,7 +7,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import User from '@/models/User';
 import { verifySignature, mapMidtransStatus } from '@/lib/midtrans';
+import { appRouter } from '@/server/routers/_app';
 
 export default async function handler(
   req: NextApiRequest,
@@ -91,6 +93,44 @@ export default async function handler(
       orderStatus,
       paymentType,
     });
+
+    // Send notification to all admins when payment is successful
+    if (paymentStatus === 'paid') {
+      try {
+        const admins = await User.find({ role: 'admin' }).lean();
+        
+        // Create tRPC caller for server-side calls
+        const caller = appRouter.createCaller({
+          req,
+          res,
+          session: null,
+          user: null,
+        } as any);
+
+        // Send notification to each admin
+        for (const admin of admins) {
+          try {
+            await caller.notifications.createNotification({
+              userId: admin._id.toString(),
+              type: 'new_paid_order',
+              title: 'Pesanan Baru Perlu Diproses',
+              message: `Pesanan #${order.orderNumber} telah dibayar. Total: Rp ${order.total.toLocaleString('id-ID')}`,
+              clickAction: '/admin/orders?status=paid',
+              icon: 'shopping-cart',
+              color: 'blue',
+              data: { orderId: order._id.toString() },
+            });
+          } catch (notifError) {
+            console.error('[Midtrans Webhook] Failed to create notification for admin:', admin._id, notifError);
+          }
+        }
+
+        console.log(`[Midtrans Webhook] Sent notifications to ${admins.length} admin(s)`);
+      } catch (notifError) {
+        console.error('[Midtrans Webhook] Error sending notifications:', notifError);
+        // Don't fail the webhook if notification fails
+      }
+    }
 
     // Send success response to Midtrans
     return res.status(200).json({

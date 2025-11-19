@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useSession, signOut } from "next-auth/react";
 import { useRequireRole } from "@/hooks/useRequireAuth";
+import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   Package,
@@ -13,7 +14,6 @@ import {
   Users,
   BarChart3,
   Store,
-  Bell,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -242,10 +242,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           
           <div className="flex items-center gap-4">
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Button>
+            <NotificationBell />
 
             {/* User Menu with Dropdown */}
             <DropdownMenu>

@@ -5,6 +5,8 @@ import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
 import Product from '@/models/Product';
 import StockMovement from '@/models/StockMovement';
+import User from '@/models/User';
+import Notification from '@/models/Notification';
 import { createSnapToken, getTransactionStatus } from '@/lib/midtrans';
 
 // Generate unique order ID
@@ -649,6 +651,40 @@ export const ordersRouter = router({
               newStock,
               notes: `Order diproses oleh ${ctx.user.name}`,
             });
+
+            // Check for low stock and send notification to admins
+            if (newStock <= product.minStock) {
+              try {
+                const admins = await User.find({ role: 'admin' }).lean();
+                const now = new Date().toISOString();
+
+                for (const admin of admins) {
+                  try {
+                    await Notification.create({
+                      userId: admin._id,
+                      type: 'low_stock_alert',
+                      title: 'Stok Produk Rendah',
+                      message: `${product.name} tersisa ${newStock} ${product.unit} (minimum: ${product.minStock} ${product.unit})`,
+                      clickAction: `/admin/products?search=${encodeURIComponent(product.name)}`,
+                      icon: 'alert-triangle',
+                      color: 'yellow',
+                      isRead: false,
+                      data: {
+                        productId: product._id.toString(),
+                      },
+                      createdAt: now,
+                    });
+                  } catch (notifError) {
+                    console.error('[processOrder] Failed to send low stock notification to admin:', admin._id, notifError);
+                  }
+                }
+
+                console.log(`[processOrder] Sent low stock alert for ${product.name} to ${admins.length} admin(s)`);
+              } catch (notifError) {
+                console.error('[processOrder] Error sending low stock notifications:', notifError);
+                // Don't fail the order processing if notification fails
+              }
+            }
           }
         }
 

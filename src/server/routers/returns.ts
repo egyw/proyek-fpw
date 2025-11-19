@@ -4,6 +4,8 @@ import { TRPCError } from '@trpc/server';
 import connectDB from '@/lib/mongodb';
 import Return from '@/models/Return';
 import Order from '@/models/Order';
+import User from '@/models/User';
+import Notification from '@/models/Notification';
 
 // Generate unique return number
 function generateReturnNumber(): string {
@@ -100,6 +102,41 @@ export const returnsRouter = router({
         // Update order returnStatus
         order.returnStatus = 'requested';
         await order.save();
+
+        // Send notification to all admins about new return request
+        try {
+          const admins = await User.find({ role: 'admin' }).lean();
+          const customer = await User.findById(ctx.user.id).lean();
+
+          const now = new Date().toISOString();
+
+          for (const admin of admins) {
+            try {
+              await Notification.create({
+                userId: admin._id,
+                type: 'new_return_request',
+                title: 'Permintaan Pengembalian Baru',
+                message: `Pesanan #${order.orderId} dari ${customer?.fullName || ctx.user.name} mengajukan pengembalian`,
+                clickAction: '/admin/returns?status=pending',
+                icon: 'rotate-ccw',
+                color: 'orange',
+                isRead: false,
+                data: {
+                  returnId: returnRequest._id.toString(),
+                  orderId: order._id.toString(),
+                },
+                createdAt: now,
+              });
+            } catch (notifError) {
+              console.error('[createReturnRequest] Failed to send notification to admin:', admin._id, notifError);
+            }
+          }
+
+          console.log(`[createReturnRequest] Sent notifications to ${admins.length} admin(s)`);
+        } catch (notifError) {
+          console.error('[createReturnRequest] Error sending notifications:', notifError);
+          // Don't fail the return request if notification fails
+        }
 
         return {
           success: true,

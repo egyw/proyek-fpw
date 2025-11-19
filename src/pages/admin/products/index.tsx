@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,15 @@ export default function AdminProducts() {
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const router = useRouter();
+
+  // Auto-fill search query from URL params (for notification clicks)
+  useEffect(() => {
+    if (router.isReady && router.query.search) {
+      setSearchQuery(decodeURIComponent(router.query.search as string));
+    }
+  }, [router.isReady, router.query.search]);
 
   type ProductType = {
     _id: string | { $oid: string };

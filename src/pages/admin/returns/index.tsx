@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
@@ -51,6 +52,15 @@ export default function AdminReturnsPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const router = useRouter();
+
+  // Auto-set status filter from query params (for notification clicks)
+  useEffect(() => {
+    if (router.isReady && router.query.status) {
+      setStatusFilter(router.query.status as string);
+    }
+  }, [router.isReady, router.query.status]);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Dialogs

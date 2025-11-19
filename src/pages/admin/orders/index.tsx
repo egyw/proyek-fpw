@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import {
@@ -116,6 +117,15 @@ const statusConfig = {
 export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled">("all");
+  
+  const router = useRouter();
+
+  // Auto-set status filter from query params (for notification clicks)
+  useEffect(() => {
+    if (router.isReady && router.query.status) {
+      setStatusFilter(router.query.status as typeof statusFilter);
+    }
+  }, [router.isReady, router.query.status]);
   
   // Dialog states
   const [viewDetailDialog, setViewDetailDialog] = useState(false);
