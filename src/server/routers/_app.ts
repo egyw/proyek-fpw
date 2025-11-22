@@ -11,7 +11,6 @@ import { usersRouter } from './users';
 import { voucherRouter } from './voucher';
 import { reportsRouter } from './reports';
 import { returnsRouter } from './returns';
-import { chatRouter } from './chat';
 import { categoriesRouter } from './categories';
 import { notificationsRouter } from './notifications';
 
@@ -28,7 +27,6 @@ export const appRouter = router({
   vouchers: voucherRouter,
   reports: reportsRouter,
   returns: returnsRouter,
-  chat: chatRouter,
   categories: categoriesRouter,
   notifications: notificationsRouter,
 });

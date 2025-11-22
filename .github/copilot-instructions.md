@@ -4546,7 +4546,144 @@ src/
 
 ## Recent Features & Patterns (November 2025)
 
-### 0. Voucher & Checkout System - Complete Integration (November 17, 2025)
+### 0. WhatsApp Dynamic Phone Integration (November 22, 2025)
+
+**Status**: ✅ Production-ready, fully centralized from database
+
+**Purpose**: Centralize WhatsApp phone numbers from database instead of hardcoded values across multiple components.
+
+**Key Features**:
+- ✅ Single source of truth: `proyekFPW.store_configs.contact` field
+- ✅ Fallback chain: `whatsapp` → `phone` → default
+- ✅ Automatic format conversion: local (08...) → international (628...)
+- ✅ Two components updated: WhatsAppButton + Contact page
+
+**Architecture Pattern**:
+
+```typescript
+// Database structure
+interface StoreConfig {
+  contact: {
+    phone: string;      // e.g., "081338697515" (local format)
+    email: string;
+    whatsapp: string;   // e.g., "-" or "6281338697515" (international)
+  }
+}
+
+// Component implementation
+import { trpc } from '@/utils/trpc';
+
+const { data: storeConfig } = trpc.store.getConfig.useQuery();
+
+// Helper: Convert local to international format
+const formatPhoneForWhatsApp = (phone: string) => {
+  if (phone.startsWith('08')) {
+    return '62' + phone.substring(1);  // "081..." → "6281..."
+  }
+  return phone;
+};
+
+// Fallback logic with format conversion
+const rawPhone = storeConfig?.contact?.whatsapp !== '-' && storeConfig?.contact?.whatsapp
+  ? storeConfig.contact.whatsapp
+  : storeConfig?.contact?.phone || '6281234567890';
+
+const phoneNumber = formatPhoneForWhatsApp(rawPhone);
+
+// Use in WhatsApp URL
+const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+```
+
+**Updated Components**:
+
+**1. WhatsAppButton.tsx** (`src/components/WhatsAppButton.tsx`):
+- Floating button visible on all customer pages (via MainLayout)
+- Fetches phone dynamically from `trpc.store.getConfig.useQuery()`
+- Returns `null` until store config loads (no broken URLs)
+- No props needed for phone number
+
+**2. Contact Page** (`src/pages/contact.tsx`):
+- Contact form submission redirects to WhatsApp
+- Same tRPC query and fallback logic
+- Format conversion applied in `handleSubmit` function
+
+**Key Implementation Points**:
+
+```typescript
+// ✅ CORRECT: Dynamic phone with fallback
+const { data: storeConfig } = trpc.store.getConfig.useQuery();
+
+const formatPhoneForWhatsApp = (phone: string) => {
+  if (phone.startsWith('08')) return '62' + phone.substring(1);
+  return phone;
+};
+
+const rawPhone = storeConfig?.contact?.whatsapp !== '-' && storeConfig?.contact?.whatsapp
+  ? storeConfig.contact.whatsapp
+  : storeConfig?.contact?.phone || '6281234567890';
+
+const phoneNumber = formatPhoneForWhatsApp(rawPhone);
+
+// ❌ WRONG: Hardcoded phone number
+const phoneNumber = '6281234567890';
+```
+
+**Fallback Chain**:
+1. **whatsapp field** - Use if not "-" (dedicated WhatsApp number)
+2. **phone field** - Fallback if whatsapp is "-" (main store phone)
+3. **default '6281234567890'** - Fallback if both empty
+
+**Phone Format Conversion**:
+- Database stores: "081338697515" (Indonesian local format)
+- WhatsApp needs: "6281338697515" (international format with country code)
+- `formatPhoneForWhatsApp()` handles conversion automatically
+
+**Benefits**:
+- ✅ Update phone in database → All components update automatically
+- ✅ No code changes needed to update phone number
+- ✅ Consistent phone across all WhatsApp touchpoints
+- ✅ Supports both local and international format inputs
+- ✅ Proper fallback if database fields empty
+
+**Database Configuration**:
+
+```json
+// proyekFPW.store_configs
+{
+  "contact": {
+    "phone": "081338697515",        // Main store phone (local format OK)
+    "email": "store@example.com",
+    "whatsapp": "6281234567890"     // Dedicated WhatsApp (international format recommended)
+  }
+}
+
+// If whatsapp is "-", will use phone field:
+{
+  "contact": {
+    "phone": "081338697515",
+    "email": "-",
+    "whatsapp": "-"  // ← Uses phone field, converts to 6281338697515
+  }
+}
+```
+
+**tRPC Integration**:
+- **Router**: `storeRouter.getConfig` (already exists)
+- **Type**: `publicProcedure.query()` (no auth required)
+- **Returns**: Complete store config including contact data
+- **No backend changes needed**
+
+**Testing Checklist**:
+✅ WhatsApp button opens correct phone  
+✅ Contact form redirects to correct phone  
+✅ Format conversion works (08... → 628...)  
+✅ Fallback to phone field when whatsapp="-"  
+✅ Fallback to default when both empty  
+✅ Loading state prevents broken URLs  
+
+---
+
+### 0.1. Voucher & Checkout System - Complete Integration (November 17, 2025)
 
 **Status**: ✅ Production-ready, fully tested with Midtrans
 
@@ -5018,125 +5155,6 @@ const getColorClasses = () => {
 - `src/server/routers/orders.ts` - 5 notification triggers added
 - `src/server/routers/returns.ts` - 3 notification triggers added
 - `src/components/NotificationItem.tsx` - 4 new icons, 8 new types, 3 new colors
-
----
-
-### 0.1. Admin Live Chat System - Tawk.to Integration (November 17, 2025)
-
-**Status**: 🚧 UI Complete, API Integration Pending (Tawk.to account registration in progress)
-
-**Location**: `src/pages/admin/chat.tsx`, `src/server/routers/chat.ts`, `src/lib/tawkto.ts`
-
-**Purpose**: Admin dashboard for managing customer live chat conversations with real-time Tawk.to API integration.
-
-**⚠️ IMPORTANT - Not Yet Functional**:
-- **API Registration Pending**: Tawk.to account masih dalam proses pendaftaran
-- **Cannot Test**: Fitur chat belum bisa dicoba karena API key belum tersedia
-- **UI Ready**: Interface sudah selesai dibuat dan siap digunakan setelah API key tersedia
-- **Future Setup**: Setelah API key didapat, tambahkan ke `.env.local` sebagai `TAWK_TO_API_KEY`
-
-**Current State**:
-```typescript
-// src/lib/tawkto.ts - API functions prepared but not active
-export async function getTawktoConversations() {
-  // Will fetch from Tawk.to API when key is available
-  // Currently returns empty array for development
-}
-
-// src/server/routers/chat.ts - tRPC procedures ready
-export const chatRouter = router({
-  getConversations: protectedProcedure.query(async ({ ctx }) => {
-    // Role check implemented (admin/staff only)
-    // API integration prepared, waiting for credentials
-  }),
-  getConversation: protectedProcedure.input(...).query(...),
-  sendMessage: protectedProcedure.input(...).mutation(...),
-  getStats: protectedProcedure.query(...),
-});
-```
-
-**UI Design Pattern - Clean Minimal**:
-
-**Layout Structure**:
-```tsx
-<div className="h-[600px] flex border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-  {/* Sidebar - Conversation List (320px) */}
-  <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
-    {/* Search + Conversations */}
-  </div>
-  
-  {/* Chat Window (flex-1) */}
-  <div className="flex-1 flex flex-col bg-white">
-    {/* Messages + Input */}
-  </div>
-</div>
-```
-
-**Empty States** (Clean, Lucide Icons Only):
-```tsx
-// Sidebar Empty State
-<div className="flex flex-col items-center justify-center h-full p-8">
-  <MessageCircle className="h-12 w-12 text-gray-300 mb-3" />
-  <p className="text-sm text-gray-900 font-semibold mb-1">Belum ada percakapan</p>
-  <p className="text-xs text-gray-500 text-center">
-    Chat baru akan muncul otomatis
-  </p>
-</div>
-
-// Chat Window Empty State
-<div className="flex-1 flex items-center justify-center bg-gray-50">
-  <div className="text-center">
-    <MessageCircle className="h-16 w-16 text-gray-300 mx-auto mb-3" />
-    <p className="text-sm text-gray-900 font-semibold mb-1">Pilih percakapan</p>
-    <p className="text-xs text-gray-500">Klik chat di sebelah kiri untuk mulai</p>
-  </div>
-</div>
-```
-
-**Loading States** (Minimal Spinner):
-```tsx
-<div className="text-center">
-  <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary mb-2 mx-auto"></div>
-  <p className="text-sm text-gray-600">Memuat pesan...</p>
-</div>
-```
-
-**Error States** (Clean with Lucide Icons):
-```tsx
-<div className="flex flex-col items-center justify-center h-full p-6">
-  <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-3">
-    <MessageCircle className="h-7 w-7 text-red-500" />
-  </div>
-  <p className="text-sm text-gray-900 font-semibold mb-1">Gagal memuat chat</p>
-  <p className="text-xs text-gray-600 text-center mb-4">{error.message}</p>
-  <div className="bg-gray-50 rounded-lg p-3 w-full text-center">
-    <p className="text-xs text-gray-600">Periksa koneksi internet dan API key</p>
-  </div>
-</div>
-```
-
-**Design Principles**:
-- ✅ **No Gradients**: Pure flat colors (white, gray-50, gray-100)
-- ✅ **Lucide Icons Only**: MessageCircle, Send, Users, Clock (NO emoji)
-- ✅ **Minimal Borders**: Subtle gray-200 borders only
-- ✅ **Clean Typography**: text-sm/xs, no excessive bold
-- ✅ **Consistent Spacing**: p-4, p-6, p-8 (multiples of 4)
-- ✅ **Professional Look**: No decorative elements, badges, or animations
-
-**When API is Ready**:
-1. Get Tawk.to API key from dashboard
-2. Add to `.env.local`: `TAWK_TO_API_KEY=your_key_here`
-3. Restart dev server
-4. Chat interface will automatically connect to real API
-5. Remove dummy data fallbacks from `chat.ts` router
-
-**Testing Checklist** (After API Available):
-- [ ] Login as admin/staff
-- [ ] Navigate to /admin/chat
-- [ ] Verify conversation list loads from Tawk.to
-- [ ] Click conversation to view messages
-- [ ] Send reply message
-- [ ] Verify real-time updates work
 
 ---
 
@@ -7246,3 +7264,6 @@ If you have dynamic data in session (like addresses), remove it:
 53. **Never pass `user: null` in tRPC context** (use `user: undefined` for optional types)
 54. **Never call `.toString()` on Mongoose ObjectId with unknown type** (use `String(objectId)` instead)
 55. **Never skip `npm run build` before pushing to production** (catches TypeScript/ESLint errors early)
+56. **Never hardcode WhatsApp phone numbers** (fetch from `trpc.store.getConfig.useQuery()` with fallback chain)
+57. **Never skip phone format conversion for WhatsApp** (convert local "08..." to international "628..." format)
+58. **Never render WhatsApp components without store config** (return null until data loads to prevent broken URLs)

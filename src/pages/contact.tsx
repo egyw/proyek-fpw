@@ -16,8 +16,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/utils/trpc";
 
 export default function ContactPage() {
+  // Fetch store config untuk mendapatkan nomor WhatsApp
+  const { data: storeConfig } = trpc.store.getConfig.useQuery();
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -40,7 +44,19 @@ export default function ContactPage() {
     // Format pesan WhatsApp
     const waMessage = `*Pesan dari Website*\n\nNama: ${formData.name}\nEmail: ${formData.email}\nTelepon: ${formData.phone || "-"}\nSubjek: ${formData.subject || "-"}\n\nPesan:\n${formData.message}`;
     
-    const waNumber = "6281338697515"; // Format internasional
+    // Helper: Convert local format (08...) to international (628...)
+    const formatPhoneForWhatsApp = (phone: string) => {
+      if (phone.startsWith('08')) {
+        return '62' + phone.substring(1);
+      }
+      return phone;
+    };
+    
+    // Gunakan nomor dari database, fallback ke phone jika whatsapp kosong
+    const rawPhone = storeConfig?.contact?.whatsapp !== '-' && storeConfig?.contact?.whatsapp
+      ? storeConfig.contact.whatsapp
+      : storeConfig?.contact?.phone || '6281234567890';
+    const waNumber = formatPhoneForWhatsApp(rawPhone);
     const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
     
     // Buka WhatsApp

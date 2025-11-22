@@ -27,12 +27,12 @@ export default function Navbar() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
 
-  // Query unread notification count
+  // Query unread notification count with auto-refresh
   const { data: unreadData } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     { 
       enabled: isLoggedIn,
-      refetchInterval: 30000, // Refresh every 30 seconds
+      refetchInterval: 5000, // ⭐ Auto-refresh every 5 seconds for real-time notifications
     }
   );
 

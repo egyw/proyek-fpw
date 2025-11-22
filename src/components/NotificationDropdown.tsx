@@ -35,7 +35,7 @@ export default function NotificationDropdown({
     {
       limit: 20,
       offset: 0,
-      unreadOnly: false,
+      showRead: false, // ⭐ Fixed: Only show unread by default
     },
     {
       enabled: isOpen && !isUserMode, // Only enabled for admin mode
@@ -46,7 +46,7 @@ export default function NotificationDropdown({
     {
       limit: 20,
       offset: 0,
-      unreadOnly: false,
+      showRead: false, // ⭐ Fixed: Only show unread by default
     },
     {
       enabled: isOpen && isUserMode, // Only enabled for user mode
@@ -108,8 +108,8 @@ export default function NotificationDropdown({
         )}
       </div>
 
-      {/* Notifications List */}
-      <div className="max-h-[400px] overflow-y-auto">
+      {/* Notifications List - Max height for ~5 items (85px each = ~425px) */}
+      <div className="max-h-[425px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary"></div>

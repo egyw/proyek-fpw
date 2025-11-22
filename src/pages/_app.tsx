@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { trpc } from '../utils/trpc';
 import { useState, useEffect } from 'react';
-import { SessionProvider, useSession } from 'next-auth/react';
+import { SessionProvider } from 'next-auth/react';
 import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import Head from 'next/head';
@@ -46,65 +46,11 @@ const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps }) =
           <div className={inter.className}>
             <Component {...pageProps} />
             <Toaster />
-            <TawkToWidget />
           </div>
         </QueryClientProvider>
       </trpc.Provider>
     </SessionProvider>
   );
 };
-
-// Tawk.to Widget Component with Role-based Protection
-function TawkToWidget() {
-  const { data: session, status } = useSession();
-  const isAuthenticated = status === 'authenticated';
-  const userRole = session?.user?.role;
-
-  useEffect(() => {
-    // Only load Tawk.to for authenticated users with 'user' role
-    if (isAuthenticated && userRole === 'user') {
-      // Initialize Tawk.to API
-      if (typeof window !== 'undefined') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (window as any).Tawk_API = (window as any).Tawk_API || {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (window as any).Tawk_LoadStart = new Date();
-
-        const tawkScript = document.createElement('script');
-        tawkScript.async = true;
-        tawkScript.src = 'https://embed.tawk.to/691b2a485f04601958b69cd7/1ja91qbmd';
-        tawkScript.charset = 'UTF-8';
-        tawkScript.setAttribute('crossorigin', '*');
-
-        const firstScript = document.getElementsByTagName('script')[0];
-        if (firstScript && firstScript.parentNode) {
-          firstScript.parentNode.insertBefore(tawkScript, firstScript);
-        }
-
-        return () => {
-          // Cleanup Tawk.to widget on unmount
-          if (tawkScript.parentNode) {
-            tawkScript.parentNode.removeChild(tawkScript);
-          }
-          // Hide widget if exists
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if ((window as any).Tawk_API?.hideWidget) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (window as any).Tawk_API.hideWidget();
-          }
-        };
-      }
-    } else {
-      // Hide widget for admin, staff, or guest users
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (typeof window !== 'undefined' && (window as any).Tawk_API?.hideWidget) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (window as any).Tawk_API.hideWidget();
-      }
-    }
-  }, [isAuthenticated, userRole]);
-
-  return null; // This component doesn't render anything
-}
 
 export default MyApp;

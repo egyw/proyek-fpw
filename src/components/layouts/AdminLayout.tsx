@@ -19,7 +19,6 @@ import {
   ChevronRight,
   Ticket,
   RotateCcw,
-  MessageCircle,
   FolderTree,
   UserCog,
 } from "lucide-react";
@@ -136,12 +135,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: FolderTree,
       href: "/admin/categories",
       active: router.pathname.startsWith("/admin/categories"),
-    },
-    {
-      title: "Live Chat",
-      icon: MessageCircle,
-      href: "/admin/chat",
-      active: router.pathname.startsWith("/admin/chat"),
     },
     {
       title: "Voucher",

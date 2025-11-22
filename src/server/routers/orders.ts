@@ -495,6 +495,34 @@ export const ordersRouter = router({
           // Continue - notification failure shouldn't block order processing
         }
 
+        // ⭐ Send new_paid_order notification to ALL admin/staff
+        try {
+          const User = (await import('@/models/User')).default;
+          const adminUsers = await User.find({ 
+            role: { $in: ['admin', 'staff'] },
+            isActive: true 
+          }).select('_id');
+
+          // Create notification for each admin/staff
+          const adminNotifications = adminUsers.map(admin => ({
+            userId: admin._id,
+            type: 'new_paid_order',
+            title: 'Pesanan Baru Masuk',
+            message: `Pesanan baru #${order.orderId} telah dibayar sebesar ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.total)}. Segera proses!`,
+            clickAction: `/admin/orders?orderId=${order.orderId}`,
+            icon: 'shopping-cart',
+            color: 'blue',
+            isRead: false,
+            data: { orderId: order.orderId.toString() },
+          }));
+
+          await Notification.insertMany(adminNotifications);
+          console.log(`[simulatePaymentSuccess] ✅ Sent notifications to ${adminUsers.length} admin(s)`);
+        } catch (notifError) {
+          console.error('[simulatePaymentSuccess] Failed to send admin notifications:', notifError);
+          // Continue - notification failure shouldn't block order processing
+        }
+
         return { success: true, order };
       } catch (error) {
         console.error('[simulatePaymentSuccess] Error:', error);

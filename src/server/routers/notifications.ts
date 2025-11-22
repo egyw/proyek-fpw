@@ -6,12 +6,13 @@ import connectDB from '@/lib/mongodb';
 
 export const notificationsRouter = router({
   // Get user notifications (for customers - order and return notifications)
+  // ⭐ DEFAULT: Only show unread notifications (clean dropdown UX)
   getUserNotifications: protectedProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(50).default(20),
         offset: z.number().min(0).default(0),
-        unreadOnly: z.boolean().default(false),
+        showRead: z.boolean().default(false), // Changed: showRead instead of unreadOnly
       })
     )
     .query(async ({ ctx, input }) => {
@@ -19,7 +20,8 @@ export const notificationsRouter = router({
         await connectDB();
 
         const query: { userId: string; isRead?: boolean } = { userId: ctx.user.id };
-        if (input.unreadOnly) {
+        // Only show unread by default (read notifications hidden)
+        if (!input.showRead) {
           query.isRead = false;
         }
 
@@ -47,12 +49,13 @@ export const notificationsRouter = router({
     }),
 
   // Get admin notifications with pagination and filters
+  // ⭐ DEFAULT: Only show unread notifications (clean dropdown UX)
   getAdminNotifications: protectedProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(50).default(20),
         offset: z.number().min(0).default(0),
-        unreadOnly: z.boolean().default(false),
+        showRead: z.boolean().default(false), // Changed: showRead instead of unreadOnly
       })
     )
     .query(async ({ ctx, input }) => {
@@ -68,7 +71,8 @@ export const notificationsRouter = router({
         await connectDB();
 
         const query: { userId: string; isRead?: boolean } = { userId: ctx.user.id };
-        if (input.unreadOnly) {
+        // Only show unread by default (read notifications hidden)
+        if (!input.showRead) {
           query.isRead = false;
         }
 

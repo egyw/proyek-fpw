@@ -131,6 +131,51 @@ export default async function handler(
     console.log('[Midtrans Webhook] Payment Status:', paymentStatus);
     console.log('[Midtrans Webhook] Order Status:', orderStatus);
 
+    // ⭐ Send notifications when payment successful
+    if (paymentStatus === 'paid') {
+      try {
+        const Notification = (await import('@/models/Notification')).default;
+        const User = (await import('@/models/User')).default;
+
+        // 1. Send order_confirmed notification to CUSTOMER
+        await Notification.create({
+          userId: order.userId,
+          type: 'order_confirmed',
+          title: 'Pesanan Dikonfirmasi',
+          message: `Pesanan #${order.orderId} sedang diproses. Estimasi pengiriman 1-2 hari kerja`,
+          clickAction: `/orders/${order.orderId}`,
+          icon: 'package',
+          color: 'blue',
+          data: { orderId: order.orderId.toString() },
+        });
+        console.log('[Midtrans Webhook] ✅ Customer notification sent');
+
+        // 2. Send new_paid_order notification to ALL ADMIN/STAFF
+        const adminUsers = await User.find({ 
+          role: { $in: ['admin', 'staff'] },
+          isActive: true 
+        }).select('_id');
+
+        const adminNotifications = adminUsers.map(admin => ({
+          userId: admin._id,
+          type: 'new_paid_order',
+          title: 'Pesanan Baru Masuk',
+          message: `Pesanan baru #${order.orderId} telah dibayar sebesar ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.total)}. Segera proses!`,
+          clickAction: `/admin/orders?orderId=${order.orderId}`,
+          icon: 'shopping-cart',
+          color: 'blue',
+          isRead: false,
+          data: { orderId: order.orderId.toString() },
+        }));
+
+        await Notification.insertMany(adminNotifications);
+        console.log(`[Midtrans Webhook] ✅ Sent notifications to ${adminUsers.length} admin(s)`);
+      } catch (notifError) {
+        console.error('[Midtrans Webhook] Failed to send notifications:', notifError);
+        // Continue - notification failure shouldn't block webhook processing
+      }
+    }
+
     // Return success response to Midtrans
     return res.status(200).json({
       message: 'Notification processed successfully',

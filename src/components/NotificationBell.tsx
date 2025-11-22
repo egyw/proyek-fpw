@@ -7,11 +7,11 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
-  // Get unread count with auto-refresh every 30 seconds
+  // Get unread count with auto-refresh for real-time notifications
   const { data: unreadData, refetch } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 30000, // 30 seconds
+      refetchInterval: 5000, // ⭐ Auto-refresh every 5 seconds for real-time notifications
     }
   );
 
