@@ -579,10 +579,6 @@ export const reportsRouter = router({
           paymentStatus: { $in: ['paid', 'completed'] },
         }).lean();
 
-        console.log('[getBestSellers] Date range:', startDateObj, 'to', endDateObj);
-        console.log('[getBestSellers] Found orders:', orders.length);
-        console.log('[getBestSellers] Sample order:', orders[0] || 'No orders found');
-
         // Aggregate sales by product
         const productSales: Record<
           string,

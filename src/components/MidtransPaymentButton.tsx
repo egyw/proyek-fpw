@@ -58,10 +58,6 @@ export default function MidtransPaymentButton({
     script.setAttribute('data-client-key', clientKey);
     script.async = true;
 
-    script.onload = () => {
-      console.log('[Midtrans] Snap script loaded successfully');
-    };
-
     script.onerror = () => {
       console.error('[Midtrans] Failed to load Snap script');
       toast.error('Gagal memuat pembayaran');
@@ -97,14 +93,12 @@ export default function MidtransPaymentButton({
     // Open Midtrans Snap payment popup
     window.snap.pay(snapToken, {
       onSuccess: (result) => {
-        console.log('[Midtrans] Payment success:', result);
         toast.success('Pembayaran Berhasil!', {
           description: `Order ${orderId} telah dibayar`,
         });
         onSuccess?.();
       },
       onPending: (result) => {
-        console.log('[Midtrans] Payment pending:', result);
         toast.info('Menunggu Pembayaran', {
           description: 'Silakan selesaikan pembayaran Anda',
         });
@@ -118,7 +112,6 @@ export default function MidtransPaymentButton({
         onError?.();
       },
       onClose: () => {
-        console.log('[Midtrans] Payment popup closed');
         toast.info('Pembayaran dibatalkan', {
           description: 'Anda dapat melanjutkan pembayaran kapan saja',
         });

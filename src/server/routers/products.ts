@@ -153,11 +153,7 @@ export const productsRouter = router({
       );
 
       const endOfLastMonthISO = endOfLastMonth.toISOString();
-      console.log("Date ranges:", {
-        startOfThisMonthISO,
-        startOfLastMonthISO,
-        endOfLastMonthISO,
-      });
+
       const [
         totalProducts,
         lowStockProducts,
@@ -356,10 +352,6 @@ export const productsRouter = router({
             message: "Database connection failed for dashboard stats",
             cause: error,
           });
-        }
-
-        if (error.message.includes("User")) {
-          console.warn("User model not found, using dummy customer data");
         }
       }
 

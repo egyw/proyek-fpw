@@ -329,7 +329,6 @@ export async function calculateMultipleCouriers(params: {
         weight: params.weight,
         courier,
       }).catch(error => {
-        console.warn(`[${courier}] Failed to fetch:`, error.message);
         return []; // Return empty array if courier fails
       })
     );

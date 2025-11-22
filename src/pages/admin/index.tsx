@@ -32,7 +32,6 @@ interface OrderData {
 export default function AdminDashboard() {
   const router = useRouter();
   const {data: dashboardStats, isLoading: statsLoading} = trpc.products.getDashBoardStats.useQuery();
-  console.log(dashboardStats);
 
   // Quick Action Handlers
   const handleQuickAction = (action: string) => {
@@ -171,7 +170,6 @@ export default function AdminDashboard() {
   // ];
 
       const now = new Date();
-  console.log(new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {

@@ -131,8 +131,6 @@ export const returnsRouter = router({
               console.error('[createReturnRequest] Failed to send notification to admin:', admin._id, notifError);
             }
           }
-
-          console.log(`[createReturnRequest] Sent notifications to ${admins.length} admin(s)`);
         } catch (notifError) {
           console.error('[createReturnRequest] Error sending notifications:', notifError);
           // Don't fail the return request if notification fails

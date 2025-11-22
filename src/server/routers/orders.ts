@@ -517,7 +517,6 @@ export const ordersRouter = router({
           }));
 
           await Notification.insertMany(adminNotifications);
-          console.log(`[simulatePaymentSuccess] ✅ Sent notifications to ${adminUsers.length} admin(s)`);
         } catch (notifError) {
           console.error('[simulatePaymentSuccess] Failed to send admin notifications:', notifError);
           // Continue - notification failure shouldn't block order processing
@@ -740,8 +739,6 @@ export const ordersRouter = router({
                     console.error('[processOrder] Failed to send low stock notification to admin:', admin._id, notifError);
                   }
                 }
-
-                console.log(`[processOrder] Sent low stock alert for ${product.name} to ${admins.length} admin(s)`);
               } catch (notifError) {
                 console.error('[processOrder] Error sending low stock notifications:', notifError);
                 // Don't fail the order processing if notification fails
