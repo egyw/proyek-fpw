@@ -572,13 +572,28 @@ export const ordersRouter = router({
           query.orderStatus = input.status;
         }
 
-        // Search by order number, customer name, or phone
+        // Search by order ID, customer name (from user data), email, or phone
         if (input.search) {
           const searchRegex = new RegExp(input.search, 'i');
+          
+          // First, find users matching the search (for customer name/email/phone)
+          const matchingUsers = await User.find({
+            $or: [
+              { fullName: searchRegex },
+              { name: searchRegex },
+              { email: searchRegex },
+              { phone: searchRegex },
+            ]
+          }).select('_id').lean();
+          
+          const matchingUserIds = matchingUsers.map(u => u._id);
+          
+          // Search in order fields AND user IDs
           query.$or = [
-            { orderNumber: searchRegex },
+            { orderId: searchRegex },  // Fixed: orderNumber → orderId (actual field name)
             { 'shippingAddress.recipientName': searchRegex },
             { 'shippingAddress.phoneNumber': searchRegex },
+            ...(matchingUserIds.length > 0 ? [{ userId: { $in: matchingUserIds } }] : []),
           ];
         }
 

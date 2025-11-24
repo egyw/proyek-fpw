@@ -398,7 +398,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Produk Terlaris</h2>
-            <Link href="/products?filter=bestseller" className="text-primary hover:underline">
+            <Link href="/products?sortBy=popular" className="text-primary hover:underline">
               Lihat Semua →
             </Link>
           </div>

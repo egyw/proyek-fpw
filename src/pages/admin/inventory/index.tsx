@@ -212,21 +212,20 @@ export default function StockMovementsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Tanggal & Waktu</TableHead>
-              <TableHead>Produk</TableHead>
-              <TableHead>Tipe</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Stock Before</TableHead>
-              <TableHead className="text-right">Stock After</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>Performed By</TableHead>
+              <TableHead className="w-[140px]">Tanggal & Waktu</TableHead>
+              <TableHead className="w-[200px]">Produk</TableHead>
+              <TableHead className="text-right w-[120px]">Stok Awal</TableHead>
+              <TableHead className="w-[280px] pl-6">Keterangan</TableHead>
+              <TableHead className="text-right w-[140px]">Qty</TableHead>
+              <TableHead className="text-right w-[110px]">Stok Akhir</TableHead>
+              <TableHead className="w-[180px]">Referensi</TableHead>
+              <TableHead className="w-[140px]">Performed By</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   <div className="flex items-center justify-center gap-2 text-gray-500">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                     <span>Memuat data...</span>
@@ -235,7 +234,7 @@ export default function StockMovementsPage() {
               </TableRow>
             ) : movements.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   Tidak ada data pergerakan stok
                 </TableCell>
               </TableRow>
@@ -257,21 +256,29 @@ export default function StockMovementsPage() {
                       <p className="text-sm text-gray-600">{movement.productCode}</p>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        movement.movementType === "in"
-                          ? "bg-green-100 text-green-800 hover:bg-green-100"
-                          : "bg-red-100 text-red-800 hover:bg-red-100"
-                      }
-                    >
-                      {movement.movementType === "in" ? (
-                        <ArrowDownCircle className="h-3 w-3 mr-1" />
-                      ) : (
-                        <ArrowUpCircle className="h-3 w-3 mr-1" />
-                      )}
-                      {movement.movementType === "in" ? "IN" : "OUT"}
-                    </Badge>
+                  <TableCell className="text-right text-gray-600">
+                    {formatNumber(movement.previousStock)}
+                  </TableCell>
+                  <TableCell className="pl-6">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={
+                          movement.movementType === "in"
+                            ? "bg-green-100 text-green-800 hover:bg-green-100 shrink-0"
+                            : "bg-red-100 text-red-800 hover:bg-red-100 shrink-0"
+                        }
+                      >
+                        {movement.movementType === "in" ? (
+                          <ArrowDownCircle className="h-3 w-3 mr-1" />
+                        ) : (
+                          <ArrowUpCircle className="h-3 w-3 mr-1" />
+                        )}
+                        {movement.movementType === "in" ? "IN" : "OUT"}
+                      </Badge>
+                      <span className="text-sm text-gray-700 whitespace-nowrap">
+                        {getSourceLabel(movement.referenceType, movement.reason)}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     <span
@@ -283,16 +290,8 @@ export default function StockMovementsPage() {
                       {formatNumber(movement.quantity)} {movement.unit}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right text-gray-600">
-                    {formatNumber(movement.previousStock)}
-                  </TableCell>
                   <TableCell className="text-right font-medium">
                     {formatNumber(movement.newStock)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {getSourceLabel(movement.referenceType, movement.reason)}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <code className="text-sm bg-gray-100 px-2 py-1 rounded">

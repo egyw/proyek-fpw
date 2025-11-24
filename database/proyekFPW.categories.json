@@ -93,8 +93,6 @@
     "productCount": 0,
     "order": 5,
     "availableUnits": [
-      { "value": "set", "label": "Set", "conversionRate": 1 },
-      { "value": "pcs", "label": "Pieces (pcs)", "conversionRate": 1 },
       { "value": "unit", "label": "Unit", "conversionRate": 1 }
     ],
     "createdAt": "2025-01-01T00:00:00.000Z",

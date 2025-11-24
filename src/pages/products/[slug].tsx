@@ -14,7 +14,6 @@ import {
   ShoppingCart,
   Minus,
   Plus,
-  Heart,
   Share2,
   Truck,
   ShieldCheck,
@@ -408,9 +407,6 @@ export default function ProductDetailPage() {
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Tambah ke Keranjang
-              </Button>
-              <Button size="lg" variant="outline" className="h-12">
-                <Heart className="h-5 w-5" />
               </Button>
               <Button 
                 size="lg" 

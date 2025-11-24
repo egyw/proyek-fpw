@@ -57,6 +57,7 @@ export default function ProductsPage() {
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [hasDiscount, setHasDiscount] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   // Read query parameters on mount (for deep linking with filters)
   useEffect(() => {
@@ -80,8 +81,74 @@ export default function ProductsPage() {
       if (router.query.sortBy && typeof router.query.sortBy === "string") {
         setSortBy(router.query.sortBy);
       }
+      
+      // Set price filters from URL
+      if (router.query.minPrice && typeof router.query.minPrice === "string") {
+        setMinPrice(router.query.minPrice);
+      }
+      
+      if (router.query.maxPrice && typeof router.query.maxPrice === "string") {
+        setMaxPrice(router.query.maxPrice);
+      }
+      
+      // Set page from URL
+      if (router.query.page && typeof router.query.page === "string") {
+        const pageNum = parseInt(router.query.page, 10);
+        if (!isNaN(pageNum) && pageNum > 0) {
+          setCurrentPage(pageNum);
+        }
+      }
+      
+      // Set view mode from URL
+      if (router.query.view && (router.query.view === "grid" || router.query.view === "list")) {
+        setViewMode(router.query.view);
+      }
+      
+      // Mark initial load as complete
+      setIsInitialLoad(false);
     }
   }, [router.isReady, router.query]);
+
+  // Sync state changes to URL (preserve filters on back/forward navigation)
+  useEffect(() => {
+    // Skip during initial load to prevent overwriting URL params
+    if (isInitialLoad || !router.isReady) {
+      return;
+    }
+    
+    // Build query object from current state (exclude defaults)
+    const query: Record<string, string> = {};
+    
+    if (selectedCategory) query.category = selectedCategory;
+    if (searchQuery) query.search = searchQuery;
+    if (sortBy && sortBy !== 'newest') query.sortBy = sortBy; // Don't include default
+    if (minPrice) query.minPrice = minPrice;
+    if (maxPrice) query.maxPrice = maxPrice;
+    if (hasDiscount) query.discount = 'true';
+    if (currentPage > 1) query.page = currentPage.toString();
+    if (viewMode !== 'grid') query.view = viewMode; // Don't include default 'grid'
+    
+    // Update URL without reload (shallow routing)
+    router.push(
+      {
+        pathname: '/products',
+        query: Object.keys(query).length > 0 ? query : undefined,
+      },
+      undefined,
+      { shallow: true } // Critical: don't reload page
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isInitialLoad,
+    selectedCategory,
+    searchQuery,
+    sortBy,
+    minPrice,
+    maxPrice,
+    hasDiscount,
+    currentPage,
+    viewMode,
+  ]);
 
   const ITEMS_PER_PAGE = 20;
 
