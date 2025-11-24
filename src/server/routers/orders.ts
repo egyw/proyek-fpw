@@ -560,12 +560,8 @@ export const ordersRouter = router({
 
         await connectDB();
 
-        // Build query
-        interface OrderQuery {
-          orderStatus?: string;
-          $or?: Array<Record<string, RegExp>>;
-        }
-        const query: OrderQuery = {};
+        // Build query with MongoDB operators
+        const query: Record<string, unknown> = {};
 
         // Filter by status
         if (input.status && input.status !== 'all') {
