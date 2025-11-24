@@ -1,11 +1,16 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { compare } from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -55,6 +60,55 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google') {
+        try {
+          await connectDB();
+          
+          const existingUser = await User.findOne({ email: user.email });
+          
+          if (existingUser) {
+            existingUser.lastLogin = new Date();
+            await existingUser.save();
+            
+            user.id = String(existingUser._id);
+            user.username = existingUser.username;
+            user.role = existingUser.role;
+            user.phone = existingUser.phone || '';
+            user.isActive = existingUser.isActive;
+            
+            return true;
+          } else {
+            const newUser = new User({
+              fullName: user.name || 'User',
+              email: user.email,
+              username: user.email?.split('@')[0] || '',
+              password: 'GOOGLE_OAUTH_NO_PASSWORD',
+              role: 'user',
+              phone: '0000000000',
+              addresses: [],
+              isActive: true,
+              lastLogin: new Date(),
+            });
+            
+            await newUser.save({ validateBeforeSave: false });
+            
+            user.id = String(newUser._id);
+            user.username = newUser.username;
+            user.role = newUser.role;
+            user.phone = newUser.phone;
+            user.isActive = newUser.isActive;
+            
+            return true;
+          }
+        } catch (error) {
+          console.error('[Google OAuth] Error:', error);
+          return false;
+        }
+      }
+      
+      return true;
+    },
     async jwt({ token, user }) {
       // Initial sign in
       if (user) {

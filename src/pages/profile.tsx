@@ -115,6 +115,18 @@ export default function ProfilePage() {
     phone: "",
   });
 
+  // Initialize form with session data on mount or when session changes
+  useEffect(() => {
+    if (session?.user) {
+      setProfileForm({
+        fullName: session.user.name || "",
+        phone: session.user.phone && session.user.phone !== '0000000000' 
+          ? session.user.phone 
+          : "",
+      });
+    }
+  }, [session?.user]);
+
   // Address State
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
@@ -143,6 +155,9 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  // Phone Notification State (show when phone not set)
+  const [showPhoneNotification, setShowPhoneNotification] = useState(false);
 
   // Map location state (for AddressMapPicker)
   const [mapLocation, setMapLocation] = useState<{
@@ -251,6 +266,16 @@ export default function ProfilePage() {
       });
     }
   }, [profileData]);
+
+  // Show phone notification popup setiap kali user buka profile (jika phone belum di-set)
+  useEffect(() => {
+    if (session?.user) {
+      const phoneNotSet = !session.user.phone || session.user.phone === '0000000000';
+      if (phoneNotSet) {
+        setShowPhoneNotification(true);
+      }
+    }
+  }, [session?.user]);
 
   // Handle location selection from map (same as checkout)
   const handleLocationSelect = (
@@ -486,12 +511,12 @@ export default function ProfilePage() {
                         <span className="text-sm">@{session.user.username}</span>
                       </div>
                     </div>
-                    {session.user.phone && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone className="h-4 w-4 text-primary" />
-                        <span className="text-sm">{session.user.phone}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Phone className="h-4 w-4 text-primary" />
+                      <span className="text-sm">
+                        {session.user.phone && session.user.phone !== '0000000000' ? session.user.phone : '-'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -547,7 +572,16 @@ export default function ProfilePage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setIsEditingProfile(true)}
+                      onClick={() => {
+                        setIsEditingProfile(true);
+                        // Set form values when entering edit mode
+                        if (session?.user) {
+                          setProfileForm({
+                            fullName: session.user.name || "",
+                            phone: session.user.phone && session.user.phone !== '0000000000' ? session.user.phone : "",
+                          });
+                        }
+                      }}
                       className="gap-2"
                     >
                       <Edit className="h-4 w-4" />
@@ -602,12 +636,12 @@ export default function ProfilePage() {
                       <Label htmlFor="phone">Nomor Telepon *</Label>
                       <Input
                         id="phone"
-                        value={profileForm.phone}
+                        value={isEditingProfile ? profileForm.phone : (session?.user?.phone && session.user.phone !== '0000000000' ? session.user.phone : '')}
                         onChange={(e) =>
                           setProfileForm({ ...profileForm, phone: e.target.value })
                         }
                         disabled={!isEditingProfile}
-                        placeholder="08xxxxxxxxxx"
+                        placeholder={isEditingProfile ? "08xxxxxxxxxx" : (session?.user?.phone && session.user.phone !== '0000000000' ? session.user.phone : '-')}
                       />
                     </div>
                   </div>
@@ -622,7 +656,7 @@ export default function ProfilePage() {
                           if (session?.user) {
                             setProfileForm({
                               fullName: session.user.name || "",
-                              phone: session.user.phone || "",
+                              phone: session.user.phone && session.user.phone !== '0000000000' ? session.user.phone : "",
                             });
                           }
                         }}
@@ -895,6 +929,66 @@ export default function ProfilePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Phone Notification Dialog */}
+      <Dialog open={showPhoneNotification} onOpenChange={setShowPhoneNotification}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader className="space-y-3">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Phone className="h-8 w-8 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-center">
+              Lengkapi Nomor Telepon Anda
+            </DialogTitle>
+            <DialogDescription className="text-center text-base">
+              Nomor telepon diperlukan untuk menerima notifikasi pesanan dan konfirmasi pengiriman.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6">
+            <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-primary font-semibold text-sm">1</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">Edit Profil</p>
+                  <p className="text-xs text-gray-600">Klik tombol &ldquo;Edit Profil&rdquo; di tab Profil</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-primary font-semibold text-sm">2</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">Isi Nomor Telepon</p>
+                  <p className="text-xs text-gray-600">Format: 08xxxxxxxxxx (10-13 digit)</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-primary font-semibold text-sm">3</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">Simpan Perubahan</p>
+                  <p className="text-xs text-gray-600">Klik tombol &ldquo;Simpan Perubahan&rdquo; untuk menyimpan</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-center">
+            <Button 
+              onClick={() => setShowPhoneNotification(false)}
+              className="w-full sm:w-auto px-8"
+            >
+              Tutup
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Address Dialog */}
       <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>

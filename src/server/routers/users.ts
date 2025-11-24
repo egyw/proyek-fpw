@@ -522,4 +522,48 @@ export const usersRouter = router({
         });
       }
     }),
+
+  // Update user phone number (for Google OAuth users with placeholder)
+  updateUserPhone: protectedProcedure
+    .input(
+      z.object({
+        phone: z
+          .string()
+          .regex(
+            /^08\d{8,11}$/,
+            'Format nomor telepon tidak valid. Gunakan format: 08xxxxxxxxxx (8-11 digit)'
+          ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const user = await User.findByIdAndUpdate(
+          ctx.user.id,
+          { phone: input.phone },
+          { new: true, runValidators: true }
+        );
+
+        if (!user) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User tidak ditemukan',
+          });
+        }
+
+        return {
+          success: true,
+          phone: user.phone,
+          message: 'Nomor telepon berhasil diperbarui',
+        };
+      } catch (error) {
+        console.error('[updateUserPhone] Error:', error);
+        if (error instanceof TRPCError) throw error;
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Gagal memperbarui nomor telepon',
+          cause: error,
+        });
+      }
+    }),
 });

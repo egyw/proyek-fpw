@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import { useCartStore } from "@/store/cartStore";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -192,6 +193,7 @@ export default function CheckoutPage() {
   
   // ✅ Protect page - redirect guest to login
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
+  const { data: session } = useSession();
 
   // Cart store (for logged in users, we'll use tRPC cart)
   const cartItems = useCartStore((state) => state.items);
@@ -427,6 +429,19 @@ export default function CheckoutPage() {
 
   // Handle place order (Create order and get Snap token)
   const handlePlaceOrder = async () => {
+    // ⭐ Check if phone number is still placeholder (Google OAuth users)
+    if (!session?.user?.phone || session?.user?.phone === '0000000000') {
+      toast.error('Lengkapi Nomor Telepon Terlebih Dahulu', {
+        description: 'Nomor telepon diperlukan untuk konfirmasi pesanan. Anda akan diarahkan ke halaman profil.',
+        duration: 5000,
+      });
+      // Redirect to profile page
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
+      return;
+    }
+
     if (!selectedAddress) {
       toast.error('Alamat Belum Dipilih', {
         description: 'Silakan pilih alamat pengiriman terlebih dahulu.',

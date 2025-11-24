@@ -92,13 +92,13 @@ export default function MidtransPaymentButton({
 
     // Open Midtrans Snap payment popup
     window.snap.pay(snapToken, {
-      onSuccess: (result) => {
+      onSuccess: () => {
         toast.success('Pembayaran Berhasil!', {
           description: `Order ${orderId} telah dibayar`,
         });
         onSuccess?.();
       },
-      onPending: (result) => {
+      onPending: () => {
         toast.info('Menunggu Pembayaran', {
           description: 'Silakan selesaikan pembayaran Anda',
         });

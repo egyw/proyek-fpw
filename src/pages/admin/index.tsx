@@ -169,8 +169,6 @@ export default function AdminDashboard() {
   //   { name: "Genteng Metal", stock: 25, min: 100, category: "Atap" },
   // ];
 
-      const now = new Date();
-
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
       pending: { label: "Menunggu Bayar", className: "bg-yellow-100 text-yellow-800" },

@@ -241,6 +241,15 @@ export default function LoginPage() {
               type="button" 
               variant="outline" 
               className="w-full h-10 border-2 hover:bg-gray-50"
+              onClick={() => {
+                // Set flag for cart persistence before OAuth redirect
+                if (cartItems.length > 0) {
+                  sessionStorage.setItem('justLoggedIn', 'true');
+                }
+                // OAuth will redirect to homepage by default, we'll handle role-based redirect there
+                signIn('google', { callbackUrl: '/' });
+              }}
+              disabled={isLoading}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

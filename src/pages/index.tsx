@@ -28,13 +28,15 @@ import { toast } from "sonner";
 import { ShoppingCart, Package } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import Autoplay from "embla-carousel-autoplay";
+import { useRouter } from "next/router";
 
 export default function Home() {
   const plugin = useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  const { status } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   
@@ -52,6 +54,19 @@ export default function Home() {
     },
   });
 
+
+
+  // Redirect admin/staff to dashboard after Google OAuth
+  useEffect(() => {
+    if (session?.user?.role === 'admin' || session?.user?.role === 'staff') {
+      const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+      if (justLoggedIn === 'true') {
+        sessionStorage.removeItem('justLoggedIn');
+        router.push('/admin');
+      }
+    }
+  }, [session, router]);
+
   // Check if user just logged in with cart items
   useEffect(() => {
     if (isLoggedIn && cartItems.length > 0) {
@@ -59,7 +74,7 @@ export default function Home() {
       const justLoggedIn = sessionStorage.getItem('justLoggedIn');
       if (justLoggedIn === 'true') {
         setShowMergeDialog(true);
-        sessionStorage.removeItem('justLoggedIn'); // Clear flag
+        sessionStorage.removeItem('justLoggedIn'); // Clear the flag
       }
     }
   }, [isLoggedIn, cartItems.length]);
@@ -95,6 +110,8 @@ export default function Home() {
       });
     }
   };
+
+
 
   const handleSkipMerge = () => {
     clearCart();
