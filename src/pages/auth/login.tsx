@@ -203,15 +203,6 @@ export default function LoginPage() {
                         </div>
                       </FormControl>
                       <FormMessage />
-                      {/* Lupa password - moved below input */}
-                      <div className="text-right">
-                        <Link 
-                          href="/auth/forgot-password" 
-                          className="text-xs text-primary hover:underline"
-                        >
-                          Lupa password?
-                        </Link>
-                      </div>
                     </FormItem>
                   )}
                 />
@@ -240,13 +231,15 @@ export default function LoginPage() {
             <Button 
               type="button" 
               variant="outline" 
-              className="w-full h-10 border-2 hover:bg-gray-50"
+              className="w-full h-10 border-2 border-primary/30 text-gray-700 hover:bg-primary hover:text-white hover:border-primary font-semibold transition-all"
               onClick={() => {
                 // Set flag for cart persistence before OAuth redirect
                 if (cartItems.length > 0) {
                   sessionStorage.setItem('justLoggedIn', 'true');
                 }
-                // OAuth will redirect to homepage by default, we'll handle role-based redirect there
+                // Set flag to indicate OAuth login in progress (for role-based redirect)
+                sessionStorage.setItem('oauthLoginInProgress', 'true');
+                // OAuth will redirect to homepage, role-based redirect handled in homepage
                 signIn('google', { callbackUrl: '/' });
               }}
               disabled={isLoading}

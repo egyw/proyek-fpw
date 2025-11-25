@@ -131,6 +131,12 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Get the callback URL or default to base URL
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   pages: {
     signIn: '/auth/login',

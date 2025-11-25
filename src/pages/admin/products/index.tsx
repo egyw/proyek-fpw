@@ -7,6 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Edit, Power } from "lucide-react";
 import ImagePreview from "@/components/ImagePreview";
+import AttributeManager, {
+  type AttributeItem,
+  attributesToObject,
+  objectToAttributes,
+} from "@/components/admin/AttributeManager";
 import { trpc } from "@/utils/trpc";
 import { toast } from "sonner";
 import type { ICategoryData } from "@/models/Category";
@@ -83,6 +88,9 @@ export default function AdminProducts() {
   // Edit image states
   const [editImagePreview, setEditImagePreview] = useState<string>("");
   const [selectedEditFile, setSelectedEditFile] = useState<File | null>(null);
+  
+  // Attributes state for add/edit forms
+  const [attributes, setAttributes] = useState<AttributeItem[]>([]);
 
   // Form setup
   const form = useForm<ProductFormValues>({
@@ -294,6 +302,9 @@ export default function AdminProducts() {
       // Generate slug from name
       const slug = data.name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
 
+      // Convert attributes array to object for database
+      const attributesObject = attributesToObject(attributes);
+
       const productData = {
         name: data.name,
         slug: slug,
@@ -311,7 +322,7 @@ export default function AdminProducts() {
         availableUnits: data.availableUnits,
         images: [imageUrl],
         description: data.description,
-        attributes: {},
+        attributes: attributesObject,
         isActive: data.isActive,
         isFeatured: data.isFeatured,
       };
@@ -331,6 +342,12 @@ export default function AdminProducts() {
     // Set image preview
     setEditImagePreview(product.images[0] || "");
     setSelectedEditFile(null);
+    // Load attributes
+    if (product.attributes && typeof product.attributes === 'object') {
+      setAttributes(objectToAttributes(product.attributes as Record<string, unknown>));
+    } else {
+      setAttributes([]);
+    }
     // Pre-populate form
     form.reset({
       name: product.name,
@@ -427,6 +444,9 @@ export default function AdminProducts() {
         }
       }
 
+      // Convert attributes array to object for database
+      const attributesObject = attributesToObject(attributes);
+
       const updateData = {
         id: productId,
         name: data.name,
@@ -444,6 +464,7 @@ export default function AdminProducts() {
         availableUnits: data.availableUnits,
         images: [imageUrl], // Include updated image
         description: data.description,
+        attributes: attributesObject,
         isActive: data.isActive,
         isFeatured: data.isFeatured,
       };
@@ -483,6 +504,7 @@ export default function AdminProducts() {
       });
       setImagePreview("");
       setSelectedFile(null);
+      setAttributes([]); // Reset attributes
     }
   };
 
@@ -509,6 +531,7 @@ export default function AdminProducts() {
       setImagePreview("");
       setEditImagePreview("");
       setSelectedEditFile(null);
+      setAttributes([]); // Reset attributes
     }
   };
 
@@ -1168,6 +1191,15 @@ export default function AdminProducts() {
                 </div>
               </div>
 
+              {/* Attributes Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <AttributeManager
+                  attributes={attributes}
+                  onChange={setAttributes}
+                  disabled={createProductMutation.isPending}
+                />
+              </div>
+
               {/* Status Section */}
               <div className="space-y-5 pt-6 border-t">
                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Status Produk</h3>
@@ -1478,6 +1510,15 @@ export default function AdminProducts() {
                   currentImage={editImagePreview}
                   onFileSelect={handleEditFileSelect}
                   onRemove={handleEditRemoveImage}
+                  disabled={updateProductMutation.isPending}
+                />
+              </div>
+
+              {/* Attributes Section */}
+              <div className="space-y-5 pt-6 border-t">
+                <AttributeManager
+                  attributes={attributes}
+                  onChange={setAttributes}
                   disabled={updateProductMutation.isPending}
                 />
               </div>

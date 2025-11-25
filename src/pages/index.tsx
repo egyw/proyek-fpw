@@ -39,6 +39,7 @@ export default function Home() {
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
   const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [isCheckingOAuthRedirect, setIsCheckingOAuthRedirect] = useState(true);
   
   // Cart store and merge mutation
   const cartItems = useCartStore((state) => state.items);
@@ -56,16 +57,38 @@ export default function Home() {
 
 
 
-  // Redirect admin/staff to dashboard after Google OAuth
+  // Redirect admin/staff to dashboard immediately after OAuth login
   useEffect(() => {
-    if (session?.user?.role === 'admin' || session?.user?.role === 'staff') {
-      const justLoggedIn = sessionStorage.getItem('justLoggedIn');
-      if (justLoggedIn === 'true') {
-        sessionStorage.removeItem('justLoggedIn');
-        router.push('/admin');
+    // Check if OAuth login just completed (client-side only)
+    const oauthLoginInProgress = sessionStorage.getItem('oauthLoginInProgress');
+    
+    if (oauthLoginInProgress === 'true') {
+      // Keep loading UI visible while checking auth
+      if (status === 'authenticated' && session?.user) {
+        const role = session.user.role;
+        
+        // Debug log
+        console.log('[Homepage OAuth Redirect] User role:', role);
+        
+        // Clear the flag
+        sessionStorage.removeItem('oauthLoginInProgress');
+        
+        // Redirect admin/staff to dashboard, regular users stay on homepage
+        if (role === 'admin' || role === 'staff') {
+          console.log('[Homepage OAuth Redirect] Redirecting to /admin');
+          // Keep isCheckingOAuthRedirect true to maintain loading UI during redirect
+          router.replace('/admin');
+        } else {
+          console.log('[Homepage OAuth Redirect] User role, staying on homepage');
+          setIsCheckingOAuthRedirect(false); // Show homepage for regular users
+        }
       }
+      // If auth not ready yet, keep loading
+    } else {
+      // No OAuth redirect in progress, show homepage normally
+      setIsCheckingOAuthRedirect(false);
     }
-  }, [session, router]);
+  }, [status, session, router]);
 
   // Check if user just logged in with cart items
   useEffect(() => {
@@ -121,8 +144,31 @@ export default function Home() {
     });
   };
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS (React Rules of Hooks)
+  
   // Fetch featured products from backend using tRPC
   const { data: featuredProducts, isLoading } = trpc.products.getFeatured.useQuery();
+
+  // Fetch categories from database
+  const { data: categories, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
+    includeInactive: false,
+    includeProductCount: true,
+  });
+
+  // Show loading screen while checking OAuth redirect (prevents homepage flash)
+  // This check happens in useEffect (client-only) to avoid hydration errors
+  if (isCheckingOAuthRedirect) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Mengalihkan...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   // Static data (will remain static)
   const carouselItems = [
@@ -132,12 +178,6 @@ export default function Home() {
     { id: 4, image: "/assets/carousels/carousel4.png" },
     { id: 5, image: "/assets/carousels/carousel5.png" },
   ];
-
-  // Fetch categories from database
-  const { data: categories, isLoading: categoriesLoading } = trpc.categories.getAll.useQuery({
-    includeInactive: false,
-    includeProductCount: true,
-  });
 
   return (
     <MainLayout>
