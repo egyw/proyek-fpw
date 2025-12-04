@@ -37,15 +37,27 @@ export default function ProductsPage() {
   
   // Cart store
   const addItem = useCartStore((state) => state.addItem);
+  const guestCartItems = useCartStore((state) => state.items); // ⭐ NEW: For guest cart validation
   
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
   
   // tRPC mutations for logged in users
   const addToCartMutation = trpc.cart.addItem.useMutation({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Invalidate cart query to trigger re-fetch and update badge
       utils.cart.getCart.invalidate();
+      
+      // Show success toast
+      toast.success('Berhasil!', {
+        description: `${variables.name} ditambahkan ke keranjang.`,
+      });
+    },
+    onError: (error) => {
+      // ⭐ Handle backend validation errors (e.g., stock exceeded)
+      toast.error('Gagal Menambahkan ke Keranjang', {
+        description: error.message, // Backend already sends detailed message
+      });
     },
   });
   
@@ -203,23 +215,36 @@ export default function ProductsPage() {
     };
 
     if (!isLoggedIn) {
+      // Guest: Check existing cart items BEFORE adding
+      const existingItem = guestCartItems.find(
+        (i) => i.productId === cartItem.productId && i.unit === cartItem.unit
+      );
+      
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + cartItem.quantity;
+        
+        // ⚠️ STOCK VALIDATION: Prevent total quantity from exceeding stock
+        if (newQuantity > cartItem.stock) {
+          toast.error("Stok Tidak Cukup", {
+            description: `Anda sudah memiliki ${existingItem.quantity} ${existingItem.unit} di keranjang. Stok tersedia: ${cartItem.stock} ${cartItem.unit}`,
+          });
+          return; // ← Prevent adding to cart
+        }
+      }
+      
       // Guest: Save to Zustand + LocalStorage
       addItem(cartItem);
       toast.success('Berhasil!', {
         description: `${product.name} ditambahkan ke keranjang.`,
       });
     } else {
-      // Logged in: Save to Database via tRPC
+      // Logged in: Backend validation handles stock check
+      // Success/error handled by mutation callbacks
       try {
         await addToCartMutation.mutateAsync(cartItem);
-        toast.success('Berhasil!', {
-          description: `${product.name} ditambahkan ke keranjang.`,
-        });
-      } catch (error) {
-        toast.error('Gagal menambahkan ke keranjang', {
-          description: 'Silakan coba lagi.',
-        });
-        console.error('Add to cart error:', error);
+      } catch {
+        // Error already handled by onError callback
+        // This try-catch prevents unhandled error popup in dev mode
       }
     }
   };

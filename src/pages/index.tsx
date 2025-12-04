@@ -53,6 +53,11 @@ export default function Home() {
       // Invalidate cart query to trigger refetch in all components (including Navbar)
       utils.cart.getCart.invalidate();
     },
+    onError: (error) => {
+      toast.error('Gagal Menggabungkan Keranjang', {
+        description: error.message,
+      });
+    },
   });
 
 
@@ -126,11 +131,8 @@ export default function Home() {
       toast.success('Keranjang Digabungkan!', {
         description: 'Produk dari keranjang sementara telah disimpan.',
       });
-    } catch (error) {
-      console.error('Cart merge error:', error);
-      toast.error('Gagal menggabungkan keranjang', {
-        description: 'Terjadi kesalahan, silakan coba lagi.',
-      });
+    } catch {
+      // Error already handled by onError callback
     }
   };
 

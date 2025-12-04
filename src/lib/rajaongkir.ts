@@ -281,8 +281,13 @@ export async function calculateShippingCost(params: {
     //   }
     // ]
     
+    // Filter out invalid services (NOT FOUND)
+    const validData = data.data.filter((item: KomerceShippingItem) => 
+      item.service !== 'NOT FOUND' && item.cost > 0
+    );
+    
     // Map Komerce format to our ShippingCost interface
-    const shippingCosts: ShippingCost[] = data.data.map((item: KomerceShippingItem) => ({
+    const shippingCosts: ShippingCost[] = validData.map((item: KomerceShippingItem) => ({
       code: item.code, // courier code (e.g., "lion", "jne")
       name: item.name, // courier name (e.g., "Lion Parcel")
       costs: [

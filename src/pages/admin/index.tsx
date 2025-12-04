@@ -247,13 +247,10 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders */}
         <Card className="lg:col-span-2 p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900">
               Pesanan Terbaru
             </h3>
-            <button className="text-primary hover:underline text-sm">
-              Lihat Semua →
-            </button>
           </div>
           <div className="space-y-4">
             {recentOrders.length > 0 ? (

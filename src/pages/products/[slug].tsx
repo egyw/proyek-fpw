@@ -34,6 +34,7 @@ export default function ProductDetailPage() {
 
   // Cart store for guest users
   const addToGuestCart = useCartStore((state) => state.addItem);
+  const guestCartItems = useCartStore((state) => state.items);
 
   // Get slug from URL
   const slug = router.query.slug as string;
@@ -102,10 +103,32 @@ export default function ProductDetailPage() {
     };
 
     if (isLoggedIn) {
-      // Logged-in: Save to database via tRPC
-      await addToCartMutation.mutateAsync(cartItem);
+      // Logged-in: Save to database via tRPC (validation handled by backend)
+      try {
+        await addToCartMutation.mutateAsync(cartItem);
+      } catch {
+        // Error already handled by onError callback
+        // This try-catch prevents unhandled error popup in dev mode
+      }
     } else {
-      // Guest: Save to LocalStorage via Zustand
+      // Guest: Check if item already exists in cart before adding
+      const existingItem = guestCartItems.find(
+        (i) => i.productId === cartItem.productId && i.unit === cartItem.unit
+      );
+      
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + cartItem.quantity;
+        
+        // ⚠️ STOCK VALIDATION for guest cart
+        if (newQuantity > cartItem.stock) {
+          toast.error("Stok Tidak Cukup", {
+            description: `Anda sudah memiliki ${existingItem.quantity} ${existingItem.unit} di keranjang. Stok tersedia: ${cartItem.stock} ${cartItem.unit}`,
+          });
+          return;
+        }
+      }
+      
+      // Save to LocalStorage via Zustand
       addToGuestCart(cartItem);
       toast.success("Berhasil!", {
         description: `${cartItem.name} (${cartItem.quantity} ${cartItem.unit.toUpperCase()}) ditambahkan ke keranjang.`,

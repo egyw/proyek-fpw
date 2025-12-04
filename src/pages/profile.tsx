@@ -115,18 +115,6 @@ export default function ProfilePage() {
     phone: "",
   });
 
-  // Initialize form with session data on mount or when session changes
-  useEffect(() => {
-    if (session?.user) {
-      setProfileForm({
-        fullName: session.user.name || "",
-        phone: session.user.phone && session.user.phone !== '0000000000' 
-          ? session.user.phone 
-          : "",
-      });
-    }
-  }, [session?.user]);
-
   // Address State
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
@@ -166,18 +154,46 @@ export default function ProfilePage() {
   } | null>(null);
 
   // tRPC Queries and Mutations
-  const { data: profileData } = trpc.user.getProfile.useQuery();
+  const { data: profileData, refetch: refetchProfile } = trpc.user.getProfile.useQuery();
   const { data: addressesData, refetch: refetchAddresses } = trpc.user.getAddresses.useQuery();
   const { data: ordersData } = trpc.orders.getUserOrders.useQuery();
   
   const updateProfileMutation = trpc.user.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Profil Berhasil Diperbarui!");
       setIsEditingProfile(false);
+      // Refetch profile data from database
+      const updatedProfile = await refetchProfile();
+      // Update profileForm state with latest data
+      if (updatedProfile.data?.profile) {
+        setProfileForm({
+          fullName: updatedProfile.data.profile.fullName || "",
+          phone: updatedProfile.data.profile.phone || "",
+        });
+      }
+      // Update NextAuth session to reflect changes in navbar/header
+      // This will trigger a session refresh without page reload
+      await fetch('/api/auth/session?update');
     },
     onError: (error) => {
+      // Parse Zod error if it's in JSON format
+      let errorMessage = error.message;
+      
+      // Zod validation errors come as stringified JSON array
+      if (errorMessage.startsWith('[') && errorMessage.includes('"message"')) {
+        try {
+          const parsed = JSON.parse(errorMessage);
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.message) {
+            errorMessage = parsed[0].message;
+          }
+        } catch (e) {
+          // If parsing fails, keep original message
+          console.error('Error parsing validation message:', e);
+        }
+      }
+      
       toast.error("Gagal Memperbarui Profil", {
-        description: error.message,
+        description: errorMessage,
       });
     },
   });
@@ -574,11 +590,11 @@ export default function ProfilePage() {
                       size="sm"
                       onClick={() => {
                         setIsEditingProfile(true);
-                        // Set form values when entering edit mode
-                        if (session?.user) {
+                        // Set form values from latest profileData (not session - session might be stale)
+                        if (profileData?.profile) {
                           setProfileForm({
-                            fullName: session.user.name || "",
-                            phone: session.user.phone && session.user.phone !== '0000000000' ? session.user.phone : "",
+                            fullName: profileData.profile.fullName || "",
+                            phone: profileData.profile.phone || "",
                           });
                         }
                       }}
@@ -1072,11 +1088,16 @@ export default function ProfilePage() {
                     <FormLabel>Alamat Lengkap *</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Nama jalan, nomor rumah, RT/RW, dll"
+                        placeholder="Pilih lokasi dari peta untuk mengisi otomatis"
                         rows={3}
                         {...field}
+                        readOnly
+                        className="bg-gray-50 cursor-not-allowed"
                       />
                     </FormControl>
+                    <p className="text-xs text-gray-500 mt-1">
+                      📍 Alamat otomatis terisi dari peta
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1090,7 +1111,12 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Kecamatan *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nama kecamatan" {...field} />
+                        <Input 
+                          placeholder="Otomatis dari peta" 
+                          {...field} 
+                          readOnly
+                          className="bg-gray-50 cursor-not-allowed"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1101,9 +1127,14 @@ export default function ProfilePage() {
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Kota/Kabupaten *</FormLabel>
+                      <FormLabel>Kota *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nama kota" {...field} />
+                        <Input 
+                          placeholder="Otomatis dari peta" 
+                          {...field} 
+                          readOnly
+                          className="bg-gray-50 cursor-not-allowed"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1119,7 +1150,12 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Provinsi *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nama provinsi" {...field} />
+                        <Input 
+                          placeholder="Otomatis dari peta" 
+                          {...field} 
+                          readOnly
+                          className="bg-gray-50 cursor-not-allowed"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1132,7 +1168,13 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Kode Pos *</FormLabel>
                       <FormControl>
-                        <Input placeholder="12345" maxLength={5} {...field} />
+                        <Input 
+                          placeholder="Otomatis dari peta" 
+                          maxLength={5} 
+                          {...field} 
+                          readOnly
+                          className="bg-gray-50 cursor-not-allowed"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

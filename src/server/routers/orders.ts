@@ -104,6 +104,81 @@ export const ordersRouter = router({
           discount: input.discount,
         });
 
+        // ⭐ REDUCE STOCK immediately after checkout (before payment)
+        // This prevents race condition - stock reserved on checkout
+        for (const item of input.items) {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            const previousStock = product.stock;
+            const newStock = previousStock - item.quantity;
+            
+            // Validate stock availability
+            if (newStock < 0) {
+              // Rollback: Delete the created order
+              await Order.findByIdAndDelete(order._id);
+              
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: `Stok tidak cukup untuk ${product.name}`,
+              });
+            }
+
+            // Update product stock
+            product.stock = newStock;
+            product.sold = (product.sold || 0) + item.quantity;
+            await product.save();
+
+            // Record stock movement
+            await StockMovement.create({
+              productId: product._id,
+              productName: product.name,
+              productCode: product.slug,
+              movementType: 'out',
+              quantity: item.quantity,
+              unit: product.unit,
+              reason: `Checkout pesanan - ${orderId}`,
+              referenceType: 'order',
+              referenceId: orderId,
+              performedBy: user.id,
+              performedByName: user.name,
+              previousStock,
+              newStock,
+              notes: `Stok reserved saat checkout oleh ${user.name}`,
+            });
+
+            // Check for low stock and send notification to admins
+            if (newStock <= product.minStock) {
+              try {
+                const admins = await User.find({ role: 'admin' }).lean();
+                const now = new Date().toISOString();
+
+                for (const admin of admins) {
+                  try {
+                    await Notification.create({
+                      userId: admin._id,
+                      type: 'low_stock_alert',
+                      title: 'Stok Produk Rendah',
+                      message: `${product.name} tersisa ${newStock} ${product.unit} (minimum: ${product.minStock} ${product.unit})`,
+                      clickAction: `/admin/products?search=${encodeURIComponent(product.name)}`,
+                      icon: 'alert-triangle',
+                      color: 'yellow',
+                      isRead: false,
+                      data: {
+                        productId: String(product._id),
+                      },
+                      createdAt: now,
+                    });
+                  } catch (notifError) {
+                    console.error('[createOrder] Failed to send low stock notification to admin:', admin._id, notifError);
+                  }
+                }
+              } catch (notifError) {
+                console.error('[createOrder] Error sending low stock notifications:', notifError);
+              }
+            }
+          }
+        }
+
         // If payment method is Midtrans, create Snap token
         let snapToken: string | undefined;
         let snapRedirectUrl: string | undefined;
@@ -112,7 +187,7 @@ export const ordersRouter = router({
           try {
             // Format expiry time for Midtrans
             // Format: "2024-12-02 17:00:00 +0700"
-            // Snap popup: 15 min to choose payment method
+            // ⭐ Snap popup expiry: 15 minutes (match Midtrans dashboard page expiry)
             const expiryTime = new Date();
             expiryTime.setMinutes(expiryTime.getMinutes() + 15);
             const formattedExpiry = expiryTime.toISOString().slice(0, 19).replace('T', ' ') + ' +0700';
@@ -155,13 +230,19 @@ export const ordersRouter = router({
                 postal_code: input.shippingAddress.postalCode,
                 country_code: 'IDN',
               },
-              // ⭐ Snap popup expiry: 15 minutes to choose payment method
-              // After selection, Midtrans dashboard settings apply: +45 min for payment
-              // Total: 15 min (popup) + 45 min (payment) = 60 min (our order expiry)
+              // ⭐ Midtrans page expiry: 15 minutes (to choose payment method)
+              // After user selects payment, dashboard settings apply: +45 min
+              // Total: 15 min (page) + 45 min (payment) = 60 min
               customExpiry: {
                 start_time: formattedExpiry,
                 unit: 'minute',
                 duration: 15,
+              },
+              // Callback URLs - redirect to order detail page
+              callbacks: {
+                finish: `${process.env.NEXTAUTH_URL}/orders/${orderId}`,
+                unfinish: `${process.env.NEXTAUTH_URL}/orders/${orderId}`,
+                error: `${process.env.NEXTAUTH_URL}/orders/${orderId}`,
               },
             });
 
@@ -400,16 +481,51 @@ export const ordersRouter = router({
         const now = new Date();
         const isExpired = order.paymentExpiredAt && now > order.paymentExpiredAt;
 
-        // Auto-update status if expired and still pending
-        if (isExpired && order.paymentStatus === 'pending') {
-          order.paymentStatus = 'expired';
-          order.orderStatus = 'cancelled';
-          order.cancelReason = 'Pembayaran melebihi batas waktu 30 menit';
-          order.cancelledAt = now;
-          await order.save();
-        }
+    // Auto-update status if expired and still pending
+    if (isExpired && order.paymentStatus === 'pending') {
+      // ⭐ CRITICAL: Restore stock BEFORE updating status
+      // Stock was reduced at checkout (createOrder), must restore on expiry
+      const Product = (await import('@/models/Product')).default;
+      const StockMovement = (await import('@/models/StockMovement')).default;
 
-        return {
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          const previousStock = product.stock;
+          const newStock = previousStock + item.quantity;
+
+          // Restore stock
+          product.stock = newStock;
+          product.sold = Math.max(0, (product.sold || 0) - item.quantity);
+          await product.save();
+
+          // Record stock movement (restoration)
+          await StockMovement.create({
+            productId: product._id,
+            productName: product.name,
+            productCode: product.slug,
+            movementType: 'in',
+            quantity: item.quantity,
+            unit: product.unit,
+            reason: `Pesanan expired - ${order.orderId}`,
+            referenceType: 'return',
+            referenceId: order.orderId,
+            performedBy: 'system',
+            performedByName: 'System Auto',
+            previousStock,
+            newStock,
+            notes: 'Auto-restore stok dari pesanan yang expired (pembayaran melebihi batas waktu)',
+          });
+        }
+      }
+
+      // Then update order status
+      order.paymentStatus = 'expired';
+      order.orderStatus = 'cancelled';
+      order.cancelReason = 'Pembayaran melebihi batas waktu 30 menit';
+      order.cancelledAt = now;
+      await order.save();
+    }        return {
           isExpired: order.paymentStatus === 'expired',
           paymentExpiredAt: order.paymentExpiredAt?.toISOString(),
           remainingSeconds: order.paymentExpiredAt 
@@ -686,77 +802,8 @@ export const ordersRouter = router({
           });
         }
 
-        // ⭐ Phase 1: Record stock OUT for each order item
-        for (const item of order.items) {
-          // Get product details
-          const product = await Product.findById(item.productId);
-          if (product) {
-            // Update product stock
-            const previousStock = product.stock;
-            const newStock = previousStock - item.quantity;
-            
-            if (newStock < 0) {
-              throw new TRPCError({
-                code: 'BAD_REQUEST',
-                message: `Insufficient stock for product: ${product.name}`,
-              });
-            }
-
-            product.stock = newStock;
-            product.sold = (product.sold || 0) + item.quantity;
-            await product.save();
-
-            // Record stock movement
-            await StockMovement.create({
-              productId: product._id,
-              productName: product.name,
-              productCode: product.slug,
-              movementType: 'out',
-              quantity: item.quantity,
-              unit: product.unit,
-              reason: `Pesanan customer - ${input.orderId}`,
-              referenceType: 'order',
-              referenceId: input.orderId,
-              performedBy: ctx.user.id,
-              performedByName: ctx.user.name,
-              previousStock,
-              newStock,
-              notes: `Order diproses oleh ${ctx.user.name}`,
-            });
-
-            // Check for low stock and send notification to admins
-            if (newStock <= product.minStock) {
-              try {
-                const admins = await User.find({ role: 'admin' }).lean();
-                const now = new Date().toISOString();
-
-                for (const admin of admins) {
-                  try {
-                    await Notification.create({
-                      userId: admin._id,
-                      type: 'low_stock_alert',
-                      title: 'Stok Produk Rendah',
-                      message: `${product.name} tersisa ${newStock} ${product.unit} (minimum: ${product.minStock} ${product.unit})`,
-                      clickAction: `/admin/products?search=${encodeURIComponent(product.name)}`,
-                      icon: 'alert-triangle',
-                      color: 'yellow',
-                      isRead: false,
-                      data: {
-                        productId: String(product._id),
-                      },
-                      createdAt: now,
-                    });
-                  } catch (notifError) {
-                    console.error('[processOrder] Failed to send low stock notification to admin:', admin._id, notifError);
-                  }
-                }
-              } catch (notifError) {
-                console.error('[processOrder] Error sending low stock notifications:', notifError);
-                // Don't fail the order processing if notification fails
-              }
-            }
-          }
-        }
+        // ⭐ Stock already reduced at checkout (createOrder)
+        // No need to reduce stock again here
 
         return { success: true, order };
       } catch (error) {
@@ -892,8 +939,6 @@ export const ordersRouter = router({
           });
         }
 
-        const wasProcessing = existingOrder.orderStatus === 'processing';
-
         const order = await Order.findOneAndUpdate(
           {
             orderId: input.orderId,
@@ -932,37 +977,36 @@ export const ordersRouter = router({
           console.error('[cancelOrder] Failed to send customer notification:', notifError);
         }
 
-        // ⭐ Phase 1: Restore stock if order was already processing (stock was reduced)
-        if (wasProcessing) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          for (const item of (order as any).items) {
-            const product = await Product.findById(item.productId);
-            if (product) {
-              const previousStock = product.stock;
-              const newStock = previousStock + item.quantity;
+        // ⭐ CRITICAL: ALWAYS restore stock on cancellation
+        // Stock is now reduced at checkout (createOrder), so must restore on ANY cancellation
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const item of (order as any).items) {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            const previousStock = product.stock;
+            const newStock = previousStock + item.quantity;
 
-              product.stock = newStock;
-              product.sold = Math.max(0, (product.sold || 0) - item.quantity);
-              await product.save();
+            product.stock = newStock;
+            product.sold = Math.max(0, (product.sold || 0) - item.quantity);
+            await product.save();
 
-              // Record stock movement (return/restore)
-              await StockMovement.create({
-                productId: product._id,
-                productName: product.name,
-                productCode: product.slug,
-                movementType: 'in',
-                quantity: item.quantity,
-                unit: product.unit,
-                reason: `Pesanan dibatalkan - ${input.orderId}`,
-                referenceType: 'return',
-                referenceId: input.orderId,
-                performedBy: ctx.user.id,
-                performedByName: ctx.user.name,
-                previousStock,
-                newStock,
-                notes: `Alasan pembatalan: ${input.cancelReason}`,
-              });
-            }
+            // Record stock movement (return/restore)
+            await StockMovement.create({
+              productId: product._id,
+              productName: product.name,
+              productCode: product.slug,
+              movementType: 'in',
+              quantity: item.quantity,
+              unit: product.unit,
+              reason: `Pesanan dibatalkan - ${input.orderId}`,
+              referenceType: 'return',
+              referenceId: input.orderId,
+              performedBy: ctx.user.id,
+              performedByName: ctx.user.name,
+              previousStock,
+              newStock,
+              notes: `Alasan pembatalan: ${input.cancelReason}`,
+            });
           }
         }
 

@@ -63,6 +63,11 @@ export interface MidtransTransactionParams {
     unit: 'second' | 'minute' | 'hour' | 'day';
     duration: number;
   };
+  callbacks?: {
+    finish?: string; // Redirect URL when payment is successful
+    unfinish?: string; // Redirect URL when payment is pending/abandoned
+    error?: string; // Redirect URL when payment has error
+  };
 }
 
 export async function createSnapToken(params: MidtransTransactionParams) {
@@ -103,6 +108,10 @@ export async function createSnapToken(params: MidtransTransactionParams) {
           duration: 24,
         },
       }),
+      // Callbacks (redirect URLs after payment)
+      ...(params.callbacks ? {
+        callbacks: params.callbacks,
+      } : {}),
     };
 
     const transaction = await snap.createTransaction(parameter);

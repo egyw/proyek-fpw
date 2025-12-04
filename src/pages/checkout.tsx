@@ -832,10 +832,15 @@ export default function CheckoutPage() {
                                 <FormLabel>Alamat Lengkap *</FormLabel>
                                 <FormControl>
                                   <Input
-                                    placeholder="Jl. Contoh No. 123"
+                                    placeholder="Pilih lokasi dari peta untuk mengisi otomatis"
                                     {...field}
+                                    readOnly
+                                    className="bg-gray-50 cursor-not-allowed"
                                   />
                                 </FormControl>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  📍 Alamat otomatis terisi dari peta
+                                </p>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -849,7 +854,12 @@ export default function CheckoutPage() {
                                 <FormItem>
                                   <FormLabel>Kecamatan *</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Menteng" {...field} />
+                                    <Input 
+                                      placeholder="Otomatis dari peta" 
+                                      {...field} 
+                                      readOnly
+                                      className="bg-gray-50 cursor-not-allowed"
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -862,7 +872,12 @@ export default function CheckoutPage() {
                                 <FormItem>
                                   <FormLabel>Kota *</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Jakarta" {...field} />
+                                    <Input 
+                                      placeholder="Otomatis dari peta" 
+                                      {...field} 
+                                      readOnly
+                                      className="bg-gray-50 cursor-not-allowed"
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -879,8 +894,10 @@ export default function CheckoutPage() {
                                   <FormLabel>Provinsi *</FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="DKI Jakarta"
+                                      placeholder="Otomatis dari peta"
                                       {...field}
+                                      readOnly
+                                      className="bg-gray-50 cursor-not-allowed"
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -894,7 +911,12 @@ export default function CheckoutPage() {
                                 <FormItem>
                                   <FormLabel>Kode Pos *</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="12345" {...field} />
+                                    <Input 
+                                      placeholder="Otomatis dari peta" 
+                                      {...field} 
+                                      readOnly
+                                      className="bg-gray-50 cursor-not-allowed"
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>

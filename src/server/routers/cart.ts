@@ -81,8 +81,18 @@ export const cartRouter = router({
           );
 
           if (existingItemIndex > -1) {
-            // Item with same product and unit exists, update quantity
-            cart.items[existingItemIndex].quantity += input.quantity;
+            // Item with same product and unit exists, check stock before updating
+            const newQuantity = cart.items[existingItemIndex].quantity + input.quantity;
+            
+            // ⚠️ STOCK VALIDATION: Prevent total quantity from exceeding stock
+            if (newQuantity > input.stock) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'Stok tidak cukup',
+              });
+            }
+            
+            cart.items[existingItemIndex].quantity = newQuantity;
           } else {
             // New item (different product or different unit), add to cart
             cart.items.push({
@@ -119,7 +129,7 @@ export const cartRouter = router({
         console.error('[addItem] Error:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to add item to cart',
+          message: 'Stok tidak cukup',
           cause: error,
         });
       }
@@ -298,8 +308,18 @@ export const cartRouter = router({
             );
 
             if (existingItemIndex > -1) {
-              // Item with same product and unit exists, increase quantity
-              cart!.items[existingItemIndex].quantity += guestItem.quantity;
+              // Item with same product and unit exists, check stock before merging
+              const newQuantity = cart!.items[existingItemIndex].quantity + guestItem.quantity;
+              
+              // ⚠️ STOCK VALIDATION: Prevent merged quantity from exceeding stock
+              if (newQuantity > guestItem.stock) {
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message: 'Stok tidak cukup',
+                });
+              }
+              
+              cart!.items[existingItemIndex].quantity = newQuantity;
             } else {
               // New item (different product or different unit), add to cart
               cart!.items.push({
@@ -335,9 +355,16 @@ export const cartRouter = router({
         };
       } catch (error) {
         console.error('[mergeCart] Error:', error);
+        
+        // If error is TRPCError (like stock validation), re-throw it
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        // For other errors, throw generic message
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to merge cart',
+          message: 'Gagal menggabungkan keranjang',
           cause: error,
         });
       }
