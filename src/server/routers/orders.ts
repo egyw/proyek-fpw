@@ -7,7 +7,9 @@ import Product from '@/models/Product';
 import StockMovement from '@/models/StockMovement';
 import User from '@/models/User';
 import Notification from '@/models/Notification';
+import Category from '@/models/Category';
 import { createSnapToken, getTransactionStatus } from '@/lib/midtrans';
+import { convertToSupplierUnit } from '@/lib/shippingHelpers';
 import type { Types } from 'mongoose';
 
 // Type for lean Order documents
@@ -108,73 +110,101 @@ export const ordersRouter = router({
         // This prevents race condition - stock reserved on checkout
         for (const item of input.items) {
           const product = await Product.findById(item.productId);
-          if (product) {
-            const previousStock = product.stock;
-            const newStock = previousStock - item.quantity;
-            
-            // Validate stock availability
-            if (newStock < 0) {
-              // Rollback: Delete the created order
-              await Order.findByIdAndDelete(order._id);
-              
-              throw new TRPCError({
-                code: 'BAD_REQUEST',
-                message: `Stok tidak cukup untuk ${product.name}`,
-              });
-            }
-
-            // Update product stock
-            product.stock = newStock;
-            product.sold = (product.sold || 0) + item.quantity;
-            await product.save();
-
-            // Record stock movement
-            await StockMovement.create({
-              productId: product._id,
-              productName: product.name,
-              productCode: product.slug,
-              movementType: 'out',
-              quantity: item.quantity,
-              unit: product.unit,
-              reason: `Checkout pesanan - ${orderId}`,
-              referenceType: 'order',
-              referenceId: orderId,
-              performedBy: user.id,
-              performedByName: user.name,
-              previousStock,
-              newStock,
-              notes: `Stok reserved saat checkout oleh ${user.name}`,
+          if (!product) {
+            // Rollback: Delete the created order
+            await Order.findByIdAndDelete(order._id);
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: `Produk tidak ditemukan: ${item.name}`,
             });
+          }
 
-            // Check for low stock and send notification to admins
-            if (newStock <= product.minStock) {
-              try {
-                const admins = await User.find({ role: 'admin' }).lean();
-                const now = new Date().toISOString();
+          // ⭐ GET CATEGORY DATA for unit conversion
+          const category = await Category.findOne({ name: product.category });
+          if (!category) {
+            // Rollback: Delete the created order
+            await Order.findByIdAndDelete(order._id);
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: `Kategori tidak ditemukan: ${product.category}`,
+            });
+          }
 
-                for (const admin of admins) {
-                  try {
-                    await Notification.create({
-                      userId: admin._id,
-                      type: 'low_stock_alert',
-                      title: 'Stok Produk Rendah',
-                      message: `${product.name} tersisa ${newStock} ${product.unit} (minimum: ${product.minStock} ${product.unit})`,
-                      clickAction: `/admin/products?search=${encodeURIComponent(product.name)}`,
-                      icon: 'alert-triangle',
-                      color: 'yellow',
-                      isRead: false,
-                      data: {
-                        productId: String(product._id),
-                      },
-                      createdAt: now,
-                    });
-                  } catch (notifError) {
-                    console.error('[createOrder] Failed to send low stock notification to admin:', admin._id, notifError);
-                  }
+          // ⭐ CONVERT quantity from user's unit to supplier's unit
+          // Example: User buys 100 kg, supplier unit is gulung (25kg)
+          // Result: 100 kg → 4 gulung
+          const quantityInSupplierUnit = convertToSupplierUnit(
+            item.quantity,
+            item.unit,
+            product.unit,
+            category.availableUnits
+          );
+
+          const previousStock = product.stock;
+          const newStock = previousStock - quantityInSupplierUnit;
+          
+          // Validate stock availability
+          if (newStock < 0) {
+            // Rollback: Delete the created order
+            await Order.findByIdAndDelete(order._id);
+            
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `Stok tidak cukup untuk ${product.name}. Tersedia: ${previousStock} ${product.unit}`,
+            });
+          }
+
+          // Update product stock
+          product.stock = newStock;
+          product.sold = (product.sold || 0) + quantityInSupplierUnit;
+          await product.save();
+
+          // Record stock movement (use supplier unit for consistency)
+          await StockMovement.create({
+            productId: product._id,
+            productName: product.name,
+            productCode: product.slug,
+            movementType: 'out',
+            quantity: quantityInSupplierUnit,
+            unit: product.unit,
+            reason: `Checkout pesanan - ${orderId}`,
+            referenceType: 'order',
+            referenceId: orderId,
+            performedBy: user.id,
+            performedByName: user.name,
+            previousStock,
+            newStock,
+            notes: `Customer beli ${item.quantity} ${item.unit} (= ${quantityInSupplierUnit.toFixed(2)} ${product.unit})`,
+          });
+
+          // Check for low stock and send notification to admins
+          if (newStock <= product.minStock) {
+            try {
+              const admins = await User.find({ role: 'admin' }).lean();
+              const now = new Date().toISOString();
+
+              for (const admin of admins) {
+                try {
+                  await Notification.create({
+                    userId: admin._id,
+                    type: 'low_stock_alert',
+                    title: 'Stok Produk Rendah',
+                    message: `${product.name} tersisa ${newStock} ${product.unit} (minimum: ${product.minStock} ${product.unit})`,
+                    clickAction: `/admin/products?search=${encodeURIComponent(product.name)}`,
+                    icon: 'alert-triangle',
+                    color: 'yellow',
+                    isRead: false,
+                    data: {
+                      productId: String(product._id),
+                    },
+                    createdAt: now,
+                  });
+                } catch (notifError) {
+                  console.error('[createOrder] Failed to send low stock notification to admin:', admin._id, notifError);
                 }
-              } catch (notifError) {
-                console.error('[createOrder] Error sending low stock notifications:', notifError);
               }
+            } catch (notifError) {
+              console.error('[createOrder] Error sending low stock notifications:', notifError);
             }
           }
         }
@@ -983,11 +1013,26 @@ export const ordersRouter = router({
         for (const item of (order as any).items) {
           const product = await Product.findById(item.productId);
           if (product) {
+            // ⭐ GET CATEGORY DATA for unit conversion
+            const category = await Category.findOne({ name: product.category });
+            if (!category) {
+              console.error(`[cancelOrder] Category not found: ${product.category}`);
+              continue; // Skip this item if category not found
+            }
+
+            // ⭐ CONVERT quantity from user's unit to supplier's unit
+            const quantityInSupplierUnit = convertToSupplierUnit(
+              item.quantity,
+              item.unit,
+              product.unit,
+              category.availableUnits
+            );
+
             const previousStock = product.stock;
-            const newStock = previousStock + item.quantity;
+            const newStock = previousStock + quantityInSupplierUnit;
 
             product.stock = newStock;
-            product.sold = Math.max(0, (product.sold || 0) - item.quantity);
+            product.sold = Math.max(0, (product.sold || 0) - quantityInSupplierUnit);
             await product.save();
 
             // Record stock movement (return/restore)
@@ -996,7 +1041,7 @@ export const ordersRouter = router({
               productName: product.name,
               productCode: product.slug,
               movementType: 'in',
-              quantity: item.quantity,
+              quantity: quantityInSupplierUnit,
               unit: product.unit,
               reason: `Pesanan dibatalkan - ${input.orderId}`,
               referenceType: 'return',
@@ -1005,7 +1050,7 @@ export const ordersRouter = router({
               performedByName: ctx.user.name,
               previousStock,
               newStock,
-              notes: `Alasan pembatalan: ${input.cancelReason}`,
+              notes: `Alasan pembatalan: ${input.cancelReason}. User beli ${item.quantity} ${item.unit}`,
             });
           }
         }

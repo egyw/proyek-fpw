@@ -206,3 +206,46 @@ export function formatWeight(weightGrams: number): string {
   
   return `${weightGrams.toFixed(0)} gram`;
 }
+
+/**
+ * Convert quantity from user's selected unit to supplier's unit
+ * Used in checkout to calculate actual stock reduction
+ * 
+ * @param quantity - Quantity in user's unit
+ * @param fromUnit - User's selected unit (e.g., "kg")
+ * @param toUnit - Supplier's unit (e.g., "gulung", "sak", "batang")
+ * @param availableUnits - Category unit data from database
+ * @returns Quantity converted to supplier's unit
+ * 
+ * Example:
+ * - User buys 100 kg kawat (1 gulung = 25kg)
+ * - convertToSupplierUnit(100, "kg", "gulung", [...]) = 4 gulung
+ */
+export function convertToSupplierUnit(
+  quantity: number,
+  fromUnit: string,
+  toUnit: string,
+  availableUnits: Array<{ value: string; conversionRate: number }>
+): number {
+  // If same unit, no conversion needed
+  if (fromUnit === toUnit) {
+    return quantity;
+  }
+
+  // Find conversion rates for both units
+  const fromConversion = availableUnits.find((u) => u.value === fromUnit);
+  const toConversion = availableUnits.find((u) => u.value === toUnit);
+
+  if (!fromConversion || !toConversion) {
+    console.error(`[convertToSupplierUnit] Unit not found: ${fromUnit} or ${toUnit}`);
+    return quantity; // Fallback: return original quantity
+  }
+
+  // Convert via base unit
+  // Formula: quantity * fromRate / toRate
+  // Example: 100 kg * 1 (kg→base) / 25 (gulung→base) = 4 gulung
+  const baseValue = quantity * fromConversion.conversionRate;
+  const result = baseValue / toConversion.conversionRate;
+
+  return result;
+}

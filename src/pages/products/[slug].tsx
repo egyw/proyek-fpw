@@ -82,13 +82,8 @@ export default function ProductDetailPage() {
   ) => {
     if (!product) return;
 
-    // Check stock availability
-    if (quantity > product.stock) {
-      toast.error("Stok Tidak Cukup", {
-        description: `Stok tersedia hanya ${product.stock} ${product.unit}`,
-      });
-      return;
-    }
+    // ✅ No stock validation here - UnitConverter already validates correctly
+    // Backend will also validate stock in the supplier's unit
 
     const cartItem = {
       productId: product._id.toString(),
@@ -111,24 +106,8 @@ export default function ProductDetailPage() {
         // This try-catch prevents unhandled error popup in dev mode
       }
     } else {
-      // Guest: Check if item already exists in cart before adding
-      const existingItem = guestCartItems.find(
-        (i) => i.productId === cartItem.productId && i.unit === cartItem.unit
-      );
-      
-      if (existingItem) {
-        const newQuantity = existingItem.quantity + cartItem.quantity;
-        
-        // ⚠️ STOCK VALIDATION for guest cart
-        if (newQuantity > cartItem.stock) {
-          toast.error("Stok Tidak Cukup", {
-            description: `Anda sudah memiliki ${existingItem.quantity} ${existingItem.unit} di keranjang. Stok tersedia: ${cartItem.stock} ${cartItem.unit}`,
-          });
-          return;
-        }
-      }
-      
-      // Save to LocalStorage via Zustand
+      // Guest: Save to LocalStorage via Zustand
+      // UnitConverter already validated stock, so we can safely add
       addToGuestCart(cartItem);
       toast.success("Berhasil!", {
         description: `${cartItem.name} (${cartItem.quantity} ${cartItem.unit.toUpperCase()}) ditambahkan ke keranjang.`,
