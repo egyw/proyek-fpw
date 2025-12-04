@@ -200,7 +200,7 @@ export default function Home() {
           <div className="py-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                <strong>💡 Info:</strong> Jika Anda memilih <strong>&quot;Simpan&quot;</strong>, 
+                <strong>Info:</strong> Jika Anda memilih <strong>&quot;Simpan&quot;</strong>, 
                 produk akan digabungkan dengan keranjang Anda yang sudah ada. 
                 Jika memilih <strong>&quot;Hapus&quot;</strong>, produk di keranjang sementara akan dihapus.
               </p>

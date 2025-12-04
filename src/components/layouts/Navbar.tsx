@@ -32,7 +32,7 @@ export default function Navbar() {
     undefined,
     { 
       enabled: isLoggedIn,
-      refetchInterval: 5000, // ⭐ Auto-refresh every 5 seconds for real-time notifications
+      refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time notifications
     }
   );
 
@@ -57,7 +57,6 @@ export default function Navbar() {
     }
   );
 
-  // Fix hydration error: Only read cart count on client-side
   const [cartItemCount, setCartItemCount] = useState(0);
 
   useEffect(() => {
@@ -71,7 +70,7 @@ export default function Navbar() {
       const guestTotalItems = guestCartItems.reduce((sum, item) => sum + item.quantity, 0);
       setCartItemCount(guestTotalItems);
     }
-  }, [isLoggedIn, dbCart, guestCartItems]); // Simplified: only depend on items array
+  }, [isLoggedIn, dbCart, guestCartItems]); 
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });

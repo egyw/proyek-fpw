@@ -93,7 +93,7 @@ export default function OrderDetailPage() {
 
   // Extract order from data (tRPC returns { order: ... })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const order = orderData?.order as any; // TODO: Add proper Order interface type
+  const order = orderData?.order as any; 
 
   // Return request states
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -206,7 +206,7 @@ export default function OrderDetailPage() {
     }
   }, [remainingTime, isExpired]);
 
-  // ⭐ Auto-open Midtrans popup if auto_pay=true from checkout
+  // Auto-open Midtrans popup if auto_pay=true from checkout
   useEffect(() => {
     if (
       !hasAutoOpened &&
@@ -226,7 +226,7 @@ export default function OrderDetailPage() {
               console.log('[AUTO_PAY] Payment success:', result);
               
               try {
-                // ⭐ Update payment status in backend (for Sandbox)
+                // Update payment status in backend (for Sandbox)
                 await simulatePaymentMutation.mutateAsync({ 
                   orderId: order.orderId 
                 });
@@ -419,7 +419,7 @@ export default function OrderDetailPage() {
     },
   };
 
-  // ⭐ Priority: returnStatus (if active) > orderStatus
+  // Priority: returnStatus (if active) > orderStatus
   const currentStatus = (order.returnStatus && order.returnStatus !== 'none')
     ? (returnStatusConfig[order.returnStatus as keyof typeof returnStatusConfig] || orderStatusConfig.awaiting_payment)
     : (orderStatusConfig[order.orderStatus as keyof typeof orderStatusConfig] || orderStatusConfig.awaiting_payment);
@@ -786,7 +786,7 @@ export default function OrderDetailPage() {
                         console.log('[MANUAL_PAY] Payment success');
                         
                         try {
-                          // ⭐ Update payment status in backend (for Sandbox)
+                          // Update payment status in backend (for Sandbox)
                           await simulatePaymentMutation.mutateAsync({ 
                             orderId: order.orderId 
                           });

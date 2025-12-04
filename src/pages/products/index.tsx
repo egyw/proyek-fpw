@@ -32,12 +32,12 @@ import type { ICategoryData } from "@/models/Category";
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { status } = useSession(); // ✅ Removed unused 'session' variable
+  const { status } = useSession();
   const isLoggedIn = status === "authenticated";
   
   // Cart store
   const addItem = useCartStore((state) => state.addItem);
-  const guestCartItems = useCartStore((state) => state.items); // ⭐ NEW: For guest cart validation
+  const guestCartItems = useCartStore((state) => state.items);
   
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
@@ -54,9 +54,8 @@ export default function ProductsPage() {
       });
     },
     onError: (error) => {
-      // ⭐ Handle backend validation errors (e.g., stock exceeded)
       toast.error('Gagal Menambahkan ke Keranjang', {
-        description: error.message, // Backend already sends detailed message
+        description: error.message,
       });
     },
   });
@@ -223,12 +222,11 @@ export default function ProductsPage() {
       if (existingItem) {
         const newQuantity = existingItem.quantity + cartItem.quantity;
         
-        // ⚠️ STOCK VALIDATION: Prevent total quantity from exceeding stock
         if (newQuantity > cartItem.stock) {
           toast.error("Stok Tidak Cukup", {
             description: `Anda sudah memiliki ${existingItem.quantity} ${existingItem.unit} di keranjang. Stok tersedia: ${cartItem.stock} ${cartItem.unit}`,
           });
-          return; // ← Prevent adding to cart
+          return;
         }
       }
       

@@ -608,7 +608,7 @@ export const productsRouter = router({
 
         const product = await Product.create(input);
 
-        // ⭐ Phase 3: Record initial stock movement if stock > 0
+        // Phase 3: Record initial stock movement if stock > 0
         if (input.stock > 0) {
           await StockMovement.create({
             productId: product._id as unknown as import('mongoose').Types.ObjectId,
@@ -671,7 +671,7 @@ export const productsRouter = router({
         attributes: z.record(z.string(), z.unknown()).optional(),
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
-        stockAdjustmentReason: z.string().optional(), // ⭐ For stock movement tracking
+        stockAdjustmentReason: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -694,7 +694,7 @@ export const productsRouter = router({
           }
         }
 
-        // ⭐ Phase 2: Track stock adjustment if stock is being updated
+        // Phase 2: Track stock adjustment if stock is being updated
         let previousStock = 0;
         if (updateData.stock !== undefined) {
           const currentProduct = await Product.findById(id);
@@ -787,7 +787,7 @@ export const productsRouter = router({
           });
         }
 
-        // ⭐ NOTE: We do NOT delete images from Cloudinary
+        // NOTE: We do NOT delete images from Cloudinary
         // Reason: Product can be restored, and we want to keep images
         // If you need to clean up orphaned images, use a scheduled job
 

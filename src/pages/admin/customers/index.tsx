@@ -48,8 +48,8 @@ interface Customer {
   lastLogin: string;
   suspendedAt?: string;
   suspensionReason?: string;
-  totalOrders: number; // ⭐ NEW: From aggregation
-  totalSpent: number; // ⭐ NEW: From aggregation
+  totalOrders: number;
+  totalSpent: number; 
   addresses: Array<{
     id: string;
     label: string;

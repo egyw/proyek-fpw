@@ -88,7 +88,7 @@ interface Order {
   orderStatus: "pending" | "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
   paymentStatus: string;
   paymentMethod: string;
-  paymentType?: string; // ✅ NEW - Specific payment type from Midtrans
+  paymentType?: string;
   shippingInfo?: {
     courier: string;
     courierName: string;

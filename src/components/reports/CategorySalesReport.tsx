@@ -20,19 +20,6 @@ import {
   Cell,
 } from 'recharts';
 
-/**
- * Category Sales Report Component
- * 
- * Features:
- * - Optional date range filter
- * - 3 Stats cards (Total Categories, Highest Revenue, Lowest Revenue)
- * - Bar chart by category
- * - Table with columns: Kategori, Revenue, Percentage, Order Count, Products Sold
- * - Sort by revenue
- * 
- * Connected to: trpc.reports.getCategorySales
- */
-
 // Category colors for chart
 const CATEGORY_COLORS: Record<string, string> = {
   'Pipa': '#3B82F6',

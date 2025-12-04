@@ -11,9 +11,6 @@ import {
 import { useState } from "react";
 import { ShoppingCart } from "lucide-react";
 
-// NO MORE HARDCODED unitConversions!
-// Unit conversions now come from database via categoryUnits prop
-
 interface CategoryUnitData {
   value: string;
   label: string;
@@ -30,7 +27,7 @@ interface UnitConverterProps {
   productPrice: number;
   productStock: number;
   availableUnits?: string[]; // Units dari database yang dipilih admin (deprecated, now use categoryUnits)
-  categoryUnits?: CategoryUnits; // ⭐ NEW: Full unit data from database
+  categoryUnits?: CategoryUnits; 
   productAttributes?: Record<string, string | number>; // Attributes dari database (untuk ambil weight_kg)
   onAddToCart?: (quantity: number, unit: string, totalPrice: number) => void;
 }
@@ -41,7 +38,7 @@ export default function UnitConverter({
   productPrice,
   productStock,
   availableUnits, // Legacy prop (kept for backward compatibility)
-  categoryUnits, // ⭐ NEW: Database-driven units
+  categoryUnits, 
   productAttributes,
   onAddToCart,
 }: UnitConverterProps) {

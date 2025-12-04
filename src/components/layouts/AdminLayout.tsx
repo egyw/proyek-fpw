@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const {data: session, status } = useSession();
   
-  // ✅ CENTRALIZED PROTECTION: Protect ALL admin pages for admin & staff roles
+  // Protect ALL admin pages for admin & staff roles
   const {user, isAuthenticated, isLoading } = useRequireRole(['admin', 'staff']);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);

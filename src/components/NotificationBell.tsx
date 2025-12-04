@@ -11,7 +11,7 @@ export default function NotificationBell() {
   const { data: unreadData, refetch } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 5000, // ⭐ Auto-refresh every 5 seconds for real-time notifications
+      refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time notifications
     }
   );
 

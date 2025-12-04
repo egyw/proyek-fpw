@@ -35,7 +35,7 @@ export default function NotificationDropdown({
     {
       limit: 20,
       offset: 0,
-      showRead: false, // ⭐ Fixed: Only show unread by default
+      showRead: false, 
     },
     {
       enabled: isOpen && !isUserMode, // Only enabled for admin mode
@@ -46,7 +46,7 @@ export default function NotificationDropdown({
     {
       limit: 20,
       offset: 0,
-      showRead: false, // ⭐ Fixed: Only show unread by default
+      showRead: false, 
     },
     {
       enabled: isOpen && isUserMode, // Only enabled for user mode

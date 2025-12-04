@@ -63,7 +63,7 @@ export default function BestSellerReportContent() {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     };
-  }, [period]); // Only recalculate when period changes
+  }, [period]); 
 
   // tRPC Query
   const { data: reportData, isLoading, error } = trpc.reports.getBestSellers.useQuery({

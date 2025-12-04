@@ -345,7 +345,7 @@ export default function AddressMapPicker({
           </Button>
         </div>
         <p className="text-xs text-gray-500">
-          💡 Ketik minimal 3 karakter untuk mencari, atau klik tombol &quot;Lokasi
+          Ketik minimal 3 karakter untuk mencari, atau klik tombol &quot;Lokasi
           Saya&quot; untuk menggunakan GPS
         </p>
       </div>

@@ -191,7 +191,6 @@ const formatCurrency = (amount: number): string => {
 export default function CheckoutPage() {
   const router = useRouter();
   
-  // ✅ Protect page - redirect guest to login
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const { data: session } = useSession();
 
@@ -227,14 +226,12 @@ export default function CheckoutPage() {
     },
   });
 
-  // ⭐ Validate voucher mutation
   const validateVoucherMutation = trpc.vouchers.validate.useMutation();
 
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // ⭐ Voucher states
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState<{
     code: string;
@@ -249,7 +246,6 @@ export default function CheckoutPage() {
     lng: number;
   } | null>(null);
 
-  // ⭐ Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Address form with react-hook-form + Zod
@@ -271,8 +267,6 @@ export default function CheckoutPage() {
   // Determine cart items (from tRPC if logged in, from Zustand if guest)
   const items = isAuthenticated ? (cartData?.items || []) : cartItems;
 
-  // ⭐ Fetch product attributes for accurate weight calculation
-  // Get unique product IDs from cart
   const productIds = [...new Set(items.map(item => item.productId))];
   
   // Query products to get attributes (weight_kg, etc.)
@@ -287,7 +281,6 @@ export default function CheckoutPage() {
     return acc;
   }, {} as Record<string, Record<string, string | number | boolean>>) || {};
 
-  // ⭐ Calculate total weight for shipping (WITH product attributes)
   const totalWeight = calculateCartTotalWeight(items, productsAttributesMap);
 
   // Set default address when addresses load
@@ -378,7 +371,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // ⭐ Handle apply voucher
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) {
       toast.error('Kode Voucher Kosong', {
@@ -419,7 +411,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // ⭐ Handle remove voucher
   const handleRemoveVoucher = () => {
     setAppliedVoucher(null);
     toast.info('Voucher Dihapus', {
@@ -429,7 +420,7 @@ export default function CheckoutPage() {
 
   // Handle place order (Create order and get Snap token)
   const handlePlaceOrder = async () => {
-    // ⭐ Check if phone number is still placeholder (Google OAuth users)
+    // Check if phone number is still placeholder (Google OAuth users)
     if (!session?.user?.phone || session?.user?.phone === '0000000000') {
       toast.error('Lengkapi Nomor Telepon Terlebih Dahulu', {
         description: 'Nomor telepon diperlukan untuk konfirmasi pesanan. Anda akan diarahkan ke halaman profil.',
@@ -466,7 +457,7 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      // ⭐ Create order with Midtrans integration
+      // Create order with Midtrans integration
       const result = await createOrderMutation.mutateAsync({
         items: items.map((item) => ({
           productId: item.productId,
@@ -491,30 +482,28 @@ export default function CheckoutPage() {
         subtotal,
         shippingCost,
         total,
-        paymentMethod: 'midtrans', // ⭐ Midtrans only
+        paymentMethod: 'midtrans',
         discount: appliedVoucher ? {
           code: appliedVoucher.code,
           amount: appliedVoucher.discount,
         } : undefined,
       });
 
-      // ⭐ Save order ID and redirect to order detail page
       if (result.snapToken) {
-        // ⭐ Clear cart immediately after order created
+        // Clear cart immediately after order created
         // This prevents user from creating duplicate orders
         if (cartItems.length > 0) {
           clearCart(); // Clear Zustand store (frontend)
         }
         // Backend cart is already cleared by createOrder mutation
 
-        // ⭐ Close dialog
         setShowConfirmDialog(false);
 
         toast.success('Pesanan Berhasil Dibuat!', {
           description: `Order ID: ${result.orderId}. Mengarahkan ke halaman pembayaran...`,
         });
 
-        // ⭐ Redirect to order detail page with auto-pay flag
+        // Redirect to order detail page with auto-pay flag
         // Order detail page will auto-open Midtrans popup
         setTimeout(() => {
           router.push(`/orders/${result.orderId}?auto_pay=true`);

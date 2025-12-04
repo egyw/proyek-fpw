@@ -101,23 +101,23 @@ export function getProductWeightPerUnit(
  * - Product: Semen (supplier unit: SAK, weight_kg: 50)
  * - Customer buys: 2 KG (not sak!)
  * - Logic: Customer bought WEIGHT directly, no conversion needed
- * - Calculation: 2 kg × 1000 = 2000 grams ✅
+ * - Calculation: 2 kg × 1000 = 2000 grams 
  * 
  * Example 2 (Conversion - Supplier Unit):
  * - Product: Semen (supplier unit: SAK, weight_kg: 50)
  * - Customer buys: 2 SAK (supplier's unit)
  * - Logic: 1 SAK = 50kg, so 2 SAK = 100kg
- * - Calculation: 2 × 50kg × 1000 = 100,000 grams ✅
+ * - Calculation: 2 × 50kg × 1000 = 100,000 grams 
  * 
  * Example 3 (Dynamic Weight - Besi):
  * - Product: Besi 10mm (supplier unit: BATANG, weight_kg: 7.4)
  * - Customer buys: 3 BATANG
- * - Calculation: 3 × 7.4kg × 1000 = 22,200 grams ✅
+ * - Calculation: 3 × 7.4kg × 1000 = 22,200 grams 
  * 
  * Example 4 (Fractional Quantity):
  * - Product: Pipa (supplier unit: BATANG, weight_kg: 2)
  * - Customer buys: 0.5 METER (half batang via conversion)
- * - Calculation: 0.5 × 2kg × 1000 = 1000 grams ✅
+ * - Calculation: 0.5 × 2kg × 1000 = 1000 grams 
  */
 export function calculateCartItemWeight(
   item: CartItem,
@@ -207,20 +207,6 @@ export function formatWeight(weightGrams: number): string {
   return `${weightGrams.toFixed(0)} gram`;
 }
 
-/**
- * Convert quantity from user's selected unit to supplier's unit
- * Used in checkout to calculate actual stock reduction
- * 
- * @param quantity - Quantity in user's unit
- * @param fromUnit - User's selected unit (e.g., "kg")
- * @param toUnit - Supplier's unit (e.g., "gulung", "sak", "batang")
- * @param availableUnits - Category unit data from database
- * @returns Quantity converted to supplier's unit
- * 
- * Example:
- * - User buys 100 kg kawat (1 gulung = 25kg)
- * - convertToSupplierUnit(100, "kg", "gulung", [...]) = 4 gulung
- */
 export function convertToSupplierUnit(
   quantity: number,
   fromUnit: string,

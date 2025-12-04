@@ -36,12 +36,9 @@ export const useCartStore = create<CartStore>()(
           );
 
           if (existingItem) {
-            // Same product with same unit exists, check stock before increasing quantity
             const newQuantity = existingItem.quantity + item.quantity;
             
-            // ⚠️ STOCK VALIDATION: Prevent total quantity from exceeding stock
             if (newQuantity > item.stock) {
-              // Return state unchanged - validation should be handled in UI with toast
               return state;
             }
             

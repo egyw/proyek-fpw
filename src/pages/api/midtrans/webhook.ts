@@ -1,9 +1,3 @@
-/**
- * Midtrans Payment Webhook Handler
- * This endpoint receives payment notifications from Midtrans
- * Documentation: https://docs.midtrans.com/en/after-payment/http-notification
- */
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';

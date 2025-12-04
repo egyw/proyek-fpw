@@ -635,7 +635,7 @@ export default function StaffManagementPage() {
                 </Select>
                 {selectedStaff?._id === session?.user?.id && (
                   <p className="text-xs text-amber-600">
-                    ⚠️ Anda tidak dapat mengubah role Anda sendiri
+                    Anda tidak dapat mengubah role Anda sendiri
                   </p>
                 )}
               </div>

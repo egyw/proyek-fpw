@@ -356,7 +356,7 @@ export default function CartPage() {
                   {/* Info Box */}
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-900">
-                      <strong>💡 Info:</strong> Ongkos kirim akan dihitung di halaman checkout 
+                      <strong>Info:</strong> Ongkos kirim akan dihitung di halaman checkout 
                       setelah Anda memilih alamat pengiriman.
                     </p>
                   </div>

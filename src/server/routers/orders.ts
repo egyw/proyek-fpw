@@ -106,7 +106,7 @@ export const ordersRouter = router({
           discount: input.discount,
         });
 
-        // ⭐ REDUCE STOCK immediately after checkout (before payment)
+        // REDUCE STOCK immediately after checkout (before payment)
         // This prevents race condition - stock reserved on checkout
         for (const item of input.items) {
           const product = await Product.findById(item.productId);
@@ -119,7 +119,7 @@ export const ordersRouter = router({
             });
           }
 
-          // ⭐ GET CATEGORY DATA for unit conversion
+          // GET CATEGORY DATA for unit conversion
           const category = await Category.findOne({ name: product.category });
           if (!category) {
             // Rollback: Delete the created order
@@ -130,7 +130,7 @@ export const ordersRouter = router({
             });
           }
 
-          // ⭐ CONVERT quantity from user's unit to supplier's unit
+          // CONVERT quantity from user's unit to supplier's unit
           // Example: User buys 100 kg, supplier unit is gulung (25kg)
           // Result: 100 kg → 4 gulung
           const quantityInSupplierUnit = convertToSupplierUnit(
@@ -217,7 +217,7 @@ export const ordersRouter = router({
           try {
             // Format expiry time for Midtrans
             // Format: "2024-12-02 17:00:00 +0700"
-            // ⭐ Snap popup expiry: 15 minutes (match Midtrans dashboard page expiry)
+            // Snap popup expiry: 15 minutes (match Midtrans dashboard page expiry)
             const expiryTime = new Date();
             expiryTime.setMinutes(expiryTime.getMinutes() + 15);
             const formattedExpiry = expiryTime.toISOString().slice(0, 19).replace('T', ' ') + ' +0700';
@@ -260,7 +260,7 @@ export const ordersRouter = router({
                 postal_code: input.shippingAddress.postalCode,
                 country_code: 'IDN',
               },
-              // ⭐ Midtrans page expiry: 15 minutes (to choose payment method)
+              // Midtrans page expiry: 15 minutes (to choose payment method)
               // After user selects payment, dashboard settings apply: +45 min
               // Total: 15 min (page) + 45 min (payment) = 60 min
               customExpiry: {
@@ -513,7 +513,7 @@ export const ordersRouter = router({
 
     // Auto-update status if expired and still pending
     if (isExpired && order.paymentStatus === 'pending') {
-      // ⭐ CRITICAL: Restore stock BEFORE updating status
+      // CRITICAL: Restore stock BEFORE updating status
       // Stock was reduced at checkout (createOrder), must restore on expiry
       const Product = (await import('@/models/Product')).default;
       const StockMovement = (await import('@/models/StockMovement')).default;
@@ -577,7 +577,7 @@ export const ordersRouter = router({
       }
     }),
 
-  // ⭐ Simulate payment success (for Sandbox testing only)
+  // Simulate payment success (for Sandbox testing only)
   // In production, this should be done via webhook
   simulatePaymentSuccess: protectedProcedure
     .input(z.object({ orderId: z.string() }))
@@ -641,7 +641,7 @@ export const ordersRouter = router({
           // Continue - notification failure shouldn't block order processing
         }
 
-        // ⭐ Send new_paid_order notification to ALL admin/staff
+        // Send new_paid_order notification to ALL admin/staff
         try {
           const User = (await import('@/models/User')).default;
           const adminUsers = await User.find({ 
@@ -832,7 +832,7 @@ export const ordersRouter = router({
           });
         }
 
-        // ⭐ Stock already reduced at checkout (createOrder)
+        // Stock already reduced at checkout (createOrder)
         // No need to reduce stock again here
 
         return { success: true, order };
@@ -1007,20 +1007,20 @@ export const ordersRouter = router({
           console.error('[cancelOrder] Failed to send customer notification:', notifError);
         }
 
-        // ⭐ CRITICAL: ALWAYS restore stock on cancellation
+        // CRITICAL: ALWAYS restore stock on cancellation
         // Stock is now reduced at checkout (createOrder), so must restore on ANY cancellation
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const item of (order as any).items) {
           const product = await Product.findById(item.productId);
           if (product) {
-            // ⭐ GET CATEGORY DATA for unit conversion
+            // GET CATEGORY DATA for unit conversion
             const category = await Category.findOne({ name: product.category });
             if (!category) {
               console.error(`[cancelOrder] Category not found: ${product.category}`);
-              continue; // Skip this item if category not found
+              continue;
             }
 
-            // ⭐ CONVERT quantity from user's unit to supplier's unit
+            // CONVERT quantity from user's unit to supplier's unit
             const quantityInSupplierUnit = convertToSupplierUnit(
               item.quantity,
               item.unit,

@@ -82,7 +82,7 @@ export default function ProductDetailPage() {
   ) => {
     if (!product) return;
 
-    // ✅ No stock validation here - UnitConverter already validates correctly
+    // No stock validation here - UnitConverter already validates correctly
     // Backend will also validate stock in the supplier's unit
 
     const cartItem = {

@@ -17,23 +17,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-/**
- * Payment Method Report Component
- * 
- * Features:
- * - Optional date range filter
- * - 3 Stats cards (Total Methods, Most Used, Total Transactions)
- * - Pie chart for distribution
- * - Table with: Method, Count, Percentage, Total Amount, Average
- * - Color-coded badges
- * 
- * Payment Data Source:
- * - Uses paymentType from Midtrans callback (specific payment type like "gopay", "bca_va", "qris")
- * - Fallback to paymentMethod for non-Midtrans orders (e.g., "cod")
- * 
- * Connected to: trpc.reports.getPaymentMethodStats
- */
-
 // Payment method colors for chart
 const PAYMENT_COLORS: string[] = [
   '#3B82F6', // Blue

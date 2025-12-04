@@ -6,7 +6,6 @@ import connectDB from '@/lib/mongodb';
 
 export const notificationsRouter = router({
   // Get user notifications (for customers - order and return notifications)
-  // ⭐ DEFAULT: Only show unread notifications (clean dropdown UX)
   getUserNotifications: protectedProcedure
     .input(
       z.object({
@@ -49,7 +48,6 @@ export const notificationsRouter = router({
     }),
 
   // Get admin notifications with pagination and filters
-  // ⭐ DEFAULT: Only show unread notifications (clean dropdown UX)
   getAdminNotifications: protectedProcedure
     .input(
       z.object({

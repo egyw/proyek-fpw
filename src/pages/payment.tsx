@@ -390,7 +390,7 @@ export default function PaymentPage() {
           </ol>
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>💡 Tips:</strong> Pastikan Anda sampai di minimarket sebelum waktu pembayaran habis (45 menit setelah pilih metode). Bawa HP untuk menunjukkan kode pembayaran.
+              <strong>Tips:</strong> Pastikan Anda sampai di minimarket sebelum waktu pembayaran habis (45 menit setelah pilih metode). Bawa HP untuk menunjukkan kode pembayaran.
             </p>
           </div>
         </Card>

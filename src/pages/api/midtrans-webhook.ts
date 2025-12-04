@@ -131,7 +131,7 @@ export default async function handler(
     console.log('[Midtrans Webhook] Payment Status:', paymentStatus);
     console.log('[Midtrans Webhook] Order Status:', orderStatus);
 
-    // ⭐ Send notifications when payment successful
+    // Send notifications when payment successful
     if (paymentStatus === 'paid') {
       try {
         const Notification = (await import('@/models/Notification')).default;
@@ -148,7 +148,7 @@ export default async function handler(
           color: 'blue',
           data: { orderId: order.orderId.toString() },
         });
-        console.log('[Midtrans Webhook] ✅ Customer notification sent');
+        console.log('[Midtrans Webhook] Customer notification sent');
 
         // 2. Send new_paid_order notification to ALL ADMIN/STAFF
         const adminUsers = await User.find({ 
@@ -169,7 +169,7 @@ export default async function handler(
         }));
 
         await Notification.insertMany(adminNotifications);
-        console.log(`[Midtrans Webhook] ✅ Sent notifications to ${adminUsers.length} admin(s)`);
+        console.log(`[Midtrans Webhook] Sent notifications to ${adminUsers.length} admin(s)`);
       } catch (notifError) {
         console.error('[Midtrans Webhook] Failed to send notifications:', notifError);
         // Continue - notification failure shouldn't block webhook processing

@@ -1,8 +1,4 @@
-// RajaOngkir API Helper
-// Docs: https://rajaongkir.com/dokumentasi
-
 const RAJAONGKIR_API_KEY = process.env.RAJAONGKIR_API_KEY || '';
-// Updated: RajaOngkir uses Komerce platform
 const RAJAONGKIR_BASE_URL = 'https://rajaongkir.komerce.id/api/v1';
 
 // Courier configuration based on RajaOngkir plan

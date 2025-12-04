@@ -20,19 +20,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-/**
- * Periodic Sales Report Component
- * 
- * Features:
- * - Date period filter (Harian/Mingguan/Bulanan/Custom)
- * - Custom date range picker
- * - 3 Stats cards (Revenue, Orders, Products Sold)
- * - Interactive chart (Line/Bar toggle)
- * - Export buttons (PDF/Excel - ready for backend)
- * 
- * Connected to: trpc.reports.getPeriodicSales
- */
-
 export default function PeriodicSalesReport() {
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'custom'>('monthly');

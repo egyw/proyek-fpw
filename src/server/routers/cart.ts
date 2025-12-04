@@ -81,10 +81,8 @@ export const cartRouter = router({
           );
 
           if (existingItemIndex > -1) {
-            // Item with same product and unit exists, check stock before updating
             const newQuantity = cart.items[existingItemIndex].quantity + input.quantity;
             
-            // ⚠️ STOCK VALIDATION: Prevent total quantity from exceeding stock
             if (newQuantity > input.stock) {
               throw new TRPCError({
                 code: 'BAD_REQUEST',
@@ -308,10 +306,8 @@ export const cartRouter = router({
             );
 
             if (existingItemIndex > -1) {
-              // Item with same product and unit exists, check stock before merging
               const newQuantity = cart!.items[existingItemIndex].quantity + guestItem.quantity;
               
-              // ⚠️ STOCK VALIDATION: Prevent merged quantity from exceeding stock
               if (newQuantity > guestItem.stock) {
                 throw new TRPCError({
                   code: 'BAD_REQUEST',
