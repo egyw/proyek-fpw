@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { Card } from "@/components/ui/card";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search, ArrowUpCircle, ArrowDownCircle, Package, Calendar } from "lucide-react";
 import { trpc } from "@/utils/trpc";
 
@@ -25,50 +26,52 @@ export default function StockMovementsPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
-  // Calculate date range based on filter
-  const getDateRange = () => {
-    const now = new Date();
-    let dateFrom: string | undefined;
-
+  // Calculate date range based on filter (memoized to prevent infinite loop)
+  const dateFrom = useMemo(() => {
     switch (dateFilter) {
       case "today":
-        dateFrom = new Date(now.setHours(0, 0, 0, 0)).toISOString();
-        break;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today.toISOString();
       case "week":
-        const weekAgo = new Date(now);
+        const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
-        dateFrom = weekAgo.toISOString();
-        break;
+        return weekAgo.toISOString();
       case "month":
-        const monthAgo = new Date(now);
+        const monthAgo = new Date();
         monthAgo.setMonth(monthAgo.getMonth() - 1);
-        dateFrom = monthAgo.toISOString();
-        break;
+        return monthAgo.toISOString();
       default:
-        dateFrom = undefined;
+        return undefined;
     }
-
-    return { dateFrom };
-  };
+  }, [dateFilter]);
 
   // Get stock movements from database
   const { data: movementsData, isLoading } = trpc.stockMovements.getAll.useQuery({
     movementType: filterType === "all" ? undefined : (filterType as "in" | "out"),
     productCode: searchQuery || undefined,
-    dateFrom: getDateRange().dateFrom,
-    limit: 100,
-    offset: 0,
+    dateFrom,
+    limit: itemsPerPage,
+    offset: (currentPage - 1) * itemsPerPage,
   });
 
   // Get summary statistics
   const { data: summaryData } = trpc.stockMovements.getSummary.useQuery({
-    dateFrom: getDateRange().dateFrom,
+    dateFrom,
   });
 
   const movements = movementsData?.movements || [];
   const totalIn = summaryData?.totalInQuantity || 0;
   const totalOut = summaryData?.totalOutQuantity || 0;
+
+  // Calculate pagination metadata
+  const totalItems = movementsData?.total || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const hasPrevPage = currentPage > 1;
+  const hasNextPage = currentPage < totalPages;
 
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat("id-ID").format(value);
@@ -308,6 +311,103 @@ export default function StockMovementsPage() {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Menampilkan{" "}
+            <span className="font-medium">
+              {totalItems > 0
+                ? `${(currentPage - 1) * itemsPerPage + 1}-${Math.min(
+                    currentPage * itemsPerPage,
+                    totalItems
+                  )}`
+                : "0"}
+            </span>{" "}
+            dari <span className="font-medium">{totalItems}</span> pergerakan stok
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasPrevPage}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            >
+              Sebelumnya
+            </Button>
+
+            {/* Page numbers */}
+            {totalPages > 0 &&
+              (() => {
+                const pages: (number | string)[] = [];
+
+                if (totalPages <= 7) {
+                  // Show all pages if 7 or less
+                  for (let i = 1; i <= totalPages; i++) {
+                    pages.push(i);
+                  }
+                } else {
+                  // Always show first page
+                  pages.push(1);
+
+                  if (currentPage > 3) {
+                    pages.push("...");
+                  }
+
+                  // Show pages around current
+                  for (
+                    let i = Math.max(2, currentPage - 1);
+                    i <= Math.min(totalPages - 1, currentPage + 1);
+                    i++
+                  ) {
+                    pages.push(i);
+                  }
+
+                  if (currentPage < totalPages - 2) {
+                    pages.push("...");
+                  }
+
+                  // Always show last page
+                  pages.push(totalPages);
+                }
+
+                return pages.map((page, idx) => {
+                  if (page === "...") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-2 py-1 text-gray-400"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+                  return (
+                    <Button
+                      key={page}
+                      variant="outline"
+                      size="sm"
+                      className={
+                        currentPage === page ? "bg-primary text-white" : ""
+                      }
+                      onClick={() => setCurrentPage(page as number)}
+                    >
+                      {page}
+                    </Button>
+                  );
+                });
+              })()}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasNextPage}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+            >
+              Selanjutnya
+            </Button>
+          </div>
+        </div>
       </Card>
     </AdminLayout>
   );

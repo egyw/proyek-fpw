@@ -47,12 +47,12 @@ export const stockMovementsRouter = router({
         if (input.dateFrom || input.dateTo) {
           filter.createdAt = {};
           if (input.dateFrom) {
-            filter.createdAt.$gte = new Date(input.dateFrom).toISOString();
+            filter.createdAt.$gte = new Date(input.dateFrom);
           }
           if (input.dateTo) {
             const endDate = new Date(input.dateTo);
             endDate.setHours(23, 59, 59, 999);
-            filter.createdAt.$lte = endDate.toISOString();
+            filter.createdAt.$lte = endDate;
           }
         }
 
@@ -127,12 +127,13 @@ export const stockMovementsRouter = router({
         if (input.dateFrom || input.dateTo) {
           dateFilter.createdAt = {};
           if (input.dateFrom) {
-            dateFilter.createdAt.$gte = new Date(input.dateFrom).toISOString();
+            // Convert ISO string to Date object for aggregate $match
+            dateFilter.createdAt.$gte = new Date(input.dateFrom);
           }
           if (input.dateTo) {
             const endDate = new Date(input.dateTo);
             endDate.setHours(23, 59, 59, 999);
-            dateFilter.createdAt.$lte = endDate.toISOString();
+            dateFilter.createdAt.$lte = endDate;
           }
         }
 

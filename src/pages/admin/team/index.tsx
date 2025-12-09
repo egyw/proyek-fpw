@@ -225,6 +225,15 @@ export default function StaffManagementPage() {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editFormData.email)) {
+      toast.error("Format Email Tidak Valid", {
+        description: "Mohon masukkan alamat email yang valid.",
+      });
+      return;
+    }
+
     await updateStaffMutation.mutateAsync({
       userId: selectedStaff._id,
       ...editFormData,
@@ -491,7 +500,7 @@ export default function StaffManagementPage() {
                 <Label htmlFor="add-email">Email *</Label>
                 <Input
                   id="add-email"
-                  type="email"
+                  type="text"
                   placeholder="contoh@email.com"
                   value={formData.email}
                   onChange={(e) =>
@@ -609,7 +618,8 @@ export default function StaffManagementPage() {
                 <Label htmlFor="edit-email">Email *</Label>
                 <Input
                   id="edit-email"
-                  type="email"
+                  type="text"
+                  placeholder="nama@email.com"
                   value={editFormData.email}
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, email: e.target.value })
